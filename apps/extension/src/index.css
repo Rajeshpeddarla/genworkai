@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --color-background: #09090b;
+    --color-foreground: #fafafa;
+    --color-primary-500: #3b82f6;
+    --color-primary-600: #2563eb;
+    --color-accent: #8b5cf6;
+  }
+
+  html, body, #root {
+    @apply text-foreground antialiased;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #121217 !important;
+  }
+}
+
+.glass {
+  background: rgba(24, 24, 27, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Professional PDF Typography Styles */
+.pdf-export-container {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: #111;
+  line-height: 1.6;
+  padding: 40px;
+  background: #fff;
+  font-size: 11pt;
+}
+.pdf-export-container h1 {
+  font-size: 24pt;
+  font-weight: 700;
+  margin-bottom: 16pt;
+  color: #000;
+  border-bottom: 2px solid #eaeaea;
+  padding-bottom: 8pt;
+}
+.pdf-export-container h2 {
+  font-size: 18pt;
+  font-weight: 600;
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+  color: #222;
+}
+.pdf-export-container h3 {
+  font-size: 14pt;
+  font-weight: 600;
+  margin-top: 16pt;
+  margin-bottom: 8pt;
+  color: #333;
+}
+.pdf-export-container p {
+  margin-bottom: 12pt;
+}
+.pdf-export-container ul, .pdf-export-container ol {
+  margin-bottom: 12pt;
+  padding-left: 24pt;
+}
+.pdf-export-container li {
+  margin-bottom: 4pt;
+}
+.pdf-export-container code {
+  background-color: #f4f4f4;
+  padding: 2pt 4pt;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+.pdf-export-container pre {
+  background-color: #f4f4f4;
+  padding: 12pt;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-bottom: 12pt;
+}
+.pdf-export-container blockquote {
+  border-left: 4px solid #ccc;
+  margin: 0 0 12pt 0;
+  padding: 4pt 12pt;
+  color: #555;
+}

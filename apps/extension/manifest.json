@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "GenWorkAI",
+  "version": "1.0.0",
+  "description": "Transform any webpage into knowledge, documents, and AI context.",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["<all_urls>", "http://localhost:3000/*"],
+  "action": {
+    "default_title": "Open GenWorkAI Sidebar"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["index.html", "assets/*", "favicon.svg", "icons.svg"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

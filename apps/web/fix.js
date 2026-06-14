@@ -1,0 +1,1 @@
+const fs=require('fs'); let c=fs.readFileSync('apps/web/app/(app)/file-studio/page.tsx', 'utf8'); c=c.replaceAll('\', '\').replaceAll('\$', '$').replaceAll('\\\\\', '\').replaceAll('\\\\$', '$'); fs.writeFileSync('apps/web/app/(app)/file-studio/page.tsx', c);

@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --color-background: #ffffff;
+    --color-foreground: #09090b;
+    --color-primary-50: #eff6ff;
+    --color-primary-100: #dbeafe;
+    --color-primary-500: #3b82f6;
+    --color-primary-600: #2563eb;
+    --color-primary-900: #1e3a8a;
+    --color-accent: #8b5cf6;
+    --color-accent-hover: #7c3aed;
+    --color-card: #ffffff;
+    --color-card-border: #e4e4e7;
+  }
+
+  .dark {
+    --background: 270 50% 5%; /* Very dark purple */
+    --foreground: 270 20% 90%;
+    --color-background: #0a0514;
+    --color-foreground: #e9d5ff;
+    --color-card: #1c0b2b;
+    --color-card-border: #3b1c5a;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  ::selection {
+    background-color: rgba(59, 130, 246, 0.3); /* primary-500 with opacity */
+  }
+}
+
+.glass {
+  background: rgba(24, 24, 27, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(to right, #3b82f6, #8b5cf6);
+}
+
+ /* Hide scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
