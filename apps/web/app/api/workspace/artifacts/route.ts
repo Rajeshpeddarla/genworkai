@@ -1,15 +1,31 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { workspaceArtifacts, workspaceArtifactVersions } from '../../../../db/schema';
+import { workspaceArtifacts, workspaceArtifactVersions, workspaceChats } from '../../../../db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
+
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
   try {
-    // In a real app with auth, we'd filter by workspaceId/userId.
-    // Here we'll just fetch all artifacts, ordered by latest update.
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll(); },
+          setAll() {},
+        },
+      }
+    );
 
-    // We want to fetch artifacts and their LATEST version number.
-    // We can do a join, or just fetch artifacts and then the latest version for each.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Fetch artifacts belonging to chats owned by the user
     const artifacts = await db.select({
       id: workspaceArtifacts.id,
       chatId: workspaceArtifacts.chatId,
@@ -20,9 +36,10 @@ export async function GET(req: Request) {
       isPinned: workspaceArtifacts.isPinned,
       createdAt: workspaceArtifacts.createdAt,
       updatedAt: workspaceArtifacts.updatedAt,
-      // We'll fetch versions in a separate query or join if needed.
     })
       .from(workspaceArtifacts)
+      .innerJoin(workspaceChats, eq(workspaceArtifacts.chatId, workspaceChats.id))
+      .where(eq(workspaceChats.userId, user.id))
       .orderBy(desc(workspaceArtifacts.updatedAt));
 
     // Fetch the latest version content for each artifact

@@ -52,21 +52,38 @@ export async function getUserProfile(userId: string) {
   return result[0] || null;
 }
 
-export async function getReferralBonus(profile: any): Promise<{ extraKbs: number, extraArtifacts: number, extraContextBytes: number }> {
-  if (!profile || !profile.referralCode) return { extraKbs: 0, extraArtifacts: 0, extraContextBytes: 0 };
+export async function getReferralBonus(profile: any): Promise<{ extraKbs: number, extraArtifacts: number, extraContextBytes: number, hasActiveProReferral: boolean }> {
+  if (!profile || !profile.referralCode) return { extraKbs: 0, extraArtifacts: 0, extraContextBytes: 0, hasActiveProReferral: false };
   
-  const referralCount = await db
-    .select({ value: count() })
+  const allReferrals = await db
+    .select({ tier: profiles.tier, createdAt: profiles.createdAt })
     .from(profiles)
     .where(eq(profiles.referredBy, profile.referralCode));
     
-  const referrals = referralCount[0]?.value ?? 0;
+  let totalReferrals = 0;
+  let proReferrals = 0;
+  let hasActiveProReferral = false;
+  
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  
+  for (const ref of allReferrals) {
+    totalReferrals++;
+    if (ref.tier === 'pro') {
+       proReferrals++;
+       if (ref.createdAt && new Date(ref.createdAt) > oneMonthAgo) {
+          hasActiveProReferral = true;
+       }
+    }
+  }
+
   const rewards = await getReferralRewards();
   
   return {
-    extraKbs: referrals * rewards.extraKbs,
-    extraArtifacts: referrals * rewards.extraArtifacts,
-    extraContextBytes: referrals * (rewards.extraContextBytes || 0),
+    extraKbs: proReferrals * rewards.extraKbs,
+    extraArtifacts: proReferrals * rewards.extraArtifacts,
+    extraContextBytes: totalReferrals * (rewards.extraContextBytes || 0),
+    hasActiveProReferral
   };
 }
 
@@ -76,8 +93,9 @@ export async function checkKnowledgeBaseLimit(userId: string): Promise<{ allowed
   if (profile.isAdmin) return { allowed: true, limit: Infinity, current: 0 };
 
   const limits = await getSystemLimits();
-  const tierLimits = limits[profile.tier as keyof typeof limits] || limits.free;
   const bonus = await getReferralBonus(profile);
+  const effectiveTier = (profile.tier === 'pro' || bonus.hasActiveProReferral) ? 'pro' : 'free';
+  const tierLimits = limits[effectiveTier as keyof typeof limits] || limits.free;
 
   const kbCount = await db
     .select({ value: count() })
@@ -100,8 +118,9 @@ export async function checkContextLimit(userId: string): Promise<{ allowed: bool
   if (profile.isAdmin) return { allowed: true, limit: Infinity, current: 0 };
 
   const limits = await getSystemLimits();
-  const tierLimits = limits[profile.tier as keyof typeof limits] || limits.free;
   const bonus = await getReferralBonus(profile);
+  const effectiveTier = (profile.tier === 'pro' || bonus.hasActiveProReferral) ? 'pro' : 'free';
+  const tierLimits = limits[effectiveTier as keyof typeof limits] || limits.free;
 
   const docSizes = await db
     .select({ value: sum(documents.sizeBytes) })
@@ -125,7 +144,9 @@ export async function checkFlowLimit(userId: string): Promise<{ allowed: boolean
   if (profile.isAdmin) return { allowed: true, limit: Infinity, current: 0 };
 
   const limits = await getSystemLimits();
-  const tierLimits = limits[profile.tier as keyof typeof limits] || limits.free;
+  const bonus = await getReferralBonus(profile);
+  const effectiveTier = (profile.tier === 'pro' || bonus.hasActiveProReferral) ? 'pro' : 'free';
+  const tierLimits = limits[effectiveTier as keyof typeof limits] || limits.free;
 
   const flowCount = await db
     .select({ value: count() })
@@ -149,8 +170,9 @@ export async function checkArtifactLimit(userId: string): Promise<{ allowed: boo
   if (profile.isAdmin) return { allowed: true, limit: Infinity, current: 0 };
 
   const limits = await getSystemLimits();
-  const tierLimits = limits[profile.tier as keyof typeof limits] || limits.free;
   const bonus = await getReferralBonus(profile);
+  const effectiveTier = (profile.tier === 'pro' || bonus.hasActiveProReferral) ? 'pro' : 'free';
+  const tierLimits = limits[effectiveTier as keyof typeof limits] || limits.free;
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);

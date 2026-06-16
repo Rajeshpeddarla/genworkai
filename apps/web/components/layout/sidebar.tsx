@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 
 const navigation = [
-  { name: "Research Studio", href: "/research-studio", icon: FileText },
+  { name: "Automation Studio", href: "/automation-studio", icon: Zap },
   { name: "File Studio", href: "/file-studio", icon: FolderOpen },
+  { name: "Database Intelligence", href: "/databases", icon: Database },
   { name: "Knowledge Base", href: "/knowledge", icon: Database },
   { name: "Workspace", href: "/workspace", icon: LayoutDashboard },
   { name: "MCP Builder", href: "/mcp-builder", icon: Network },
@@ -30,7 +31,6 @@ const navigation = [
 
 const secondaryNavigation = [
   { name: "Admin", href: "/admin", icon: ShieldCheck },
-  { name: "Profile", href: "/profile", icon: User },
   { name: "Billing Studio", href: "/billing", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -69,7 +69,7 @@ function SidebarTierWidget() {
     <div className="p-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 mb-4">
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Free Tier</span>
-        <Link href="/settings" className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500">Upgrade</Link>
+        <Link href="/billing" className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500">Upgrade</Link>
       </div>
       <div className="w-full bg-zinc-300 dark:bg-black/50 h-1.5 rounded-full overflow-hidden">
         <div className="bg-violet-500 h-full rounded-full transition-all duration-1000" style={{ width: `${percentUsed}%` }} />
@@ -82,6 +82,25 @@ function SidebarTierWidget() {
 export function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(d => {
+        if (isMounted && d?.profile?.isAdmin) {
+          setIsAdmin(true);
+        }
+      })
+      .catch(console.error);
+    return () => { isMounted = false; };
+  }, []);
+
+  const visibleSecondary = secondaryNavigation.filter(item => {
+    if (item.name === "Admin" && !isAdmin) return false;
+    return true;
+  });
 
   return (
     <div className={cn(
@@ -143,7 +162,7 @@ export function Sidebar() {
           {/* Secondary Navigation */}
           <li className="mt-auto">
             <ul role="list" className="-mx-2 mt-2 space-y-1">
-              {secondaryNavigation.map((item) => (
+              {visibleSecondary.map((item) => (
                 <li key={item.name}>
                   <Link
                     href={item.href}

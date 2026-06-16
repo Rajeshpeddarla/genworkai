@@ -1,0 +1,71 @@
+import { NextResponse } from 'next/server';
+import { db } from '../../../../../db';
+import { databaseSchemas } from '../../../../../db/schema';
+import { eq } from 'drizzle-orm';
+import { generateWithFallbacks } from '@repo/ai';
+
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { message } = await req.json();
+    const resolvedParams = await params;
+    const dbId = parseInt(resolvedParams.id, 10);
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    const schemas = await db.select().from(databaseSchemas).where(eq(databaseSchemas.databaseId, dbId));
+    if (schemas.length === 0) {
+      return NextResponse.json({ error: 'Database schema not found. Cannot generate SQL.' }, { status: 404 });
+    }
+
+    const schemaData = schemas[0]!.schemaData;
+
+    const apiKey = process.env.CKEY_API_KEY || '';
+    if (!apiKey) {
+      return NextResponse.json({ error: 'AI API Key is not configured' }, { status: 500 });
+    }
+
+    const prompt = `You are an expert SQL assistant.
+The user wants to query their database. Here is the exact schema for their database:
+\`\`\`json
+${JSON.stringify(schemaData, null, 2)}
+\`\`\`
+
+User Request: "${message}"
+
+Write a PostgreSQL SELECT query to fulfill the user's request. 
+CRITICAL RULES:
+1. ONLY return a SELECT statement. Never use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, etc.
+2. Only use columns and tables that explicitly exist in the schema provided above.
+3. Return your response as a JSON object matching this schema exactly:
+{
+  "message": "A brief explanation of the query and what it does",
+  "sql": "The raw SQL SELECT statement"
+}`;
+
+    const aiRes = await generateWithFallbacks({
+      messages: [{ role: 'system', content: prompt }],
+      responseFormatJson: true,
+      agentRole: 'reasoning'
+    }, apiKey, process.env.CKEY_API_URL);
+
+    let parsed = { message: "Generated query.", sql: "" };
+    try {
+      const match = aiRes.content.match(/```json\n([\s\S]*?)\n```/) || aiRes.content.match(/\{[\s\S]*\}/);
+      if (match) {
+        parsed = JSON.parse(match[1] || match[0]);
+      } else {
+        parsed = JSON.parse(aiRes.content);
+      }
+    } catch (e) {
+      console.error("Failed to parse AI SQL JSON:", aiRes.content);
+      return NextResponse.json({ error: 'Failed to generate valid SQL. Try rephrasing.' }, { status: 500 });
+    }
+
+    return NextResponse.json(parsed);
+  } catch (error: any) {
+    console.error('Chat AI error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to process chat' }, { status: 500 });
+  }
+}

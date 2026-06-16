@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { Client } from 'pg';
 import { db } from '../../../../../db';
-import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots } from '../../../../../db/schema';
+import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots, connectedDatabases, databaseSchemas } from '../../../../../db/schema';
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
+import { DatabaseService, DBConnectionConfig } from '../../../../../lib/database/DatabaseService';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,31 +16,70 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: Request) {
-  let pgClient: Client | null = null;
   try {
-    const { connectionString, kbId, dbType = 'postgresql' } = await req.json();
+    const body = await req.json();
+    const { connectionString, host, port, database, databaseName, username, password, engine = 'pg', kbId } = body;
+    
+    const finalDatabaseName = databaseName || database;
 
-    if (!connectionString || !kbId) {
-      return NextResponse.json({ error: 'Connection string and kbId are required' }, { status: 400, headers: corsHeaders });
+    let targetKbId = kbId ? parseInt(kbId, 10) : 1;
+    
+    // Ensure a valid KB exists to avoid foreign key constraint violations
+    const { knowledgeBases } = require('../../../../../db/schema');
+    const { eq } = require('drizzle-orm');
+    const existingKb = await db.select().from(knowledgeBases).where(eq(knowledgeBases.id, targetKbId));
+    
+    if (existingKb.length === 0) {
+      const fallbackKbs = await db.select().from(knowledgeBases).limit(1);
+      if (fallbackKbs.length === 0) {
+        const newKb = await db.insert(knowledgeBases).values({
+          name: 'Default MVP Knowledge Base',
+          description: 'Auto-created for Database Intelligence MVP'
+        }).returning();
+        targetKbId = (newKb as any)[0].id;
+      } else {
+        targetKbId = (fallbackKbs as any)[0].id;
+      }
     }
 
-    if (dbType !== 'postgresql') {
-       return NextResponse.json({ error: 'Only PostgreSQL is supported in this V1 endpoint right now.' }, { status: 400, headers: corsHeaders });
+    const config: DBConnectionConfig = {
+      engine, connectionString, host, port, database: finalDatabaseName, username, password
+    };
+
+    const dbService = new DatabaseService(config);
+    const isConnected = await dbService.testConnection();
+
+    if (!isConnected) {
+      return NextResponse.json({ error: 'Failed to connect to the database. Check credentials.' }, { status: 400, headers: corsHeaders });
     }
 
-    // 1. Create or Update Source
-    // DO NOT STORE THE PLAIN CONNECTION STRING in configuration. Store a sanitized version and we could store the real one securely, but for V1 we'll mock the encryption behavior by storing a placeholder and connecting immediately.
-    // In a real implementation we'd use a KMS or vault for `encrypted_credentials`.
-    const urlPattern = /postgres(?:ql)?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/;
-    const match = connectionString.match(urlPattern);
-    const sanitizedUrl = match ? `postgres://${match[1]}:***@${match[3]}:${match[4]}/${match[5]}` : 'Secure DB Connection';
+    // 1. Create Connected Database Record
+    const newDb = await db.insert(connectedDatabases).values({
+      kbId: targetKbId,
+      name: `Database: ${finalDatabaseName || 'Custom'}`,
+      engine,
+      connectionString, // In MVP, storing directly (needs KMS for prod)
+      host, port, databaseName: finalDatabaseName, username, password,
+      accessMode: 'read_only'
+    }).returning();
+    const connectedDbId = newDb[0]!.id;
 
+    // 2. Extract Schema
+    const rawSchema = await dbService.extractSchema();
+
+    // 3. Cache the raw schema
+    await db.insert(databaseSchemas).values({
+      databaseId: connectedDbId,
+      schemaData: rawSchema
+    });
+
+    // 4. Create or Update Knowledge Source
     const newSource = await db.insert(knowledgeSources).values({
-      kbId: parseInt(kbId, 10),
-      name: `Database: ${match ? match[5] : 'Unknown'}`,
+      kbId: targetKbId,
+      name: `Database: ${finalDatabaseName || 'Custom'}`,
       type: 'database',
-      classification: { category: 'database', type: dbType, language: 'sql' },
-      configuration: { sanitizedUrl },
+      classification: { category: 'database', type: engine, language: 'sql' },
+      configuration: { connectedDbId }, // Link to secure credentials
       syncStatus: 'syncing'
     }).returning();
     const sourceId = newSource[0]!.id;
@@ -52,66 +91,29 @@ export async function POST(req: Request) {
       startedAt: new Date()
     }).returning();
 
-    // 2. Connect to the DB
-    pgClient = new Client({ connectionString, statement_timeout: 10000 });
-    await pgClient.connect();
-
-    // 3. Extract Schema
-    const tablesRes = await pgClient.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'public'
-    `);
-    
-    let schemaDefinition = `# Database Schema\n\n`;
-    
-    for (const row of tablesRes.rows) {
-      const tableName = row.table_name;
-      schemaDefinition += `## Table: ${tableName}\n`;
-      
-      const columnsRes = await pgClient.query(`
-        SELECT column_name, data_type, is_nullable
-        FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = $1
-      `, [tableName]);
-      
-      schemaDefinition += `| Column | Type | Nullable |\n|---|---|---|\n`;
-      for (const col of columnsRes.rows) {
-        schemaDefinition += `| ${col.column_name} | ${col.data_type} | ${col.is_nullable} |\n`;
+    // 5. Convert Schema to Markdown for Knowledge Base
+    let schemaDefinition = `# Database Schema (${engine})\n\n`;
+    if (engine === 'mongodb') {
+      schemaDefinition += `## Collections\n`;
+      for (const coll of rawSchema.collections || []) {
+        schemaDefinition += `- ${coll}\n`;
       }
-      
-      // Foreign Keys
-      const fksRes = await pgClient.query(`
-        SELECT
-            kcu.column_name,
-            ccu.table_name AS foreign_table_name,
-            ccu.column_name AS foreign_column_name
-        FROM 
-            information_schema.table_constraints AS tc 
-            JOIN information_schema.key_column_usage AS kcu
-              ON tc.constraint_name = kcu.constraint_name
-              AND tc.table_schema = kcu.table_schema
-            JOIN information_schema.constraint_column_usage AS ccu
-              ON ccu.constraint_name = tc.constraint_name
-              AND ccu.table_schema = tc.table_schema
-        WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_name = $1;
-      `, [tableName]);
-      
-      if (fksRes.rows.length > 0) {
-        schemaDefinition += `\n### Foreign Keys\n`;
-        for (const fk of fksRes.rows) {
-          schemaDefinition += `- ${fk.column_name} -> ${fk.foreign_table_name}(${fk.foreign_column_name})\n`;
+    } else {
+      for (const [tableName, columns] of Object.entries(rawSchema)) {
+        schemaDefinition += `## Table: ${tableName}\n| Column | Type |\n|---|---|\n`;
+        for (const col of columns as any[]) {
+          schemaDefinition += `| ${col.column} | ${col.type} |\n`;
         }
+        schemaDefinition += `\n---\n`;
       }
-      schemaDefinition += `\n---\n`;
     }
 
-    // 4. Process the schema document
+    // 6. Process the schema document
     const apiKey = process.env.CKEY_API_KEY || '';
     const enhancedData = apiKey ? await enhanceTextWithAI(schemaDefinition, apiKey, process.env.CKEY_API_URL) : {
       summary: "Database Schema Definition",
       topics: ["Database", "Schema", "Tables"],
-      keywords: ["SQL", "Postgres", "Schema"],
+      keywords: ["SQL", "Database", "Schema"],
       classification: "Database Schema",
       knowledgeContent: schemaDefinition,
       embeddingContent: schemaDefinition
@@ -120,11 +122,11 @@ export async function POST(req: Request) {
     const relationships = extractRelationships(schemaDefinition, 'database');
 
     const newDoc = await db.insert(documents).values({
-      kbId: parseInt(kbId, 10),
+      kbId: targetKbId,
       sourceId,
       title: 'Database Schema',
       sourceType: 'sql',
-      sourceUrl: sanitizedUrl,
+      sourceUrl: `db://${engine}/${finalDatabaseName}`,
       content: schemaDefinition,
       summary: enhancedData.summary,
       topics: enhancedData.topics,
@@ -150,7 +152,8 @@ export async function POST(req: Request) {
         });
         embeddingsGenerated++;
       } catch (embedErr) {
-        console.error("Failed to embed chunk:", embedErr);
+        console.error("Failed to embed chunk (Ollama might not be running). Skipping remaining chunks:", embedErr);
+        break; // Stop trying to embed if the model/server is unreachable to prevent long timeouts
       }
     }
 
@@ -161,7 +164,7 @@ export async function POST(req: Request) {
     await db.insert(sourceSnapshots).values({
       sourceId,
       hash: schemaHash,
-      metadata: { tablesCount: tablesRes.rows.length }
+      metadata: { tablesCount: Object.keys(rawSchema).length }
     });
 
     await db.execute(
@@ -184,15 +187,11 @@ export async function POST(req: Request) {
       WHERE id = ${syncJob[0]!.id}`
     );
 
-    await pgClient.end();
-
-    return NextResponse.json({ success: true, sourceId, tablesProcessed: tablesRes.rows.length }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, sourceId, connectedDbId }, { headers: corsHeaders });
 
   } catch (error: any) {
-    if (pgClient) {
-      await pgClient.end().catch(() => {});
-    }
     console.error('Database Import error:', error);
     return NextResponse.json({ error: error.message || 'Failed to import Database schema' }, { status: 500, headers: corsHeaders });
   }
 }
+

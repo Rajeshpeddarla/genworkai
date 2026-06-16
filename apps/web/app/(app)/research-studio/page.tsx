@@ -214,7 +214,7 @@ export default function ResearchStudioPage() {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     className="block w-full rounded-xl border-0 py-4 pl-12 pr-32 bg-black/40 text-white ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-fuchsia-500 sm:text-base sm:leading-6 placeholder:text-zinc-500 transition-shadow"
-                    placeholder="Paste Website URL, YouTube Link, or GitHub Repo..."
+                    placeholder="Paste Website URL or GitHub Repo..."
                   />
                   <div className="absolute inset-y-1 right-1 flex items-center">
                     <button
@@ -260,10 +260,8 @@ export default function ResearchStudioPage() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { name: "Websites", icon: Globe, color: "text-blue-400", bg: "bg-blue-400/10" },
-                { name: "YouTube", icon: PlaySquare, color: "text-red-400", bg: "bg-red-400/10" },
                 { name: "Documents", icon: FileText, color: "text-emerald-400", bg: "bg-emerald-400/10" },
                 { name: "GitHub", icon: Code2, color: "text-zinc-300", bg: "bg-zinc-400/10" },
-                { name: "Instagram", icon: Camera, color: "text-pink-400", bg: "bg-pink-400/10" },
                 { name: "Images", icon: ImageIcon, color: "text-violet-400", bg: "bg-violet-400/10" },
               ].map((source) => (
                 <div key={source.name} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-zinc-900/30">

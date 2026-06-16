@@ -134,4 +134,38 @@ export function registerTools(server: McpServer) {
     },
     async (args, extra) => await handlers.getArtifact(args.artifactId, extra)
   );
+
+  // --- LAYER 5: DATABASE INTELLIGENCE ---
+  server.tool("get_database_schema", "Retrieve the schema for a connected database", 
+    {
+      databaseId: z.number().describe("The connected database ID"),
+    },
+    async (args, extra) => await handlers.getDatabaseSchema(args.databaseId, extra)
+  );
+
+  server.tool("query_database", "Execute a read-only SQL query against a database", 
+    {
+      databaseId: z.number().describe("The connected database ID"),
+      query: z.string().describe("The SQL query (SELECT only)"),
+    },
+    async (args, extra) => await handlers.queryDatabase(args.databaseId, args.query, extra)
+  );
+
+  // --- LAYER 6: AUTOMATION STUDIO ---
+  server.tool("create_task", "Create a new automation task", 
+    {
+      name: z.string(),
+      goal: z.string(),
+      sourceId: z.number().optional(),
+      schedule: z.string().optional()
+    },
+    async (args, extra) => await handlers.createAutomationTask(args, extra)
+  );
+
+  server.tool("run_task", "Manually trigger an automation task", 
+    {
+      taskId: z.number()
+    },
+    async (args, extra) => await handlers.triggerAutomationTask(args.taskId, extra)
+  );
 }

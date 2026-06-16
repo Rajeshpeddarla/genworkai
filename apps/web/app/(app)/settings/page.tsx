@@ -141,9 +141,9 @@ export default function SettingsPage() {
                       <p className="text-white/80">{isPro ? "You have unlimited access to all features." : "Upgrade to Pro to unlock unlimited KBs, Flows, and MCP servers."}</p>
                     </div>
                     {!isPro && (
-                      <button className="bg-white text-zinc-900 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-white/25 transition-all hover:-translate-y-0.5">
+                      <Link href="/billing" className="bg-white text-zinc-900 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-white/25 transition-all hover:-translate-y-0.5 inline-block">
                         Upgrade Now
-                      </button>
+                      </Link>
                     )}
                  </div>
               </div>
@@ -207,7 +207,7 @@ export default function SettingsPage() {
                  </div>
                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Refer & Earn</h2>
                  <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
-                   Invite your team and friends to GenWorkAI. For every friend who signs up with your code, you both instantly unlock <span className="text-emerald-600 dark:text-emerald-400 font-bold">+1 Knowledge Base</span>, <span className="text-emerald-600 dark:text-emerald-400 font-bold">+25 Artifacts</span>, and <span className="text-emerald-600 dark:text-emerald-400 font-bold">+1GB Context</span> permanently added to your free tier limits!
+                   We won't give anything permanent until referrer hasn't purchased. We give free context, and size increase for one existing knowledgebase. If his referrer has subscribed he get 1 month of the tier their referrer subscribed. After that ends even if referer subscribed he wont get any.
                  </p>
               </div>
 

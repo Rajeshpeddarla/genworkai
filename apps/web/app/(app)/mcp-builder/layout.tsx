@@ -35,7 +35,7 @@ export default async function McpBuilderLayout({ children }: { children: React.R
           <p className="text-zinc-400 mb-8 leading-relaxed">
             MCP Server Deployment is exclusive to Pro tier users. Upgrade to unlock direct AI agent integration with your business knowledge.
           </p>
-          <a href="/dashboard/settings" className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-violet-500/25 transition-all">
+          <a href="/billing" className="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-violet-500/25 transition-all">
             Upgrade to Pro
           </a>
         </div>

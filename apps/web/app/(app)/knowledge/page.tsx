@@ -547,6 +547,18 @@ export default function KnowledgePage() {
                ))
             ) : (
                <>
+                 {/* Add New Card */}
+                 <div 
+                   onClick={() => setShowCreate(true)}
+                   className="border border-dashed border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer flex flex-col items-center justify-center min-h-[220px] transition-colors group bg-black/20"
+                 >
+                   <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center mb-4 group-hover:bg-white/5 transition-colors">
+                     <Plus className="w-5 h-5 text-zinc-400 group-hover:text-white" />
+                   </div>
+                   <h3 className="font-medium text-zinc-300 group-hover:text-white mb-1">Add Knowledge Base</h3>
+                   <p className="text-xs text-zinc-500 text-center">Upload docs, PDFs, sheets & more</p>
+                 </div>
+
                  {filteredKbs.map(kb => {
                    const uniqueTypes = Array.from(new Set((kb.documents || []).map((d: any) => d.sourceType)));
                    const displayTypes = uniqueTypes.slice(0, 4);
@@ -594,18 +606,6 @@ export default function KnowledgePage() {
                      </div>
                    );
                  })}
-
-                 {/* Add New Card */}
-                 <div 
-                   onClick={() => setShowCreate(true)}
-                   className="border border-dashed border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer flex flex-col items-center justify-center min-h-[220px] transition-colors group bg-black/20"
-                 >
-                   <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center mb-4 group-hover:bg-white/5 transition-colors">
-                     <Plus className="w-5 h-5 text-zinc-400 group-hover:text-white" />
-                   </div>
-                   <h3 className="font-medium text-zinc-300 group-hover:text-white mb-1">Add Knowledge Base</h3>
-                   <p className="text-xs text-zinc-500 text-center">Upload docs, PDFs, sheets & more</p>
-                 </div>
                </>
             )}
           </div>

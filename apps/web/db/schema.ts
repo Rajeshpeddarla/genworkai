@@ -201,7 +201,7 @@ export const mcpApiKeys = pgTable('mcp_api_keys', {
   serverId: integer('server_id').references(() => mcpServers.id, { onDelete: 'cascade' }),
   keyHash: varchar('key_hash', { length: 255 }).notNull(), // The hashed key string
   name: varchar('name', { length: 255 }).notNull(),
-  permissionLevel: varchar('permission_level', { length: 50 }).default('read_only'), // 'read_only' | 'read_generate'
+  permissionLevel: varchar('permission_level', { length: 50 }).default('read_only'), // 'read_only' | 'generate' | 'execute'
   createdAt: timestamp('created_at').defaultNow(),
   lastUsedAt: timestamp('last_used_at'),
 });
@@ -215,4 +215,56 @@ export const mcpAuditLogs = pgTable('mcp_audit_logs', {
   responseStatus: varchar('response_status', { length: 50 }), // 'success' | 'error'
   durationMs: integer('duration_ms'),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const connectedDatabases = pgTable('connected_databases', {
+  id: serial('id').primaryKey(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  engine: varchar('engine', { length: 50 }).notNull(), // 'pg', 'mysql', 'mssql', 'mongodb'
+  connectionString: text('connection_string'), // Encrypted connection string
+  host: varchar('host', { length: 255 }),
+  port: integer('port'),
+  databaseName: varchar('database_name', { length: 255 }),
+  username: varchar('username', { length: 255 }),
+  password: text('password'), // Encrypted password
+  accessMode: varchar('access_mode', { length: 50 }).default('read_only'), // 'read_only' | 'advanced'
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const databaseSchemas = pgTable('database_schemas', {
+  id: serial('id').primaryKey(),
+  databaseId: integer('database_id').references(() => connectedDatabases.id, { onDelete: 'cascade' }),
+  schemaData: jsonb('schema_data').notNull(), // The extracted schema JSON (tables, columns, types)
+  extractedAt: timestamp('extracted_at').defaultNow(),
+});
+
+export const automationTasks = pgTable('automation_tasks', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  type: varchar('type', { length: 100 }).notNull(), // 'learning', 'developer', 'database', 'business'
+  sourceType: varchar('source_type', { length: 100 }), // 'knowledge_base', 'database', 'github', 'api', 'website'
+  sourceId: integer('source_id'), // e.g. knowledge_sources.id or connected_databases.id
+  schedule: varchar('schedule', { length: 100 }), // cron expression or 'on_event'
+  triggerEvent: varchar('trigger_event', { length: 100 }), // e.g., 'on_commit', 'on_kb_update'
+  goal: text('goal'), // The actual prompt/goal instructions
+  isActive: boolean('is_active').default(true),
+  lastRunAt: timestamp('last_run_at'),
+  nextRunAt: timestamp('next_run_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const automationLogs = pgTable('automation_logs', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => automationTasks.id, { onDelete: 'cascade' }),
+  status: varchar('status', { length: 50 }).notNull(), // 'success', 'failed', 'running'
+  logs: text('logs'),
+  artifactId: integer('artifact_id').references(() => workspaceArtifacts.id, { onDelete: 'set null' }), // Link to generated artifact
+  startedAt: timestamp('started_at').defaultNow(),
+  finishedAt: timestamp('finished_at'),
 });

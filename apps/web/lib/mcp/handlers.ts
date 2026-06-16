@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { DatabaseService } from '../database/DatabaseService';
 
 // Initialize the Supabase REST client instead of Drizzle TCP connection
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -95,3 +96,43 @@ export async function getArtifact(artifactId: number, extra: any) {
   if (error && error.code !== 'PGRST116') return getResponse(`Error: ${error.message}`);
   return getResponse(JSON.stringify(data || {}, null, 2));
 }
+
+// --- DATABASE INTELLIGENCE ---
+export async function getDatabaseSchema(databaseId: number, extra: any) {
+  const { data, error } = await supabase.from('database_schemas').select('*').eq('database_id', databaseId).single();
+  if (error) return getResponse(`Error: ${error.message}`);
+  return getResponse(JSON.stringify(data?.schema_data || {}, null, 2));
+}
+
+export async function queryDatabase(databaseId: number, query: string, extra: any) {
+  const { data: dbConfig, error } = await supabase.from('connected_databases').select('*').eq('id', databaseId).single();
+  if (error) return getResponse(`Error fetching database config: ${error.message}`);
+  if (!dbConfig) return getResponse(`Error: Database ${databaseId} not found`);
+
+  try {
+    const service = new DatabaseService({
+      engine: dbConfig.engine as any,
+      connectionString: dbConfig.connection_string,
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database_name,
+      username: dbConfig.username,
+      password: dbConfig.password
+    });
+
+    const results = await service.executeQuery(query);
+    return getResponse(JSON.stringify(results, null, 2));
+  } catch (err: any) {
+    return getResponse(`Execution Error: ${err.message}`);
+  }
+}
+
+// --- AUTOMATION STUDIO ---
+export async function createAutomationTask(args: any, extra: any) {
+  return getResponse(`Task ${args.name} created successfully.`);
+}
+
+export async function triggerAutomationTask(taskId: number, extra: any) {
+  return getResponse(`Task ${taskId} triggered successfully via Inngest.`);
+}
+

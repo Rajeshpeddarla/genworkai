@@ -41,10 +41,14 @@ function OverviewTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/admin/stats").then(res => res.json()).then(data => {
-      setStats(data);
-      setLoading(false);
+      if (isMounted) {
+        setStats(data);
+        setLoading(false);
+      }
     });
+    return () => { isMounted = false; };
   }, []);
 
   if (loading) return <div className="animate-pulse flex space-x-4">Loading stats...</div>;
@@ -80,14 +84,20 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (isMounted = true) => {
     const res = await fetch("/api/admin/users");
     const data = await res.json();
-    if (!data.error) setUsers(data);
-    setLoading(false);
+    if (isMounted) {
+      if (!data.error) setUsers(data);
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    let isMounted = true;
+    fetchUsers(isMounted);
+    return () => { isMounted = false; };
+  }, []);
 
   const toggleStatus = async (userId: string, currentStatus: boolean) => {
     await fetch("/api/admin/users", {
@@ -95,7 +105,7 @@ function UsersTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, updates: { isActive: !currentStatus } })
     });
-    fetchUsers();
+    fetchUsers(true);
   };
 
   const changeTier = async (userId: string, currentTier: string) => {
@@ -105,7 +115,7 @@ function UsersTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, updates: { tier: newTier } })
     });
-    fetchUsers();
+    fetchUsers(true);
   };
 
   const filtered = users.filter(u => u.email.toLowerCase().includes(searchTerm.toLowerCase()) || (u.fullName && u.fullName.toLowerCase().includes(searchTerm.toLowerCase())));
@@ -180,10 +190,14 @@ function ConfigTab() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     fetch("/api/admin/config").then(res => res.json()).then(data => {
-      setConfig(data);
-      setLoading(false);
+      if (isMounted) {
+        setConfig(data);
+        setLoading(false);
+      }
     });
+    return () => { isMounted = false; };
   }, []);
 
   const saveConfig = async (key: string, value: any) => {
@@ -250,13 +264,19 @@ function PromotionsTab() {
   const [code, setCode] = useState("");
   const [type, setType] = useState("free_pro");
 
-  const fetchPromos = async () => {
+  const fetchPromos = async (isMounted = true) => {
     const res = await fetch("/api/admin/promotions");
     const data = await res.json();
-    if (!data.error) setPromos(data);
+    if (isMounted) {
+      if (!data.error) setPromos(data);
+    }
   };
 
-  useEffect(() => { fetchPromos(); }, []);
+  useEffect(() => {
+    let isMounted = true;
+    fetchPromos(isMounted);
+    return () => { isMounted = false; };
+  }, []);
 
   const createPromo = async () => {
     if (!code) return;
