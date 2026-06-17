@@ -27,24 +27,31 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, category, goal, sourceId } = body;
+    const { name, description, category, templateId, sources, artifactTypes, executionMode, schedule, triggerEvent, goal } = body;
 
     const newTask = await db.insert(automationTasks).values({
       name,
-      type: category.toLowerCase(),
+      description,
+      category,
+      templateId,
+      sources,
+      artifactTypes,
+      executionMode: executionMode || 'manual',
+      schedule,
+      triggerEvent,
       goal,
-      sourceId: sourceId ? parseInt(sourceId, 10) : null,
-      isActive: true,
-      // For MVP, if it has a schedule we could save it, otherwise trigger immediately
+      status: 'active',
     }).returning();
     
     const taskId = newTask[0]!.id;
 
-    // Trigger immediately via Inngest
-    await inngest.send({
-      name: 'automation.task.run',
-      data: { taskId }
-    });
+    // If it's a manual task, or we want to run immediately:
+    if (executionMode === 'manual') {
+      await inngest.send({
+        name: 'automation.task.run',
+        data: { taskId }
+      });
+    }
 
     return NextResponse.json({ success: true, taskId }, { headers: corsHeaders });
   } catch (error: any) {

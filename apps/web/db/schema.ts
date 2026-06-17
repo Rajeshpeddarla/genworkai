@@ -246,13 +246,15 @@ export const automationTasks = pgTable('automation_tasks', {
   userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
-  type: varchar('type', { length: 100 }).notNull(), // 'learning', 'developer', 'database', 'business'
-  sourceType: varchar('source_type', { length: 100 }), // 'knowledge_base', 'database', 'github', 'api', 'website'
-  sourceId: integer('source_id'), // e.g. knowledge_sources.id or connected_databases.id
-  schedule: varchar('schedule', { length: 100 }), // cron expression or 'on_event'
-  triggerEvent: varchar('trigger_event', { length: 100 }), // e.g., 'on_commit', 'on_kb_update'
+  category: varchar('category', { length: 100 }).notNull(), // 'knowledge', 'documentation', 'developer', 'database', 'monitoring', 'workspace'
+  templateId: varchar('template_id', { length: 100 }), // e.g., 'knowledge_digest'
+  sources: jsonb('sources'), // Array of { type: string, id: number | string }
+  artifactTypes: jsonb('artifact_types'), // Array of strings e.g. ['document', 'report']
+  executionMode: varchar('execution_mode', { length: 50 }).notNull().default('manual'), // 'manual', 'scheduled', 'triggered'
+  schedule: varchar('schedule', { length: 100 }), // e.g. 'daily', 'weekly', cron expression
+  triggerEvent: varchar('trigger_event', { length: 100 }), // e.g., 'on_kb_update'
   goal: text('goal'), // The actual prompt/goal instructions
-  isActive: boolean('is_active').default(true),
+  status: varchar('status', { length: 50 }).default('active'), // 'draft', 'active', 'paused', 'running', 'completed', 'failed', 'archived'
   lastRunAt: timestamp('last_run_at'),
   nextRunAt: timestamp('next_run_at'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -265,6 +267,7 @@ export const automationLogs = pgTable('automation_logs', {
   status: varchar('status', { length: 50 }).notNull(), // 'success', 'failed', 'running'
   logs: text('logs'),
   artifactId: integer('artifact_id').references(() => workspaceArtifacts.id, { onDelete: 'set null' }), // Link to generated artifact
+  sourceSnapshot: jsonb('source_snapshot'), // Track exact state of the source at execution
   startedAt: timestamp('started_at').defaultNow(),
   finishedAt: timestamp('finished_at'),
 });
