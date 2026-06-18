@@ -11,10 +11,12 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Missing sessionId", { status: 400 });
   }
 
-  const transport = activeTransports.get(sessionId);
-  if (!transport) {
+  const session = activeTransports.get(sessionId);
+  if (!session) {
     return new NextResponse("Session not found or expired", { status: 404 });
   }
+
+  const { transport } = session;
 
   try {
     const body = await req.json();
@@ -45,10 +47,14 @@ export async function POST(req: NextRequest) {
 
     await transport.handlePostMessage(mockReq as any, mockRes as any, body);
 
+    const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+    const origin = req.headers.get('origin');
+    const corsOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
     return new NextResponse(responseBody || "Accepted", { 
       status: statusCode === 200 ? 202 : statusCode, // Typically 202 Accepted
       headers: {
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': corsOrigin || ''
       }
     });
   } catch (error: any) {
@@ -58,11 +64,15 @@ export async function POST(req: NextRequest) {
 }
 
 // OPTIONS for CORS
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
+  const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
+  const origin = req.headers.get('origin');
+  const corsOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': corsOrigin || '',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },

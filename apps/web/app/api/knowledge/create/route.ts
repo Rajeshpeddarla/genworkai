@@ -2,48 +2,27 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { knowledgeBases } from '../../../../db/schema';
 import { checkKnowledgeBaseLimit } from '../../../../lib/limits';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser } from '../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
+import { RateLimitService } from '../../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
+    const { user, error } = await requireUser();
+    if (error) return error;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
-    }
+    const rateLimitResponse = await RateLimitService.check(user.id, 'default');
+    if (rateLimitResponse) return rateLimitResponse;
 
     const limitCheck = await checkKnowledgeBaseLimit(user.id);
     if (!limitCheck.allowed) {
-      return NextResponse.json(
-        { error: `Limit reached. You can only create up to ${limitCheck.limit} Knowledge Bases on the free plan.` }, 
-        { status: 403, headers: corsHeaders }
-      );
+      throw new ValidationError(`Limit reached. You can only create up to ${limitCheck.limit} Knowledge Bases on the free plan.`);
     }
 
     const { name, description, color } = await req.json();
-    if (!name) return NextResponse.json({ error: 'Name required' }, { status: 400, headers: corsHeaders });
+    if (!name) {
+      throw new ValidationError('Name required');
+    }
 
     const defaultColors = ['fuchsia', 'blue', 'orange', 'emerald', 'violet', 'rose'];
     const assignedColor = color || defaultColors[Math.floor(Math.random() * defaultColors.length)];
@@ -55,9 +34,8 @@ export async function POST(req: Request) {
       color: assignedColor 
     }).returning();
     
-    return NextResponse.json({ success: true, kb: newKb[0] }, { headers: corsHeaders });
-  } catch (error: any) {
-    console.error("Failed to create KB:", error);
-    return NextResponse.json({ error: error.message || 'Failed to create' }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ success: true, kb: newKb[0] });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Create Knowledge Base Route');
   }
 }

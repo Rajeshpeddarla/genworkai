@@ -6,6 +6,8 @@ import * as xlsx from 'xlsx';
 import { db } from '../../../db';
 import { documents, documentChunks, knowledgeBases } from '../../../db/schema';
 import { chunkText, generateEmbedding } from '../../../lib/embeddings';
+import { validateUpload } from '../../../lib/security/file-upload';
+import { safeErrorResponse, ValidationError } from '../../../lib/errors';
 
 export async function POST(req: Request) {
   try {
@@ -17,6 +19,13 @@ export async function POST(req: Request) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // File Security Validation
+    const validation = validateUpload({ name: file.name, type: file.type, size: file.size }, buffer);
+    if (!validation.valid) {
+      throw new ValidationError(validation.error || 'Invalid file');
+    }
+
     const mimeType = file.type;
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     let extractedText: any = '';
@@ -147,6 +156,6 @@ Return only valid JSON. Do not include markdown formatting like \`\`\`json.`;
 
   } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to process file' }, { status: 500 });
+    return safeErrorResponse(error, 'File Upload Route');
   }
 }

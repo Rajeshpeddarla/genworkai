@@ -3,33 +3,35 @@ import { db } from '../../../db';
 import { automationTasks } from '../../../db/schema';
 import { inngest } from '../../../inngest/client';
 import { eq, desc } from 'drizzle-orm';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser } from '../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../lib/errors';
 
 export async function GET(req: Request) {
   try {
-    const tasks = await db.select().from(automationTasks).orderBy(desc(automationTasks.createdAt));
-    return NextResponse.json(tasks, { headers: corsHeaders });
-  } catch (error: any) {
-    console.error('Fetch tasks error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to fetch tasks' }, { status: 500, headers: corsHeaders });
+    const { user, error } = await requireUser();
+    if (error) return error;
+
+    const tasks = await db.select().from(automationTasks).where(eq(automationTasks.userId, user.id)).orderBy(desc(automationTasks.createdAt));
+    return NextResponse.json(tasks);
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Fetch Automation Tasks Route');
   }
 }
 
 export async function POST(req: Request) {
   try {
+    const { user, error } = await requireUser();
+    if (error) return error;
+
     const body = await req.json();
     const { name, description, category, templateId, sources, artifactTypes, executionMode, schedule, triggerEvent, goal } = body;
 
+    if (!name || !category) {
+      throw new ValidationError('Name and Category are required');
+    }
+
     const newTask = await db.insert(automationTasks).values({
+      userId: user.id,
       name,
       description,
       category,
@@ -53,9 +55,8 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, taskId }, { headers: corsHeaders });
-  } catch (error: any) {
-    console.error('Create task error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to create task' }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ success: true, taskId });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Create Automation Task Route');
   }
 }

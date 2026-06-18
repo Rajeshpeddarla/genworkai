@@ -2,7 +2,7 @@ import { Client } from 'pg';
 import mysql from 'mysql2/promise';
 import sql from 'mssql';
 import { MongoClient } from 'mongodb';
-import { validateSqlQuery } from './validation';
+import { validateSqlQuery, checkPayloadSize, STATEMENT_TIMEOUT_MS } from './validation';
 
 export interface DBConnectionConfig {
   engine: 'pg' | 'mysql' | 'mssql' | 'mongodb';
@@ -96,29 +96,46 @@ export class DatabaseService {
     }
 
     const validation = validateSqlQuery(query);
-    if (!validation.isValid) {
+    if (!validation.isValid || !validation.sanitizedSql) {
       throw new Error(`Query validation failed: ${validation.error}`);
     }
+
+    const safeQuery = validation.sanitizedSql;
+    let result: any;
 
     if (this.config.engine === 'pg') {
       const client = new Client(this.getPgConfig());
       await client.connect();
-      const res = await client.query(query);
+      // Set statement timeout for this session
+      await client.query(`SET statement_timeout = ${STATEMENT_TIMEOUT_MS}`);
+      const res = await client.query(safeQuery);
       await client.end();
-      return res.rows;
+      result = res.rows;
     } else if (this.config.engine === 'mysql') {
       const connection = await mysql.createConnection(this.getMysqlConfig());
-      const [rows] = await connection.query(query);
+      // MySQL timeout is set in config
+      const [rows] = await connection.query(safeQuery);
       await connection.end();
-      return rows;
+      result = rows;
     } else if (this.config.engine === 'mssql') {
       const pool = await sql.connect(this.getMssqlConfig());
-      const result = await pool.request().query(query);
+      const req = pool.request();
+      (req as any).timeout = STATEMENT_TIMEOUT_MS;
+      const res = await req.query(safeQuery);
       await pool.close();
-      return result.recordset;
+      result = res.recordset;
+    } else {
+      throw new Error('Unsupported engine');
     }
-    
-    throw new Error('Unsupported engine');
+
+    // Enforce 5MB payload limit
+    const payloadCheck = checkPayloadSize(result);
+    if (!payloadCheck.withinLimit) {
+      const mb = Math.round(payloadCheck.sizeBytes / (1024 * 1024));
+      throw new Error(`Query result too large (${mb}MB). Maximum allowed is 5MB.`);
+    }
+
+    return result;
   }
 
   private formatRelationalSchema(rows: any[]) {
@@ -132,32 +149,35 @@ export class DatabaseService {
   }
 
   private getPgConfig() {
+    // If the user explicitly provided a connection string with sslmode=require, we respect it.
+    // We no longer blindly set rejectUnauthorized: false which is a security risk.
     if (this.config.connectionString) {
       return { 
         connectionString: this.config.connectionString,
-        ssl: this.config.connectionString.includes('supabase') || this.config.connectionString.includes('neon') ? { rejectUnauthorized: false } : undefined
+        statement_timeout: STATEMENT_TIMEOUT_MS
       };
     }
     
-    const isCloud = this.config.host?.includes('supabase') || this.config.host?.includes('neon');
     return {
       host: this.config.host,
       port: this.config.port || 5432,
       database: this.config.database,
       user: this.config.username,
       password: this.config.password,
-      ssl: isCloud ? { rejectUnauthorized: false } : undefined,
+      statement_timeout: STATEMENT_TIMEOUT_MS,
+      ssl: process.env.PG_REQUIRE_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
     };
   }
 
   private getMysqlConfig() {
-    if (this.config.connectionString) return { uri: this.config.connectionString };
+    if (this.config.connectionString) return { uri: this.config.connectionString, connectTimeout: STATEMENT_TIMEOUT_MS };
     return {
       host: this.config.host,
       port: this.config.port || 3306,
       database: this.config.database,
       user: this.config.username,
       password: this.config.password,
+      connectTimeout: STATEMENT_TIMEOUT_MS,
     };
   }
 

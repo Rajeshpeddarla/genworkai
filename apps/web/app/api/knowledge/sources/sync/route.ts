@@ -3,14 +3,10 @@ import { db } from '../../../../../db';
 import { knowledgeSources } from '../../../../../db/schema';
 import { eq } from 'drizzle-orm';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+import { getCorsHeaders } from '../../../../../lib/security/cors';
 
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
+export async function OPTIONS(req: Request) {
+  return NextResponse.json({}, { headers: getCorsHeaders(req.headers.get('origin')) });
 }
 
 export async function POST(req: Request) {
@@ -18,7 +14,7 @@ export async function POST(req: Request) {
     const { sourceId } = await req.json();
 
     if (!sourceId) {
-      return NextResponse.json({ error: 'sourceId is required' }, { status: 400, headers: corsHeaders });
+      return NextResponse.json({ error: 'sourceId is required' }, { status: 400, headers: getCorsHeaders(req.headers.get('origin')) });
     }
 
     // 1. Fetch Source
@@ -26,7 +22,7 @@ export async function POST(req: Request) {
     const source = sources[0];
 
     if (!source) {
-      return NextResponse.json({ error: 'Source not found' }, { status: 404, headers: corsHeaders });
+      return NextResponse.json({ error: 'Source not found' }, { status: 404, headers: getCorsHeaders(req.headers.get('origin')) });
     }
 
     const host = req.headers.get('host');
@@ -51,12 +47,11 @@ export async function POST(req: Request) {
       targetEndpoint = `${baseUrl}/api`;
       payload.url = (source.configuration as any).url;
     } else if (source.type === 'database') {
-       // Requires connection string which is not stored in plaintext.
-       return NextResponse.json({ error: 'Auto-syncing databases requires secure vault integration for credentials (Not available in V1).' }, { status: 400, headers: corsHeaders });
+       return NextResponse.json({ error: 'Auto-syncing databases requires secure vault integration for credentials (Not available in V1).' }, { status: 400, headers: getCorsHeaders(req.headers.get('origin')) });
     } else if (source.type === 'folder') {
-       return NextResponse.json({ error: 'Folder sources must be manually re-uploaded to sync.' }, { status: 400, headers: corsHeaders });
+       return NextResponse.json({ error: 'Folder sources must be manually re-uploaded to sync.' }, { status: 400, headers: getCorsHeaders(req.headers.get('origin')) });
     } else {
-      return NextResponse.json({ error: `Unsupported source type for auto-sync: ${source.type}` }, { status: 400, headers: corsHeaders });
+      return NextResponse.json({ error: `Unsupported source type for auto-sync: ${source.type}` }, { status: 400, headers: getCorsHeaders(req.headers.get('origin')) });
     }
 
     // Fire and forget the sync request (or await it depending on needs)
@@ -71,15 +66,15 @@ export async function POST(req: Request) {
 
     if (!syncRes.ok) {
       const err = await syncRes.json();
-      return NextResponse.json({ error: `Sync failed: ${err.error || syncRes.statusText}` }, { status: syncRes.status, headers: corsHeaders });
+      return NextResponse.json({ error: `Sync failed: ${err.error || syncRes.statusText}` }, { status: syncRes.status, headers: getCorsHeaders(req.headers.get('origin')) });
     }
 
     const syncData = await syncRes.json();
 
-    return NextResponse.json({ success: true, message: 'Sync completed', data: syncData }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, message: 'Sync completed', data: syncData }, { headers: getCorsHeaders(req.headers.get('origin')) });
 
   } catch (error: any) {
     console.error('Sync Job error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to trigger sync' }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: error.message || 'Failed to trigger sync' }, { status: 500, headers: getCorsHeaders(req.headers.get('origin')) });
   }
 }

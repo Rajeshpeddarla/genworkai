@@ -1,15 +1,36 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import * as handlers from './handlers';
+import { McpSessionContext } from './sse-state';
 
-export function registerTools(server: McpServer) {
+export function registerTools(server: McpServer, context: McpSessionContext) {
+  
+  // Helper to validate KB ownership
+  const requireKb = (kbId: number | undefined) => {
+    if (kbId && !context.kbIds.includes(kbId)) {
+      throw new Error(`Unauthorized: Server is not bound to Knowledge Base ${kbId}`);
+    }
+  };
+
+  // Helper to validate permissions
+  const requirePermission = (level: string) => {
+    if (context.permissionLevel === 'read_only' && level !== 'read_only') {
+      throw new Error(`Unauthorized: Key has read-only permissions`);
+    }
+    if (context.permissionLevel === 'generate' && level === 'execute') {
+      throw new Error(`Unauthorized: Key does not have execute permissions`);
+    }
+  };
 
   // --- LAYER 0: SOURCES ---
   server.tool("list_sources", "List all available raw sources (GitHub, Folders, DBs)", 
     {
       kbId: z.number().describe("The Knowledge Base ID to filter sources by"),
     },
-    async (args, extra) => await handlers.listSources(args.kbId, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      return await handlers.listSources(args.kbId, extra);
+    }
   );
 
   server.tool("get_source", "Retrieve details about a specific source", 
@@ -23,14 +44,20 @@ export function registerTools(server: McpServer) {
     {
       sourceId: z.number().describe("The specific Source ID"),
     },
-    async (args, extra) => await handlers.refreshSource(args.sourceId, extra)
+    async (args, extra) => {
+      requirePermission('execute');
+      return await handlers.refreshSource(args.sourceId, extra);
+    }
   );
 
 
   // --- LAYER 1: KNOWLEDGE ---
   server.tool("list_knowledge_bases", "List all available Knowledge Bases", 
     {},
-    async (args, extra) => await handlers.listKnowledgeBases(extra)
+    async (args, extra) => {
+      // Pass the allowed KB IDs to filter the results
+      return await handlers.listKnowledgeBases(context.kbIds, extra);
+    }
   );
 
   server.tool("search_knowledge", "Search documents and chunks across knowledge bases", 
@@ -38,14 +65,21 @@ export function registerTools(server: McpServer) {
       query: z.string().describe("The semantic search query"),
       kbId: z.number().optional().describe("Optional Knowledge Base ID to filter by"),
     },
-    async (args, extra) => await handlers.searchKnowledge(args.query, args.kbId, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      // Pass allowed KBs if no specific kbId is provided
+      return await handlers.searchKnowledge(args.query, args.kbId, context.kbIds, extra);
+    }
   );
 
   server.tool("get_architecture_view", "Retrieve the architectural tree (L1-L5)", 
     {
       kbId: z.number().describe("The Knowledge Base ID"),
     },
-    async (args, extra) => await handlers.getArchitectureView(args.kbId, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      return await handlers.getArchitectureView(args.kbId, extra);
+    }
   );
 
   // --- LAYER 2: FEATURES & FLOWS ---
@@ -53,7 +87,10 @@ export function registerTools(server: McpServer) {
     {
       kbId: z.number().describe("The Knowledge Base ID"),
     },
-    async (args, extra) => await handlers.listFeatures(args.kbId, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      return await handlers.listFeatures(args.kbId, extra);
+    }
   );
 
   server.tool("get_feature", "Get detailed feature information, including associated flows and artifacts", 
@@ -67,7 +104,10 @@ export function registerTools(server: McpServer) {
     {
       kbId: z.number().describe("The Knowledge Base ID"),
     },
-    async (args, extra) => await handlers.listFlows(args.kbId, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      return await handlers.listFlows(args.kbId, extra);
+    }
   );
 
   server.tool("get_flow", "Get detailed steps for a business flow", 
@@ -87,7 +127,11 @@ export function registerTools(server: McpServer) {
         description: z.string()
       }))
     },
-    async (args, extra) => await handlers.createFlow(args, extra)
+    async (args, extra) => {
+      requireKb(args.kbId);
+      requirePermission('generate');
+      return await handlers.createFlow(args, extra);
+    }
   );
 
   // --- LAYER 3: ARTIFACT GENERATION ---
@@ -95,21 +139,30 @@ export function registerTools(server: McpServer) {
     {
       featureIds: z.array(z.number()).describe("List of feature IDs to include"),
     },
-    async (args, extra) => await handlers.generateArtifactTemplate("architecture", args.featureIds, extra)
+    async (args, extra) => {
+      requirePermission('generate');
+      return await handlers.generateArtifactTemplate("architecture", args.featureIds, extra);
+    }
   );
 
   server.tool("generate_api_docs", "Generate API documentation based on features", 
     {
       featureIds: z.array(z.number()).describe("List of feature IDs to include"),
     },
-    async (args, extra) => await handlers.generateArtifactTemplate("api", args.featureIds, extra)
+    async (args, extra) => {
+      requirePermission('generate');
+      return await handlers.generateArtifactTemplate("api", args.featureIds, extra);
+    }
   );
 
   server.tool("generate_postman_collection", "Generate a Postman collection for the features", 
     {
       featureIds: z.array(z.number()).describe("List of feature IDs to include"),
     },
-    async (args, extra) => await handlers.generateArtifactTemplate("postman", args.featureIds, extra)
+    async (args, extra) => {
+      requirePermission('generate');
+      return await handlers.generateArtifactTemplate("postman", args.featureIds, extra);
+    }
   );
 
   server.tool("generate_test_plan", "Generate a QA Test Plan for specific features and flows", 
@@ -117,7 +170,10 @@ export function registerTools(server: McpServer) {
       featureIds: z.array(z.number()).describe("List of feature IDs"),
       flowIds: z.array(z.number()).describe("List of flow IDs"),
     },
-    async (args, extra) => await handlers.generateArtifactTemplate("test_plan", [...args.featureIds, ...args.flowIds], extra)
+    async (args, extra) => {
+      requirePermission('generate');
+      return await handlers.generateArtifactTemplate("test_plan", [...args.featureIds, ...args.flowIds], extra);
+    }
   );
 
   // --- LAYER 4: WORKSPACE OPERATIONS ---
@@ -140,7 +196,11 @@ export function registerTools(server: McpServer) {
     {
       databaseId: z.number().describe("The connected database ID"),
     },
-    async (args, extra) => await handlers.getDatabaseSchema(args.databaseId, extra)
+    async (args, extra) => {
+      // Database access requires 'read_only' or higher, but we verify it's connected to an allowed KB in the handler.
+      // We pass the context to handlers.getDatabaseSchema.
+      return await handlers.getDatabaseSchema(args.databaseId, context.kbIds, extra);
+    }
   );
 
   server.tool("query_database", "Execute a read-only SQL query against a database", 
@@ -148,7 +208,10 @@ export function registerTools(server: McpServer) {
       databaseId: z.number().describe("The connected database ID"),
       query: z.string().describe("The SQL query (SELECT only)"),
     },
-    async (args, extra) => await handlers.queryDatabase(args.databaseId, args.query, extra)
+    async (args, extra) => {
+      // Pass the context to handlers.queryDatabase to verify ownership
+      return await handlers.queryDatabase(args.databaseId, args.query, context.kbIds, extra);
+    }
   );
 
   // --- LAYER 6: AUTOMATION STUDIO ---
@@ -159,13 +222,19 @@ export function registerTools(server: McpServer) {
       sourceId: z.number().optional(),
       schedule: z.string().optional()
     },
-    async (args, extra) => await handlers.createAutomationTask(args, extra)
+    async (args, extra) => {
+      requirePermission('execute');
+      return await handlers.createAutomationTask(args, extra);
+    }
   );
 
   server.tool("run_task", "Manually trigger an automation task", 
     {
       taskId: z.number()
     },
-    async (args, extra) => await handlers.triggerAutomationTask(args.taskId, extra)
+    async (args, extra) => {
+      requirePermission('execute');
+      return await handlers.triggerAutomationTask(args.taskId, extra);
+    }
   );
 }

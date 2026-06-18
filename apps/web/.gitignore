@@ -9,6 +9,9 @@
 # testing
 /coverage
 
+# Python Runtime
+/Python/
+
 # next.js
 /.next/
 /out/
@@ -34,3 +37,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# security: dangerous scripts with credentials
+test-supabase.cjs
+drop-tables.cjs
+run-migration.cjs
+test-db.js
+test-db.ts
+fix.js
+
+# committed runtime (use build-time install)
+Python/

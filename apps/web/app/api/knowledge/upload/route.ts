@@ -3,19 +3,15 @@ import { db } from '../../../../db';
 import { documents, documentChunks, knowledgeSources } from '../../../../db/schema';
 import { generateEmbedding } from '../../../../lib/embeddings';
 import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../lib/knowledge-pipeline';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser, requireOwnership } from '../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
+import { checkContextLimit } from '../../../../lib/limits';
 
 export async function POST(req: Request) {
   try {
+    const { user, error } = await requireUser();
+    if (error) return error;
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const kbIdStr = formData.get('kbId') as string | null;
@@ -25,42 +21,22 @@ export async function POST(req: Request) {
     const skipEnhance = url.searchParams.get('skipEnhance') === 'true';
 
     if (!file || !kbIdStr) {
-      return NextResponse.json({ error: 'File and kbId are required' }, { status: 400, headers: corsHeaders });
+      throw new ValidationError('File and kbId are required');
     }
 
     const kbId = parseInt(kbIdStr, 10);
+
+    const ownershipError = await requireOwnership('knowledge_base', kbId, user.id);
+    if (ownershipError) return ownershipError;
+
     let sourceId = sourceIdStr ? parseInt(sourceIdStr, 10) : null;
     const buffer = Buffer.from(await file.arrayBuffer());
     const mimeType = file.type;
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
 
-    const { cookies } = require('next/headers');
-    const { createServerClient } = require('@supabase/ssr');
-    const { checkContextLimit } = require('../../../../lib/limits');
-
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
-    }
-
     const contextLimit = await checkContextLimit(user.id);
     if (!contextLimit.allowed || contextLimit.current + buffer.length > contextLimit.limit) {
-      return NextResponse.json(
-        { error: `Context limit reached. You can only upload up to ${(contextLimit.limit / 1000000).toFixed(1)}MB of data on the free plan.` }, 
-        { status: 403, headers: corsHeaders }
-      );
+      throw new Error(`Context limit reached. You can only upload up to ${(contextLimit.limit / 1000000).toFixed(1)}MB of data on the free plan.`);
     }
 
     // If no sourceId is provided, create a default "Files" source for this KB
@@ -84,7 +60,7 @@ export async function POST(req: Request) {
     const extractedText = await extractTextFromBuffer(buffer, mimeType, file.name);
     
     if (!extractedText || extractedText.length < 10) {
-      return NextResponse.json({ error: "Not enough text could be extracted." }, { status: 400, headers: corsHeaders });
+      throw new ValidationError("Not enough text could be extracted.");
     }
 
     // Pipeline Step 2: Cleaning
@@ -174,10 +150,9 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, document: newDoc[0] }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, document: newDoc[0] });
 
-  } catch (error: any) {
-    console.error('KB Upload error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to process file' }, { status: 500, headers: corsHeaders });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'KB Document Upload Route');
   }
 }

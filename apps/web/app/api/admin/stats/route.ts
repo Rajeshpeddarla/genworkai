@@ -2,25 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { profiles, knowledgeBases, workspaceArtifacts, documents } from '@/db/schema';
 import { count, eq, sum } from 'drizzle-orm';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { requireUser } from '@/lib/auth';
+import { safeErrorResponse } from '@/lib/errors';
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
     if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -49,8 +37,7 @@ export async function GET(req: Request) {
         free: freeUsers[0]?.value ?? 0
       }
     });
-  } catch (error: any) {
-    console.error("Admin stats error:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Admin Stats GET Route');
   }
 }

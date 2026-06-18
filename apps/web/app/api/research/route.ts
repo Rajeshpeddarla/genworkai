@@ -1,13 +1,30 @@
 import { NextResponse } from 'next/server';
 import { chromium } from 'playwright';
 import * as cheerio from 'cheerio';
+import { requireUser } from '../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../lib/errors';
+import { validateUrl } from '../../../lib/security/url-validator';
+import { RateLimitService } from '../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    // 1. Authentication & Rate Limiting
+    const { user, error } = await requireUser();
+    if (error) return error;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { url } = await req.json();
 
     if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+      throw new ValidationError('URL is required');
+    }
+
+    // 2. SSRF Validation
+    const ssrfError = await validateUrl(url);
+    if (ssrfError) {
+      throw new ValidationError(`Invalid or unsafe URL: ${ssrfError}`);
     }
 
     const browser = await chromium.launch({ headless: true });
@@ -107,8 +124,7 @@ Return only valid JSON. Do not include markdown formatting like \`\`\`json.`;
       opportunities: parsedData.opportunities || ["No opportunities available."]
     });
 
-  } catch (error: any) {
-    console.error('Scraping error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to scrape URL' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Research Route');
   }
 }

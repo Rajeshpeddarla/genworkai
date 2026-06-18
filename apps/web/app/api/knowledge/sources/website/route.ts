@@ -5,34 +5,47 @@ import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots 
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { enhanceTextWithAI, smartChunkMarkdown } from '../../../../../lib/knowledge-pipeline';
 import { eq, and } from 'drizzle-orm';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../../lib/errors';
+import { validateUrl } from '../../../../../lib/security/url-validator';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    // 1. Authentication & Rate Limiting
+    const { user, error } = await requireUser();
+    if (error) return error;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'upload');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { url, kbId } = await req.json();
 
     if (!url || !kbId) {
-      return NextResponse.json({ error: 'URL and kbId are required' }, { status: 400, headers: corsHeaders });
+      throw new ValidationError('URL and kbId are required');
     }
 
-    // 1. Fetch Website Content
+    const targetKbId = parseInt(kbId, 10);
+
+    // 2. Ownership Verification
+    const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
+    if (ownershipError) return ownershipError;
+
+    // 3. SSRF Validation
+    const ssrfError = await validateUrl(url);
+    if (ssrfError) {
+      throw new ValidationError(`Invalid or unsafe URL: ${ssrfError}`);
+    }
+
+    // 4. Fetch Website Content
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'GenWorkAI-Knowledge-Bot'
+        'User-Agent': 'GenWorkAI-Knowledge-Bot/1.0 (+https://genworkai.com/bot)'
       }
     });
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Failed to fetch website: ${response.statusText}` }, { status: response.status, headers: corsHeaders });
+      throw new ValidationError(`Failed to fetch website: ${response.statusText} (${response.status})`);
     }
 
     const html = await response.text();
@@ -46,7 +59,7 @@ export async function POST(req: Request) {
     extractedText = extractedText.replace(/\s+/g, ' ').trim();
 
     if (extractedText.length < 50) {
-      return NextResponse.json({ error: 'Not enough readable content found on the page' }, { status: 400, headers: corsHeaders });
+      throw new ValidationError('Not enough readable content found on the page');
     }
 
     // 2. Create or Update Source
@@ -67,7 +80,7 @@ export async function POST(req: Request) {
       // For V1, we just update the first one or create new.
       sourceId = existingSource.id;
       if (existingSource.latestHash === pageHash) {
-        return NextResponse.json({ message: 'No new content since last sync', sourceId }, { headers: corsHeaders });
+        return NextResponse.json({ message: 'No new content since last sync', sourceId });
       }
       await db.execute(
         require('drizzle-orm').sql`UPDATE knowledge_sources SET sync_status = 'syncing' WHERE id = ${sourceId}`
@@ -168,10 +181,9 @@ export async function POST(req: Request) {
       WHERE id = ${syncJob[0]!.id}`
     );
 
-    return NextResponse.json({ success: true, sourceId, title }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, sourceId, title });
 
-  } catch (error: any) {
-    console.error('Website Import error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to scrape website' }, { status: 500, headers: corsHeaders });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Website Import Route');
   }
 }

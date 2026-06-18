@@ -4,35 +4,48 @@ import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots 
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
 import { eq, and } from 'drizzle-orm';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../../lib/errors';
+import { validateUrl } from '../../../../../lib/security/url-validator';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    // 1. Authentication & Rate Limiting
+    const { user, error } = await requireUser();
+    if (error) return error;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'upload');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { url, kbId } = await req.json();
 
     if (!url || !kbId) {
-      return NextResponse.json({ error: 'OpenAPI URL and kbId are required' }, { status: 400, headers: corsHeaders });
+      throw new ValidationError('OpenAPI URL and kbId are required');
     }
 
-    // 1. Fetch OpenAPI Spec
+    const targetKbId = parseInt(kbId, 10);
+
+    // 2. Ownership Verification
+    const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
+    if (ownershipError) return ownershipError;
+
+    // 3. SSRF Validation
+    const ssrfError = await validateUrl(url);
+    if (ssrfError) {
+      throw new ValidationError(`Invalid or unsafe URL: ${ssrfError}`);
+    }
+
+    // 4. Fetch OpenAPI Spec
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json, application/yaml, text/yaml, text/plain',
-        'User-Agent': 'GenWorkAI-Knowledge-Bot'
+        'User-Agent': 'GenWorkAI-Knowledge-Bot/1.0 (+https://genworkai.com/bot)'
       }
     });
 
     if (!response.ok) {
-      return NextResponse.json({ error: `Failed to fetch API spec: ${response.statusText}` }, { status: response.status, headers: corsHeaders });
+      throw new ValidationError(`Failed to fetch API spec: ${response.statusText} (${response.status})`);
     }
 
     const specText = await response.text();
@@ -60,7 +73,7 @@ export async function POST(req: Request) {
     if (existingSource) {
       sourceId = existingSource.id;
       if (existingSource.latestHash === specHash) {
-        return NextResponse.json({ message: 'No new API changes since last sync', sourceId }, { headers: corsHeaders });
+        return NextResponse.json({ message: 'No new API changes since last sync', sourceId });
       }
       await db.execute(
         require('drizzle-orm').sql`UPDATE knowledge_sources SET sync_status = 'syncing' WHERE id = ${sourceId}`
@@ -163,10 +176,9 @@ export async function POST(req: Request) {
       WHERE id = ${syncJob[0]!.id}`
     );
 
-    return NextResponse.json({ success: true, sourceId }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, sourceId });
 
-  } catch (error: any) {
-    console.error('API Spec Import error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to import API spec' }, { status: 500, headers: corsHeaders });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'API Spec Import Route');
   }
 }

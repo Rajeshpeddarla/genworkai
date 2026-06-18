@@ -29,14 +29,17 @@ export async function refreshSource(sourceId: number, extra: any) {
   return getResponse(`Source ${sourceId} sync queued successfully.`);
 }
 
-export async function listKnowledgeBases(extra: any) {
-  const { data, error } = await supabase.from('knowledge_bases').select('*');
+export async function listKnowledgeBases(allowedKbIds: number[], extra: any) {
+  if (allowedKbIds.length === 0) return getResponse('[]');
+  const { data, error } = await supabase.from('knowledge_bases').select('*').in('id', allowedKbIds);
   if (error) return getResponse(`Error: ${error.message}`);
   return getResponse(JSON.stringify(data, null, 2));
 }
 
-export async function searchKnowledge(query: string, kbId: number | undefined, extra: any) {
-  return getResponse(`Semantic search results for "${query}"...`);
+export async function searchKnowledge(query: string, kbId: number | undefined, allowedKbIds: number[], extra: any) {
+  if (kbId && !allowedKbIds.includes(kbId)) return getResponse(`Error: Unauthorized KB`);
+  const targetKbs = kbId ? [kbId] : allowedKbIds;
+  return getResponse(`Semantic search results for "${query}" in KBs [${targetKbs.join(',')}]...`);
 }
 
 export async function getArchitectureView(kbId: number, extra: any) {
@@ -98,16 +101,22 @@ export async function getArtifact(artifactId: number, extra: any) {
 }
 
 // --- DATABASE INTELLIGENCE ---
-export async function getDatabaseSchema(databaseId: number, extra: any) {
+export async function getDatabaseSchema(databaseId: number, allowedKbIds: number[], extra: any) {
+  // First verify the database belongs to an allowed KB
+  const { data: dbConfig } = await supabase.from('connected_databases').select('kb_id').eq('id', databaseId).single();
+  if (!dbConfig || !allowedKbIds.includes(dbConfig.kb_id)) {
+    return getResponse(`Error: Unauthorized or database not found`);
+  }
+
   const { data, error } = await supabase.from('database_schemas').select('*').eq('database_id', databaseId).single();
   if (error) return getResponse(`Error: ${error.message}`);
   return getResponse(JSON.stringify(data?.schema_data || {}, null, 2));
 }
 
-export async function queryDatabase(databaseId: number, query: string, extra: any) {
+export async function queryDatabase(databaseId: number, query: string, allowedKbIds: number[], extra: any) {
   const { data: dbConfig, error } = await supabase.from('connected_databases').select('*').eq('id', databaseId).single();
   if (error) return getResponse(`Error fetching database config: ${error.message}`);
-  if (!dbConfig) return getResponse(`Error: Database ${databaseId} not found`);
+  if (!dbConfig || !allowedKbIds.includes(dbConfig.kb_id)) return getResponse(`Error: Database ${databaseId} not found or unauthorized`);
 
   try {
     const service = new DatabaseService({

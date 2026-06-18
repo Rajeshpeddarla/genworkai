@@ -2,26 +2,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { systemConfig, profiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { requireUser } from '@/lib/auth';
+import { safeErrorResponse } from '@/lib/errors';
 import { getSystemLimits, getReferralRewards } from '@/lib/limits';
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
     if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -30,27 +18,15 @@ export async function GET(req: Request) {
     const referralRewards = await getReferralRewards();
 
     return NextResponse.json({ limits, referralRewards });
-  } catch (error: any) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Admin Config GET Route');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
     if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -67,8 +43,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Config save error:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Admin Config POST Route');
   }
 }

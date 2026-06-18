@@ -4,8 +4,15 @@ const { Pool } = pkg;
 
 import * as schema from './schema';
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://postgres:password@localhost:5432/genworkai',
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
 
 export const db = drizzle(pool, { schema });

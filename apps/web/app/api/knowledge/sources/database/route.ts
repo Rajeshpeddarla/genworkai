@@ -4,43 +4,33 @@ import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots,
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
 import { DatabaseService, DBConnectionConfig } from '../../../../../lib/database/DatabaseService';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../../lib/errors';
+import { encryptSecret } from '../../../../../lib/security/encryption';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    // 1. Authentication & Rate Limiting
+    const { user, error } = await requireUser();
+    if (error) return error;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'database');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await req.json();
     const { connectionString, host, port, database, databaseName, username, password, engine = 'pg', kbId } = body;
     
-    const finalDatabaseName = databaseName || database;
-
-    let targetKbId = kbId ? parseInt(kbId, 10) : 1;
-    
-    // Ensure a valid KB exists to avoid foreign key constraint violations
-    const { knowledgeBases } = require('../../../../../db/schema');
-    const { eq } = require('drizzle-orm');
-    const existingKb = await db.select().from(knowledgeBases).where(eq(knowledgeBases.id, targetKbId));
-    
-    if (existingKb.length === 0) {
-      const fallbackKbs = await db.select().from(knowledgeBases).limit(1);
-      if (fallbackKbs.length === 0) {
-        const newKb = await db.insert(knowledgeBases).values({
-          name: 'Default MVP Knowledge Base',
-          description: 'Auto-created for Database Intelligence MVP'
-        }).returning();
-        targetKbId = (newKb as any)[0].id;
-      } else {
-        targetKbId = (fallbackKbs as any)[0].id;
-      }
+    if (!kbId) {
+      throw new ValidationError('Knowledge Base ID (kbId) is required');
     }
+
+    const finalDatabaseName = databaseName || database;
+    const targetKbId = parseInt(kbId, 10);
+    
+    // 2. Ownership Verification
+    const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
+    if (ownershipError) return ownershipError;
 
     const config: DBConnectionConfig = {
       engine, connectionString, host, port, database: finalDatabaseName, username, password
@@ -50,16 +40,20 @@ export async function POST(req: Request) {
     const isConnected = await dbService.testConnection();
 
     if (!isConnected) {
-      return NextResponse.json({ error: 'Failed to connect to the database. Check credentials.' }, { status: 400, headers: corsHeaders });
+      throw new ValidationError('Failed to connect to the database. Check credentials.');
     }
+
+    // Encrypt sensitive credentials before storing
+    const encryptedConnectionString = connectionString ? encryptSecret(connectionString) : null;
+    const encryptedPassword = password ? encryptSecret(password) : null;
 
     // 1. Create Connected Database Record
     const newDb = await db.insert(connectedDatabases).values({
       kbId: targetKbId,
       name: `Database: ${finalDatabaseName || 'Custom'}`,
       engine,
-      connectionString, // In MVP, storing directly (needs KMS for prod)
-      host, port, databaseName: finalDatabaseName, username, password,
+      connectionString: encryptedConnectionString,
+      host, port, databaseName: finalDatabaseName, username, password: encryptedPassword,
       accessMode: 'read_only'
     }).returning();
     const connectedDbId = newDb[0]!.id;
@@ -187,11 +181,10 @@ export async function POST(req: Request) {
       WHERE id = ${syncJob[0]!.id}`
     );
 
-    return NextResponse.json({ success: true, sourceId, connectedDbId }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, sourceId, connectedDbId });
 
-  } catch (error: any) {
-    console.error('Database Import error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to import Database schema' }, { status: 500, headers: corsHeaders });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Database Source Route');
   }
 }
 

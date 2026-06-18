@@ -3,17 +3,28 @@ import { db } from '../../../../db';
 import { documentChunks, documents } from '../../../../db/schema';
 import { generateEmbedding } from '../../../../lib/embeddings';
 import { cosineDistance, desc, eq } from 'drizzle-orm';
+import { requireUser, requireOwnership } from '../../../../lib/auth';
+import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
 
 export async function POST(req: Request) {
   try {
+    const { user, error } = await requireUser();
+    if (error) return error;
     const { query, kbId } = await req.json();
 
     if (!query) {
-      return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+      throw new ValidationError('Query is required');
     }
 
+    if (!kbId) {
+      throw new ValidationError('Knowledge Base ID is required');
+    }
+
+    const ownershipError = await requireOwnership('knowledge_base', parseInt(kbId, 10), user.id);
+    if (ownershipError) return ownershipError;
+
     if (!process.env.DATABASE_URL) {
-      return NextResponse.json({ error: 'Database is not configured. Please set DATABASE_URL.' }, { status: 500 });
+      throw new Error('Database is not configured. Please set DATABASE_URL.');
     }
 
     // 1. Generate embedding for the search query
@@ -39,8 +50,7 @@ export async function POST(req: Request) {
       .limit(5);
 
     return NextResponse.json({ results });
-  } catch (error: any) {
-    console.error('Knowledge Search error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to perform search' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Knowledge Search Route');
   }
 }

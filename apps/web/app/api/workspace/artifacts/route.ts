@@ -1,29 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { workspaceArtifacts, workspaceArtifactVersions, workspaceChats } from '../../../../db/schema';
-import { desc, eq, sql } from 'drizzle-orm';
-
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { desc, eq } from 'drizzle-orm';
+import { requireUser } from '../../../../lib/auth';
+import { safeErrorResponse } from '../../../../lib/errors';
 
 export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     // Fetch artifacts belonging to chats owned by the user
     const artifacts = await db.select({
@@ -66,8 +51,7 @@ export async function GET(req: Request) {
     }));
 
     return NextResponse.json({ success: true, artifacts: formattedArtifacts });
-  } catch (error: any) {
-    console.error("Failed to fetch artifacts:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Get Workspace Artifacts Route');
   }
 }

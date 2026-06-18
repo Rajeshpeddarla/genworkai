@@ -203,6 +203,7 @@ export const mcpApiKeys = pgTable('mcp_api_keys', {
   name: varchar('name', { length: 255 }).notNull(),
   permissionLevel: varchar('permission_level', { length: 50 }).default('read_only'), // 'read_only' | 'generate' | 'execute'
   createdAt: timestamp('created_at').defaultNow(),
+  expiresAt: timestamp('expires_at'),
   lastUsedAt: timestamp('last_used_at'),
 });
 
@@ -270,4 +271,16 @@ export const automationLogs = pgTable('automation_logs', {
   sourceSnapshot: jsonb('source_snapshot'), // Track exact state of the source at execution
   startedAt: timestamp('started_at').defaultNow(),
   finishedAt: timestamp('finished_at'),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 100 }).notNull(),
+  resourceType: varchar('resource_type', { length: 50 }),
+  resourceId: integer('resource_id'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
 });

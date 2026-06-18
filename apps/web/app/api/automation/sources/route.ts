@@ -2,37 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { knowledgeBases, connectedDatabases, knowledgeSources } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { requireUser } from '../../../../lib/auth';
+import { safeErrorResponse } from '../../../../lib/errors';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
-    }
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     // Fetch all KBs
     const kbs = await db.select().from(knowledgeBases).where(eq(knowledgeBases.userId, user.id));
@@ -62,9 +38,8 @@ export async function GET() {
       ...sources.map(s => ({ id: `src_${s.id}`, type: s.type, name: s.name, kbId: s.kbId, internalId: s.id }))
     ];
 
-    return NextResponse.json({ sources: availableSources }, { headers: corsHeaders });
-  } catch (error: any) {
-    console.error('Fetch sources error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to fetch sources' }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ sources: availableSources });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Fetch Automation Sources Route');
   }
 }

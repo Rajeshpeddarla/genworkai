@@ -1,26 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { requireUser } from '@/lib/auth';
+import { safeErrorResponse } from '@/lib/errors';
 import { getUserProfile, checkKnowledgeBaseLimit, checkFlowLimit, checkArtifactLimit, checkContextLimit } from '@/lib/limits';
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
-    );
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     let profile = await getUserProfile(user.id);
 
@@ -30,7 +16,7 @@ export async function GET() {
       const { profiles } = await import('@/db/schema');
       
       const emailName = user.email ? user.email.split('@')[0] : 'User';
-      const fullName = user.user_metadata?.full_name || emailName;
+      const fullName = (user as any).user_metadata?.full_name || emailName;
       
       // Generate a unique referral code
       const referralCode = `${fullName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 5)}${Math.floor(Math.random() * 1000)}`;
@@ -78,8 +64,7 @@ export async function GET() {
         context: contextLimit
       }
     });
-  } catch (error: any) {
-    console.error("Profile fetch error:", error);
-    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+  } catch (error: unknown) {
+    return safeErrorResponse(error, 'Get Profile Route');
   }
 }

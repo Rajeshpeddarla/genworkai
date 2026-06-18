@@ -4,7 +4,14 @@ config({ path: 'c:/Users/varun/.gemini/antigravity-ide/scratch/genworkai/apps/we
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 async function main() {
-  const { mcpServer } = await import('../lib/mcp/server.js');
+  const { createSessionServer } = await import('../lib/mcp/sse-state.js');
+  // Create a dummy admin session context for local stdio testing
+  const mcpServer = createSessionServer({
+    serverId: 0,
+    userId: 'local-test',
+    kbIds: [],
+    permissionLevel: 'execute'
+  });
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
   console.error("GenWorkAI MCP Server running natively on stdio");
