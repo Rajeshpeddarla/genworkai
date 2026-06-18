@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { workspaceChats, workspaceMessages, workspaceArtifacts, workspaceArtifactVersions } from '../../../../../../db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
-import { generateWithFallbacks } from '@repo/ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { streamText } from 'ai';
 
 export async function POST(req: Request, { params }: { params: Promise<{ chatId: string }> }) {
   try {
@@ -42,8 +43,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ chatId:
 
     // If there is a KB, perform search
     if (chat.kbId) {
-       // Search the knowledge base internally
-       // To keep it simple, we'll fetch from the local search API route
        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
        const searchRes = await fetch(`${baseUrl}/api/knowledge/search`, {
          method: 'POST',
@@ -73,9 +72,6 @@ ${r.content}`;
        }
     }
 
-    // Call LLM
-    const isDocRequest = content.toLowerCase().includes("pdf") || content.toLowerCase().includes("ppt") || content.toLowerCase().includes("docx") || content.toLowerCase().includes("excel");
-    
     let systemPrompt = `You are an intelligent AI assistant in a professional workspace acting as an operating system for generated assets. 
 If the user asks you to create, generate, or modify a document, file, developer asset, or presentation, you MUST output a structured JSON block containing the artifacts.
 Enclose the artifacts in a \`\`\`json block with the following schema:
@@ -98,103 +94,118 @@ You may also include normal conversational text outside the JSON block. Do not u
     }
 
     const apiKey = process.env.CKEY_API_KEY;
-    let assistantContent = "";
-    let savedArtifactIds: number[] = [];
-
     if (!apiKey) {
-       await new Promise(r => setTimeout(r, 1500));
-       assistantContent = `I am a simulated AI. Set CKEY_API_KEY to generate real documents.`;
-    } else {
-       const llmMessages: {role: "system"|"user"|"assistant", content: string}[] = [
-          { role: "system", content: systemPrompt }
-       ];
-       
-       for (const msg of previousMessages) {
-          llmMessages.push({ role: msg.role as "user"|"assistant", content: msg.content });
-       }
-
-       const result = await generateWithFallbacks({
-          messages: llmMessages,
-          agentRole: "reasoning",
-       }, apiKey, process.env.CKEY_API_URL);
-
-       assistantContent = result.content;
-       
-       // Parse artifacts from assistantContent
-       let parsedArtifacts: any[] = [];
-       const jsonBlockMatch = assistantContent.match(/```json\n([\s\S]*?)\n```/);
-       if (jsonBlockMatch && jsonBlockMatch[1]) {
-         try {
-           const parsed = JSON.parse(jsonBlockMatch[1]);
-           if (parsed.artifacts && Array.isArray(parsed.artifacts)) {
-             parsedArtifacts = parsed.artifacts;
-           }
-         } catch(e) {
-           console.error("Failed to parse LLM JSON artifacts:", e);
-         }
-       }
-
-       // Save Artifacts to DB
-       for (const art of parsedArtifacts) {
-          if (art.isNew || !art.existingArtifactId) {
-             const newArt = await db.insert(workspaceArtifacts).values({
-                chatId,
-                name: art.name || 'Untitled Document',
-                fileType: art.fileType || 'txt',
-                category: art.category || 'Document',
-                status: 'final'
-             }).returning();
-             
-             if (newArt && newArt.length > 0 && newArt[0]) {
-               await db.insert(workspaceArtifactVersions).values({
-                  artifactId: newArt[0].id,
-                  versionNumber: 1,
-                  content: art.content || ''
-               });
-               savedArtifactIds.push(newArt[0].id);
-             }
-          } else {
-             const existing = await db.select().from(workspaceArtifacts).where(eq(workspaceArtifacts.id, art.existingArtifactId));
-             if (existing && existing.length > 0 && existing[0]) {
-                const existingArt = existing[0];
-                const maxV = await db.execute(sql`SELECT COALESCE(MAX(version_number), 0) as max_v FROM workspace_artifact_versions WHERE artifact_id = ${existingArt.id}`);
-                let nextVersion = 1;
-                if (maxV && maxV.rows && maxV.rows.length > 0 && maxV.rows[0]) {
-                  nextVersion = (maxV.rows[0].max_v as number) + 1;
-                }
-                
-                await db.insert(workspaceArtifactVersions).values({
-                   artifactId: existingArt.id,
-                   versionNumber: nextVersion,
-                   content: art.content || ''
-                });
-                await db.update(workspaceArtifacts).set({ updatedAt: new Date() }).where(eq(workspaceArtifacts.id, existingArt.id));
-                savedArtifactIds.push(existingArt.id);
-             }
-          }
-       }
+      // Provide a mock stream response for local testing if no key is present
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode("I am a simulated AI. Set CKEY_API_KEY to generate real documents."));
+          controller.close();
+        }
+      });
+      return new Response(stream, { headers: { "Content-Type": "text/plain" } });
     }
 
-    // Save Assistant Message
-    const assistantMessage = await db.insert(workspaceMessages).values({
-      chatId,
-      role: 'assistant',
-      content: assistantContent,
-    }).returning();
-
-    await db.update(workspaceChats)
-      .set({ updatedAt: new Date() })
-      .where(eq(workspaceChats.id, chatId));
-
-    return NextResponse.json({ 
-      success: true, 
-      userMessage: userMessage[0], 
-      assistantMessage: assistantMessage[0],
-      savedArtifactIds,
-      contextUsed: !!contextText
+    const ckey = createOpenAI({
+      apiKey,
+      baseURL: process.env.CKEY_API_URL || "https://ckey.vn/v1",
     });
+
+    const llmMessages: {role: "system"|"user"|"assistant", content: string}[] = [
+      { role: "system", content: systemPrompt }
+    ];
+    
+    // Add history (excluding the current user message because we already inserted it)
+    for (const msg of previousMessages) {
+      if (msg.id !== userMessage?.[0]?.id) {
+         llmMessages.push({ role: msg.role as "user"|"assistant", content: msg.content });
+      }
+    }
+    // Add current user message
+    llmMessages.push({ role: "user", content });
+
+    const result = streamText({
+      model: ckey('deepseek-v4-flash'),
+      messages: llmMessages,
+      async onFinish({ text }) {
+        try {
+          // Parse artifacts from assistantContent
+          let parsedArtifacts: any[] = [];
+          const jsonBlockMatch = text.match(/```json\n([\s\S]*?)\n```/);
+          if (jsonBlockMatch && jsonBlockMatch[1]) {
+            try {
+              const parsed = JSON.parse(jsonBlockMatch[1]);
+              if (parsed.artifacts && Array.isArray(parsed.artifacts)) {
+                parsedArtifacts = parsed.artifacts;
+              }
+            } catch(e) {
+              console.error("Failed to parse LLM JSON artifacts:", e);
+            }
+          }
+
+          // Save Artifacts to DB
+          for (const art of parsedArtifacts) {
+            if (art.isNew || !art.existingArtifactId) {
+              const newArt = await db.insert(workspaceArtifacts).values({
+                  chatId,
+                  name: art.name || 'Untitled Document',
+                  fileType: art.fileType || 'txt',
+                  category: art.category || 'Document',
+                  status: 'final'
+              }).returning();
+              
+              if (newArt && newArt.length > 0 && newArt[0]) {
+                await db.insert(workspaceArtifactVersions).values({
+                    artifactId: newArt[0].id,
+                    versionNumber: 1,
+                    content: art.content || ''
+                });
+              }
+            } else {
+              const existing = await db.select().from(workspaceArtifacts).where(eq(workspaceArtifacts.id, art.existingArtifactId));
+              if (existing && existing.length > 0 && existing[0]) {
+                  const existingArt = existing[0];
+                  const maxV = await db.execute(sql`SELECT COALESCE(MAX(version_number), 0) as max_v FROM workspace_artifact_versions WHERE artifact_id = ${existingArt.id}`);
+                  let nextVersion = 1;
+                  if (maxV && maxV.rows && maxV.rows.length > 0 && maxV.rows[0]) {
+                    nextVersion = (maxV.rows[0].max_v as number) + 1;
+                  }
+                  
+                  await db.insert(workspaceArtifactVersions).values({
+                    artifactId: existingArt.id,
+                    versionNumber: nextVersion,
+                    content: art.content || ''
+                  });
+                  await db.update(workspaceArtifacts).set({ updatedAt: new Date() }).where(eq(workspaceArtifacts.id, existingArt.id));
+              }
+            }
+          }
+
+          // Save Assistant Message
+          await db.insert(workspaceMessages).values({
+            chatId,
+            role: 'assistant',
+            content: text,
+          });
+
+          await db.update(workspaceChats)
+            .set({ updatedAt: new Date() })
+            .where(eq(workspaceChats.id, chatId));
+
+        } catch (dbErr) {
+           console.error("Error saving to DB during onFinish:", dbErr);
+        }
+      }
+    });
+
+    // We return a raw text stream here. 
+    // We add a custom header so the frontend knows if context was used.
+    const response = result.toTextStreamResponse();
+    response.headers.set('x-context-used', contextText ? 'true' : 'false');
+    return response;
+
   } catch (error: any) {
     console.error("Failed to process message:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

@@ -129,43 +129,59 @@ export default function WorkspacePage() {
         body: JSON.stringify({ content: finalContent })
       });
       
-      const data = await res.json();
-      
-      if (data.success) {
-        // Replace temp message and add assistant message
-        setMessages(prev => {
-          const filtered = prev.filter(m => m !== tempUserMessage);
-          return [...filtered, data.userMessage, data.assistantMessage];
-        });
-
-        if (data.savedArtifactIds && data.savedArtifactIds.length > 0) {
-          const artifactsRes = await fetch('/api/workspace/artifacts');
-          if (artifactsRes.ok) {
-            const artifactsData = await artifactsRes.json();
-            setArtifacts(artifactsData.artifacts || []);
-            const newArt = (artifactsData.artifacts || []).find((a: any) => a.id === data.savedArtifactIds[0]);
-            if (newArt) {
-              setPreviewDoc({
-                type: newArt.fileType.toUpperCase(),
-                title: newArt.name,
-                content: newArt.content,
-                version: newArt.version,
-                id: newArt.id,
-                lastEdited: new Date().toLocaleTimeString()
-              });
-            }
-          }
-        }
-        
-        // Refresh chats list to update timestamps
-        const chatsRes = await fetch('/api/workspace/chats');
-        if (chatsRes.ok) {
-          const chatsData = await chatsRes.json();
-          setChats(chatsData.chats || []);
-        }
-      } else {
-         setMessages(prev => [...prev, { role: "assistant", content: `Error: ${data.error}` }]);
+      if (!res.ok) {
+         setMessages(prev => [...prev, { role: "assistant", content: `Error: Request failed with status ${res.status}` }]);
+         setIsGenerating(false);
+         return;
       }
+
+      if (!res.body) {
+        throw new Error("No response body");
+      }
+
+      // Add a placeholder assistant message that we will stream into
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          setMessages(prev => {
+            const newMessages = [...prev];
+            const lastMsg = newMessages[newMessages.length - 1];
+            if (lastMsg && lastMsg.role === "assistant") {
+              lastMsg.content += chunk;
+            }
+            return newMessages;
+          });
+        }
+      }
+
+      // Refresh artifacts and chats list to update timestamps and load any new artifacts saved by onFinish
+      const [artifactsRes, chatsRes] = await Promise.all([
+        fetch('/api/workspace/artifacts'),
+        fetch('/api/workspace/chats')
+      ]);
+
+      if (artifactsRes.ok) {
+        const artifactsData = await artifactsRes.json();
+        const currentArtifacts = artifactsData.artifacts || [];
+        setArtifacts(currentArtifacts);
+        
+        // If a new artifact was created, we can just grab the latest one for the preview if needed
+        // but for now, we just refresh the list.
+      }
+      
+      if (chatsRes.ok) {
+        const chatsData = await chatsRes.json();
+        setChats(chatsData.chats || []);
+      }
+
     } catch (e: any) {
       setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error querying the workspace." }]);
     }

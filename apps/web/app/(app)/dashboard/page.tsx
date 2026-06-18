@@ -20,14 +20,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const quickActions = [
-  { name: "Analyze URL", icon: Globe, href: "/research-studio", color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
-  { name: "Upload Document", icon: UploadCloud, href: "/file-studio", color: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  { name: "Upload Video", icon: Video, href: "/media-intelligence", color: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20" },
-  { name: "Create MCP", icon: Plus, href: "/mcp-builder", color: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20" },
-  { name: "Start AI Chat", icon: MessageSquare, href: "/ai-workspace", color: "bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20" },
-  { name: "Create Research Report", icon: Search, href: "/research-studio", color: "bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-500/20" },
-];
+
 
 const recentActivity: any[] = [];
 
@@ -79,24 +72,7 @@ export default function DashboardPage() {
         <div className="absolute bottom-0 right-40 -mb-20 w-72 h-72 bg-fuchsia-500/20 rounded-full blur-3xl" />
       </div>
 
-      {/* Quick Actions */}
-      <div>
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-violet-500 dark:text-violet-400" /> Quick Actions
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {quickActions.map((action) => (
-            <Link 
-              key={action.name} 
-              href={action.href}
-              className={`flex flex-col items-center justify-center p-4 rounded-2xl border bg-white dark:bg-transparent transition-all hover:scale-[1.02] ${action.color} backdrop-blur-sm`}
-            >
-              <action.icon className="w-6 h-6 mb-3" />
-              <span className="text-sm font-medium text-center">{action.name}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
+
 
 
 
@@ -142,25 +118,7 @@ export default function DashboardPage() {
           </h2>
           <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 rounded-2xl p-6 backdrop-blur-sm space-y-6">
             
-            <div>
-              <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 uppercase tracking-wider">Active MCP Servers</h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                  <span className="text-sm text-zinc-700 dark:text-zinc-200">GitHub Repository Access</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
-                  <span className="text-sm text-zinc-700 dark:text-zinc-200">Notion Knowledge Base</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
-                  <span className="text-sm text-zinc-500">Jira Ticket System</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="h-px bg-zinc-200 dark:bg-white/5 w-full" />
 
             <div>
               <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mb-3 uppercase tracking-wider">Data Sources</h3>

@@ -71,14 +71,36 @@ export class DatabaseService {
       return this.formatRelationalSchema(rows as any[]);
     } else if (this.config.engine === 'mssql') {
       const pool = await sql.connect(this.getMssqlConfig());
-      const result = await pool.request().query(`
-        SELECT table_name = t.name, column_name = c.name, data_type = ty.name
-        FROM sys.columns c
-        JOIN sys.tables t ON c.object_id = t.object_id
-        JOIN sys.types ty ON c.user_type_id = ty.user_type_id
+  
+      // database_id > 4 skips system DBs (master/tempdb/model/msdb)
+      const dbsRes = await pool.request().query(`
+        SELECT name FROM sys.databases
+        WHERE state = 0 AND database_id > 4 ORDER BY name
       `);
+      const dbNames: string[] = dbsRes.recordset.map((r: any) => r.name);
+  
+      // if user pinned a DB, only that one; else all
+      const targets = this.config.database
+        ? dbNames.filter(n => n === this.config.database) : dbNames;
+  
+      const databases: Record<string, any> = {};
+      for (const dbName of (targets.length ? targets : dbNames)) {
+        const safe = dbName.replace(/]/g, ']]');   // escape ] for bracket-quoting
+        try {
+          const result = await pool.request().query(`
+            SELECT table_name = t.name, column_name = c.name, data_type = ty.name
+            FROM [${safe}].sys.columns c
+            JOIN [${safe}].sys.tables t ON c.object_id = t.object_id
+            JOIN [${safe}].sys.types ty ON c.user_type_id = ty.user_type_id
+            ORDER BY t.name, c.column_id
+          `);
+          databases[dbName] = this.formatRelationalSchema(result.recordset);
+        } catch (e) {
+          databases[dbName] = {};   // no permission → empty, don't fail whole sync
+        }
+      }
       await pool.close();
-      return this.formatRelationalSchema(result.recordset);
+      return { __multiDb: true, databases };
     } else if (this.config.engine === 'mongodb') {
       const client = new MongoClient(this.getMongoConfig());
       await client.connect();

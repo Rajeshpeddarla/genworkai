@@ -137,7 +137,7 @@ export function Sidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      pathname === item.href
+                      (pathname === item.href || pathname.startsWith(item.href + '/'))
                         ? "bg-zinc-200/50 dark:bg-white/10 text-zinc-900 dark:text-white"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5",
                       "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
@@ -147,7 +147,7 @@ export function Sidebar() {
                   >
                     <item.icon
                       className={cn(
-                        pathname === item.href ? "text-violet-600 dark:text-white" : "text-zinc-400 dark:text-zinc-500 group-hover:text-violet-500 dark:group-hover:text-white",
+                        (pathname === item.href || pathname.startsWith(item.href + '/')) ? "text-violet-600 dark:text-white" : "text-zinc-400 dark:text-zinc-500 group-hover:text-violet-500 dark:group-hover:text-white",
                         "h-5 w-5 shrink-0 transition-colors"
                       )}
                       aria-hidden="true"
@@ -167,7 +167,7 @@ export function Sidebar() {
                   <Link
                     href={item.href}
                     className={cn(
-                      pathname === item.href
+                      (pathname === item.href || pathname.startsWith(item.href + '/'))
                         ? "bg-zinc-200/50 dark:bg-white/10 text-zinc-900 dark:text-white"
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5",
                       "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
@@ -177,7 +177,7 @@ export function Sidebar() {
                   >
                     <item.icon
                       className={cn(
-                        pathname === item.href ? "text-violet-600 dark:text-white" : "text-zinc-400 dark:text-zinc-500 group-hover:text-violet-500 dark:group-hover:text-white",
+                        (pathname === item.href || pathname.startsWith(item.href + '/')) ? "text-violet-600 dark:text-white" : "text-zinc-400 dark:text-zinc-500 group-hover:text-violet-500 dark:group-hover:text-white",
                         "h-5 w-5 shrink-0 transition-colors"
                       )}
                       aria-hidden="true"

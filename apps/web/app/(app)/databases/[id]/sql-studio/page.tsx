@@ -6,6 +6,38 @@ import { Play, Terminal, Database, Sparkles, Send, Loader2, ArrowLeft, GripHoriz
 import Link from 'next/link';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
+function flattenSchema(schema: any) {
+  if (!schema) return [];
+  if (schema.__multiDb) {
+    return Object.entries(schema.databases).flatMap(([db, tables]: any) =>
+      Object.entries(tables).map(([table, columns]: any) => ({ db, table, columns })));
+  }
+  return Object.entries(schema).map(([table, columns]: any) => ({ table, columns }));
+}
+
+function TableNode({ db, table, cols, open, onToggle, onInsert }: any) {
+  return (
+    <div>
+      <div className="flex items-center group">
+        <button onClick={onToggle} className="px-1 text-gray-500">{open?'▾':'▸'}</button>
+        <button onClick={onInsert}
+          className="flex-1 text-left py-1 rounded hover:bg-gray-800 text-gray-300 truncate">
+          {table}
+        </button>
+      </div>
+      {open && Array.isArray(cols) && (
+        <div className="ml-6 border-l border-gray-800">
+          {cols.map((c:any) => (
+            <div key={c.column} className="px-2 py-0.5 text-xs text-gray-500 flex justify-between">
+              <span>{c.column}</span><span className="text-gray-600">{c.type}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SQLStudio({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const [dbId, setDbId] = useState<string | null>(resolvedParams.id);
@@ -15,6 +47,9 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [schema, setSchema] = useState<any>(null);
+
+  const [openDb, setOpenDb] = useState<string|null>(null);
+  const [openTable, setOpenTable] = useState<string|null>(null);
 
   // Chat state
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([
@@ -69,26 +104,13 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
           documentation: 'Generates SELECT * FROM '
         });
         
-        // Add tables
-        Object.keys(dbSchema).forEach(table => {
-          suggestions.push({
-            label: table,
-            kind: monaco.languages.CompletionItemKind.Struct,
-            insertText: table,
-            detail: 'Table'
-          });
-
-          // Add columns
-          const cols = dbSchema[table];
-          if (Array.isArray(cols)) {
-            cols.forEach(col => {
-              suggestions.push({
-                label: col.column,
-                kind: monaco.languages.CompletionItemKind.Field,
-                insertText: col.column,
-                detail: `Column in ${table} (${col.type})`
-              });
-            });
+        flattenSchema(dbSchema).forEach(({ table, columns }) => {
+          suggestions.push({ label: table, kind: monaco.languages.CompletionItemKind.Struct, insertText: table, detail: 'Table' });
+          if (Array.isArray(columns)) {
+            columns.forEach((col:any) => suggestions.push({
+              label: col.column, kind: monaco.languages.CompletionItemKind.Field,
+              insertText: col.column, detail: `Column in ${table} (${col.type})` 
+            }));
           }
         });
 
@@ -100,6 +122,13 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   useEffect(() => {
     if (schema) setupAutocomplete(schema);
   }, [monaco, schema]);
+
+  const insertTable = (db: string|undefined, table: string) => {
+    const q = db
+      ? `SELECT TOP 100 * FROM [${db}].[dbo].[${table}];`   // mssql 3-part
+      : `SELECT * FROM ${table} LIMIT 100;`;
+    setQuery(q);
+  };
 
   const executeQuery = async () => {
     if (!dbId || !query.trim()) return;
@@ -167,8 +196,49 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans">
       <PanelGroup direction="horizontal">
         
-        {/* Left Main Content: Editor & Terminal Split */}
-        <Panel defaultSize={75} minSize={30}>
+        {/* Schema Explorer Panel */}
+        <Panel defaultSize={20} minSize={15} maxSize={35}>
+          <div className="h-full bg-[#111] border-r border-gray-800 flex flex-col">
+            <div className="h-14 border-b border-gray-800 flex items-center px-4 gap-2">
+              <Database className="w-4 h-4 text-indigo-400" />
+              <span className="font-semibold text-gray-200 text-sm">Schema Explorer</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 text-sm custom-scrollbar">
+              {schema?.__multiDb ? (
+                Object.entries(schema.databases).map(([dbName, tables]: any) => (
+                  <div key={dbName}>
+                    <button onClick={() => setOpenDb(openDb===dbName?null:dbName)}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-800 flex items-center gap-1 text-gray-200">
+                      <span className="text-gray-500">{openDb===dbName?'▾':'▸'}</span>
+                      <Database className="w-3.5 h-3.5 text-indigo-400" /> {dbName}
+                      <span className="ml-auto text-xs text-gray-600">{Object.keys(tables).length}</span>
+                    </button>
+                    {openDb===dbName && (
+                      <div className="ml-4 border-l border-gray-800">
+                        {Object.entries(tables).map(([t, cols]: any) => (
+                          <TableNode key={t} db={dbName} table={t} cols={cols}
+                            open={openTable===`${dbName}.${t}`}
+                            onToggle={() => setOpenTable(openTable===`${dbName}.${t}`?null:`${dbName}.${t}`)}
+                            onInsert={() => insertTable(dbName, t)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                schema && Object.entries(schema).map(([t, cols]: any) => (
+                  <TableNode key={t} table={t} cols={cols}
+                    open={openTable===t} onToggle={() => setOpenTable(openTable===t?null:t)}
+                    onInsert={() => insertTable(undefined, t)} />
+                ))
+              )}
+            </div>
+          </div>
+        </Panel>
+        <PanelResizeHandle className="w-1.5 bg-gray-800 hover:bg-indigo-500 transition-colors" />
+
+        {/* Middle Content: Editor & Terminal Split */}
+        <Panel defaultSize={55} minSize={30}>
           <div className="flex h-full flex-col min-w-0">
             
             {/* Header Bar */}

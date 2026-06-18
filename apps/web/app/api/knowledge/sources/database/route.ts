@@ -32,8 +32,9 @@ export async function POST(req: Request) {
     const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
     if (ownershipError) return ownershipError;
 
+    const portNum = port ? parseInt(String(port), 10) : undefined;
     const config: DBConnectionConfig = {
-      engine, connectionString, host, port, database: finalDatabaseName, username, password
+      engine, connectionString, host, port: portNum, database: finalDatabaseName || undefined, username, password
     };
 
     const dbService = new DatabaseService(config);
@@ -91,6 +92,17 @@ export async function POST(req: Request) {
       schemaDefinition += `## Collections\n`;
       for (const coll of rawSchema.collections || []) {
         schemaDefinition += `- ${coll}\n`;
+      }
+    } else if (rawSchema.__multiDb) {
+      for (const [dbName, tables] of Object.entries(rawSchema.databases)) {
+        schemaDefinition += `# Database: ${dbName}\n\n`;
+        for (const [tableName, columns] of Object.entries(tables as any)) {
+          schemaDefinition += `## Table: ${dbName}.${tableName}\n| Column | Type |\n|---|---|\n`;
+          for (const col of columns as any[]) {
+            schemaDefinition += `| ${col.column} | ${col.type} |\n`;
+          }
+          schemaDefinition += `\n---\n`;
+        }
       }
     } else {
       for (const [tableName, columns] of Object.entries(rawSchema)) {
@@ -155,10 +167,14 @@ export async function POST(req: Request) {
     const crypto = require('crypto');
     const schemaHash = crypto.createHash('sha256').update(schemaDefinition).digest('hex');
 
+    const tablesCount = rawSchema.__multiDb
+      ? Object.values(rawSchema.databases).reduce((n:number, t:any)=> n + Object.keys(t).length, 0)
+      : Object.keys(rawSchema).length;
+
     await db.insert(sourceSnapshots).values({
       sourceId,
       hash: schemaHash,
-      metadata: { tablesCount: Object.keys(rawSchema).length }
+      metadata: { tablesCount }
     });
 
     await db.execute(

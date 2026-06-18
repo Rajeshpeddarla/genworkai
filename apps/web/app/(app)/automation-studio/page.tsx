@@ -139,7 +139,7 @@ export default function AutomationStudio() {
         </div>
         <div className="bg-[#111] border border-green-900/30 p-4 rounded-xl">
           <div className="text-green-400 text-sm mb-1 flex justify-between"><span className="flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Success Rate</span></div>
-          <div className="text-2xl font-bold text-green-400">98.2%</div>
+          <div className="text-2xl font-bold text-green-400">N/A</div>
         </div>
         <div className="bg-[#111] border border-red-900/30 p-4 rounded-xl">
           <div className="text-red-400 text-sm mb-1 flex justify-between"><span className="flex items-center gap-1"><XCircle className="w-4 h-4"/> Failed Runs</span></div>
@@ -147,11 +147,11 @@ export default function AutomationStudio() {
         </div>
         <div className="bg-[#111] border border-gray-800 p-4 rounded-xl">
           <div className="text-gray-400 text-sm mb-1 flex justify-between"><span className="flex items-center gap-1"><File className="w-4 h-4"/> Artifacts Generated</span></div>
-          <div className="text-2xl font-bold">142</div>
+          <div className="text-2xl font-bold">0</div>
         </div>
         <div className="bg-[#111] border border-gray-800 p-4 rounded-xl">
           <div className="text-gray-400 text-sm mb-1 flex justify-between"><span className="flex items-center gap-1"><Clock className="w-4 h-4"/> Next Execution</span></div>
-          <div className="text-xl font-bold truncate">In 2h</div>
+          <div className="text-xl font-bold text-gray-500 truncate">None</div>
         </div>
       </div>
 

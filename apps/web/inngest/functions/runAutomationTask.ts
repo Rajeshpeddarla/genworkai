@@ -1,42 +1,63 @@
 // @ts-nocheck
 import { inngest } from "../client";
 import { db } from "../../db";
-import { automationTasks, automationLogs, workspaceArtifacts } from "../../db/schema";
+import { automationTasks, automationLogs, workspaceArtifacts, workspaceArtifactVersions } from "../../db/schema";
 import { eq } from "drizzle-orm";
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+
+const openai = createOpenAI({
+  apiKey: process.env.CKEY_API_KEY || "",
+  baseURL: process.env.CKEY_API_URL || "https://ckey.vn/v1",
+});
+
+async function executeLLM(task: any, systemPrompt: string) {
+  if (!process.env.CKEY_API_KEY) {
+    return `# LLM Disabled\n\nNo CKEY_API_KEY found in the environment. Task: ${task.name}\nGoal: ${task.goal}`;
+  }
+
+  const result = await generateText({
+    model: openai(process.env.CKEY_MODEL || "gpt-4o"),
+    system: systemPrompt,
+    prompt: `Execute the following automation task:\n\nTask Name: ${task.name}\nDescription: ${task.description || "None"}\nGoal: ${task.goal || "None"}\nTarget Artifact Types: ${task.artifactTypes?.join(", ") || "None"}\nSources: ${task.sources?.join(", ") || "None"}\n\nPlease generate the required output artifact contents. Format as pure Markdown.`,
+  });
+  
+  return result.text;
+}
 
 async function runKnowledgeTask(task: any, step: any) {
   return await step.run("run-knowledge-task", async () => {
-    return `# Knowledge Output for ${task.name}\n\nProcessed learning materials from knowledge base.`;
+    return await executeLLM(task, "You are a Knowledge Management AI. Process the requested materials, extract key learnings, and synthesize a comprehensive educational or summary document based on the user's goal.");
   });
 }
 
 async function runDocumentationTask(task: any, step: any) {
   return await step.run("run-documentation-task", async () => {
-    return `# Documentation Update\n\nGenerated SOPs and Technical Guides based on GitHub & APIs.`;
+    return await executeLLM(task, "You are a Technical Writer AI. Generate SOPs, technical guides, architectural reviews, or API documentation based on the goal provided.");
   });
 }
 
 async function runDeveloperTask(task: any, step: any) {
   return await step.run("run-developer-task", async () => {
-    return `# Developer Report\n\nTest assets, architecture review, and release summaries generated.`;
+    return await executeLLM(task, "You are a Principal Software Engineer. Write deep technical reviews, unit test assets, or architecture release summaries.");
   });
 }
 
 async function runDatabaseTask(task: any, step: any) {
   return await step.run("run-database-task", async () => {
-    return `# Database Audit\n\nData quality reports and operational reports generated.`;
+    return await executeLLM(task, "You are a Data Engineering AI. Formulate data quality reports, SQL schema audit notes, or analytics summaries.");
   });
 }
 
 async function runMonitoringTask(task: any, step: any) {
   return await step.run("run-monitoring-task", async () => {
-    return `# Monitoring Alert\n\nSystem impact analysis and change detection complete.`;
+    return await executeLLM(task, "You are a Site Reliability Engineer AI. Formulate system impact analysis, outage post-mortems, or general monitoring reports.");
   });
 }
 
 async function runWorkspaceTask(task: any, step: any) {
   return await step.run("run-workspace-task", async () => {
-    return `# Custom Workspace Artifact\n\nArtifact generated from workspace sources.`;
+    return await executeLLM(task, "You are an Executive AI Assistant. Create a polished workspace artifact fulfilling the user's specific workflow goal.");
   });
 }
 
@@ -123,7 +144,16 @@ export const runAutomationTask: any = inngest.createFunction(
           status: "published",
         }).returning({ id: workspaceArtifacts.id });
         
-        return newArtifact[0]!.id;
+        const createdArtifactId = newArtifact[0]!.id;
+
+        await db.insert(workspaceArtifactVersions).values({
+          artifactId: createdArtifactId,
+          versionNumber: 1,
+          content: generatedContent,
+          sourceDocIds: [],
+        });
+
+        return createdArtifactId;
       });
 
       // 6. Complete Log

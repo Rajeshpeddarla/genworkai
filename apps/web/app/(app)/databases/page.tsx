@@ -157,7 +157,7 @@ export default function DatabasesDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Port</label>
-                  <input required type="text" value={newDb.port} onChange={e => setNewDb({...newDb, port: e.target.value})} className="w-full bg-[#0a0a0a] border border-gray-800 rounded-lg px-3 py-2 text-white" placeholder="5432" />
+                  <input type="text" value={newDb.port} onChange={e => setNewDb({...newDb, port: e.target.value})} className="w-full bg-[#0a0a0a] border border-gray-800 rounded-lg px-3 py-2 text-white" placeholder="1433 (optional)" />
                 </div>
               </div>
 
