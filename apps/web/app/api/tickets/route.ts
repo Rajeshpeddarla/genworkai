@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     const validated = ticketSchema.safeParse(body);
 
     if (!validated.success) {
-      const errors = validated.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errors = validated.error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ');
       return NextResponse.json({ success: false, error: errors }, { status: 400 });
     }
 

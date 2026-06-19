@@ -35,7 +35,10 @@ export const EncryptionUtil = {
       throw new Error('Invalid encrypted text format');
     }
     
-    const [ivHex, authTagHex, encryptedTextHex] = parts;
+    const ivHex = parts[0] as string;
+    const authTagHex = parts[1] as string;
+    const encryptedTextHex = parts[2] as string;
+
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
     

@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       serverId: newServer.id,
       name: `${name} Key`,
       keyHash,
-      permissionLevel: permissionLevel || 'read_only'
+      keyPrefix: rawKey.substring(0, 16)
     }).returning();
 
     await logAuditEvent({

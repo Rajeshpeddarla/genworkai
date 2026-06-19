@@ -228,6 +228,17 @@ export const mcpServers = pgTable('mcp_servers', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const mcpApiKeys = pgTable('mcp_api_keys', {
+  id: serial('id').primaryKey(),
+  serverId: integer('server_id').references(() => mcpServers.id, { onDelete: 'cascade' }),
+  keyHash: varchar('key_hash', { length: 255 }).notNull(),
+  keyPrefix: varchar('key_prefix', { length: 50 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+});
+
 export const apiKeys = pgTable('api_keys', {
   id: serial('id').primaryKey(),
   userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
