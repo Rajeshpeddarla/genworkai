@@ -4,6 +4,8 @@ import { db } from '../../../../../db';
 import { documents, documentChunks, knowledgeSources, syncJobs } from '../../../../../db/schema';
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +47,12 @@ function isProcessableFile(filename: string): boolean {
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'upload');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const kbIdStr = formData.get('kbId') as string | null;
@@ -54,6 +62,10 @@ export async function POST(req: Request) {
     }
 
     const kbId = parseInt(kbIdStr, 10);
+    
+    const ownershipError = await requireOwnership('knowledge_base', kbId, user.id);
+    if (ownershipError) return ownershipError;
+
     const buffer = Buffer.from(await file.arrayBuffer());
 
     // Create the Folder Source

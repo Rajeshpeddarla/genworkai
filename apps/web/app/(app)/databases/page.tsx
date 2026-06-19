@@ -6,17 +6,29 @@ import Link from 'next/link';
 
 export default function DatabasesDashboard() {
   const [databases, setDatabases] = useState<any[]>([]);
+  const [kbs, setKbs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newDb, setNewDb] = useState({ name: '', engine: 'pg', host: '', port: '', database: '', username: '', password: '' });
+  const [newDb, setNewDb] = useState({ name: '', engine: 'pg', host: '', port: '', database: '', username: '', password: '', kbId: '' });
   const [saving, setSaving] = useState(false);
 
-  const fetchDatabases = async () => {
+  const fetchDatabasesAndKBs = async () => {
     try {
-      const res = await fetch('/api/databases'); // Fetch all databases for MVP
-      if (res.ok) {
-        const data = await res.json();
+      const [dbRes, kbRes] = await Promise.all([
+        fetch('/api/databases'),
+        fetch('/api/knowledge/list')
+      ]);
+      
+      if (dbRes.ok) {
+        const data = await dbRes.json();
         setDatabases(data);
+      }
+      if (kbRes.ok) {
+        const kbData = await kbRes.json();
+        setKbs(kbData.kbs || []);
+        if (kbData.kbs?.length > 0 && !newDb.kbId) {
+           setNewDb(prev => ({ ...prev, kbId: kbData.kbs[0].id.toString() }));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -26,7 +38,7 @@ export default function DatabasesDashboard() {
   };
 
   useEffect(() => {
-    fetchDatabases();
+    fetchDatabasesAndKBs();
   }, []);
 
   const handleAddDatabase = async (e: React.FormEvent) => {
@@ -37,13 +49,13 @@ export default function DatabasesDashboard() {
       const res = await fetch('/api/knowledge/sources/database', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newDb, kbId: 1 }) // Hardcode kbId 1 for MVP
+        body: JSON.stringify(newDb)
       });
 
       if (res.ok) {
-        await fetchDatabases();
+        await fetchDatabasesAndKBs();
         setIsModalOpen(false);
-        setNewDb({ name: '', engine: 'pg', host: '', port: '', database: '', username: '', password: '' });
+        setNewDb({ name: '', engine: 'pg', host: '', port: '', database: '', username: '', password: '', kbId: kbs.length > 0 ? kbs[0].id.toString() : '' });
       } else {
         const err = await res.json();
         alert(err.error || 'Failed to connect to database');
@@ -90,7 +102,7 @@ export default function DatabasesDashboard() {
                       e.stopPropagation();
                       if (confirm('Are you sure you want to disconnect this database?')) {
                         await fetch(`/api/databases?id=${db.id}`, { method: 'DELETE' });
-                        fetchDatabases();
+                        fetchDatabasesAndKBs();
                       }
                     }}
                     className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-md transition-colors"
@@ -138,6 +150,16 @@ export default function DatabasesDashboard() {
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Connection Name</label>
                 <input required type="text" value={newDb.name} onChange={e => setNewDb({...newDb, name: e.target.value})} className="w-full bg-[#0a0a0a] border border-gray-800 rounded-lg px-3 py-2 text-white" placeholder="Production DB" />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Knowledge Base (Optional)</label>
+                <select value={newDb.kbId} onChange={e => setNewDb({...newDb, kbId: e.target.value})} className="w-full bg-[#0a0a0a] border border-gray-800 rounded-lg px-3 py-2 text-white">
+                  <option value="none">None (Independent Database)</option>
+                  {kbs.map(kb => (
+                    <option key={kb.id} value={kb.id}>{kb.name}</option>
+                  ))}
+                </select>
               </div>
               
               <div>

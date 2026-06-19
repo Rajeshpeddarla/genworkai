@@ -5,6 +5,8 @@ import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots 
 import { generateEmbedding } from '../../../../../lib/embeddings';
 import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
 import { eq, and } from 'drizzle-orm';
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,11 +29,20 @@ function isProcessableFile(filename: string): boolean {
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'upload');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { repoUrl, kbId, oauthToken, branch = 'main' } = await req.json();
 
     if (!repoUrl || !kbId) {
       return NextResponse.json({ error: 'Repo URL and kbId are required' }, { status: 400, headers: corsHeaders });
     }
+
+    const ownershipError = await requireOwnership('knowledge_base', parseInt(kbId, 10), user.id);
+    if (ownershipError) return ownershipError;
 
     // Parse URL (e.g. https://github.com/owner/repo)
     const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);

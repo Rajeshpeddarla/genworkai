@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { requireUser } from '../../../lib/auth';
+import { RateLimitService } from '../../../lib/security/rate-limit';
 
 // Mock Conversion API
 // In production, you would integrate CloudConvert API here:
@@ -7,6 +9,12 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'default');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const formData = await req.formData();
     const file = formData.get('file') as Blob;
     const targetFormat = formData.get('targetFormat') as string;

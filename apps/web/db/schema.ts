@@ -26,6 +26,37 @@ export const systemConfig = pgTable('system_config', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const tickets = pgTable('tickets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'set null' }),
+  
+  type: varchar('type', { length: 50 }).notNull(), // 'demo', 'support', 'sales', 'partnership', 'bug', 'feature_request'
+  name: varchar('name', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  company: varchar('company', { length: 255 }),
+  
+  subject: varchar('subject', { length: 255 }),
+  message: text('message').notNull(),
+  
+  priority: varchar('priority', { length: 50 }).default('medium'), // 'low', 'medium', 'high', 'urgent'
+  status: varchar('status', { length: 50 }).default('open'), // 'open', 'acknowledged', 'in_progress', 'resolved', 'closed'
+  
+  assignedTo: uuid('assigned_to').references(() => profiles.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const earlyAccessRequests = pgTable('early_access_requests', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull(),
+  company: varchar('company', { length: 255 }),
+  useCase: text('use_case'),
+  status: varchar('status', { length: 50 }).default('pending'), // 'pending', 'invited'
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const promotions = pgTable('promotions', {
   id: serial('id').primaryKey(),
   code: varchar('code', { length: 50 }).notNull().unique(),
@@ -94,6 +125,7 @@ export const workspaceMessages = pgTable('workspace_messages', {
 
 export const knowledgeSources = pgTable('knowledge_sources', {
   id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
   kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   type: varchar('type', { length: 50 }).notNull(), // github, database, website, folder, file
@@ -196,30 +228,36 @@ export const mcpServers = pgTable('mcp_servers', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const mcpApiKeys = pgTable('mcp_api_keys', {
+export const apiKeys = pgTable('api_keys', {
   id: serial('id').primaryKey(),
-  serverId: integer('server_id').references(() => mcpServers.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
   keyHash: varchar('key_hash', { length: 255 }).notNull(), // The hashed key string
+  keyPrefix: varchar('key_prefix', { length: 50 }).notNull(), // e.g., 'gk_live_abc123'
   name: varchar('name', { length: 255 }).notNull(),
-  permissionLevel: varchar('permission_level', { length: 50 }).default('read_only'), // 'read_only' | 'generate' | 'execute'
+  scopes: jsonb('scopes').default([]), // ['kb:read', 'kb:write', 'db:query', 'mcp:execute']
+  resourceScopes: jsonb('resource_scopes'), // e.g., {"kb": [12,18], "db": [4]}
+  status: varchar('status', { length: 50 }).default('active'), // 'active', 'revoked'
   createdAt: timestamp('created_at').defaultNow(),
   expiresAt: timestamp('expires_at'),
   lastUsedAt: timestamp('last_used_at'),
 });
 
-export const mcpAuditLogs = pgTable('mcp_audit_logs', {
+export const apiUsageLogs = pgTable('api_usage_logs', {
   id: serial('id').primaryKey(),
-  serverId: integer('server_id').references(() => mcpServers.id, { onDelete: 'cascade' }),
-  apiKeyId: integer('api_key_id').references(() => mcpApiKeys.id, { onDelete: 'set null' }),
-  toolName: varchar('tool_name', { length: 255 }).notNull(),
-  requestPayload: jsonb('request_payload'),
-  responseStatus: varchar('response_status', { length: 50 }), // 'success' | 'error'
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+  apiKeyId: integer('api_key_id').references(() => apiKeys.id, { onDelete: 'set null' }),
+  endpoint: varchar('endpoint', { length: 255 }).notNull(),
+  resourceType: varchar('resource_type', { length: 50 }), // 'kb', 'db', 'mcp'
+  resourceId: integer('resource_id'),
+  status: integer('status').default(200), // HTTP status code
   durationMs: integer('duration_ms'),
+  metrics: jsonb('metrics'), // { requests, llm_tokens, embedding_tokens, vector_searches, db_queries, artifacts_generated, automation_executions }
   createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const connectedDatabases = pgTable('connected_databases', {
   id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
   kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   engine: varchar('engine', { length: 50 }).notNull(), // 'pg', 'mysql', 'mssql', 'mongodb'
@@ -283,4 +321,61 @@ export const auditLogs = pgTable('audit_logs', {
   userAgent: text('user_agent'),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const apiUsageCounters = pgTable('api_usage_counters', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  period: varchar('period', { length: 7 }).notNull(), // format 'YYYY-MM'
+  
+  requests: integer('requests').default(0).notNull(),
+  llmTokens: integer('llm_tokens').default(0).notNull(),
+  dbQueries: integer('db_queries').default(0).notNull(),
+  vectorSearches: integer('vector_searches').default(0).notNull(),
+  generatedArtifacts: integer('generated_artifacts').default(0).notNull(),
+  
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const databaseQueryLogs = pgTable('database_query_logs', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  databaseId: integer('database_id').references(() => connectedDatabases.id, { onDelete: 'cascade' }).notNull(),
+  question: text('question'),
+  generatedSql: text('generated_sql'),
+  executionTimeMs: integer('execution_time_ms'),
+  rowCount: integer('row_count'),
+  success: boolean('success').default(true),
+  error: text('error'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const userLlmKeys = pgTable('user_llm_keys', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  provider: varchar('provider', { length: 50 }).notNull(), // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', etc.
+  apiKey: text('api_key').notNull(), // Encrypted
+  baseUrl: text('base_url'), // For local models or custom endpoints
+  defaultModel: varchar('default_model', { length: 100 }), // The default model to use when routing to this provider
+  
+  scope: varchar('scope', { length: 50 }).default('personal'), // 'personal', 'workspace', 'organization'
+  status: varchar('status', { length: 50 }).default('active'), // 'active', 'invalid', 'testing'
+  lastValidatedAt: timestamp('last_validated_at'),
+  lastError: text('last_error'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const aiProfiles = pgTable('ai_profiles', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull().unique(),
+  
+  workspaceModelId: integer('workspace_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
+  knowledgeModelId: integer('knowledge_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
+  databaseModelId: integer('database_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
+  automationModelId: integer('automation_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });

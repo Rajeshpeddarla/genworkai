@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../../db';
 import { knowledgeSources } from '../../../../../db/schema';
 import { eq } from 'drizzle-orm';
-
+import { requireUser, requireOwnership } from '../../../../../lib/auth';
 import { getCorsHeaders } from '../../../../../lib/security/cors';
 
 export async function OPTIONS(req: Request) {
@@ -11,11 +11,17 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
     const { sourceId } = await req.json();
 
     if (!sourceId) {
       return NextResponse.json({ error: 'sourceId is required' }, { status: 400, headers: getCorsHeaders(req.headers.get('origin')) });
     }
+
+    const ownershipError = await requireOwnership('source', parseInt(sourceId, 10), user.id);
+    if (ownershipError) return ownershipError;
 
     // 1. Fetch Source
     const sources = await db.select().from(knowledgeSources).where(eq(knowledgeSources.id, parseInt(sourceId, 10))).limit(1);

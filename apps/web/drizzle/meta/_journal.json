@@ -36,6 +36,27 @@
       "when": 1781801950061,
       "tag": "0004_outgoing_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781893197778,
+      "tag": "0005_high_squadron_supreme",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781895315309,
+      "tag": "0006_blushing_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781895335860,
+      "tag": "0007_busy_exodus",
+      "breakpoints": true
     }
   ]
 }

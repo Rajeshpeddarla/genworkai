@@ -10,7 +10,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex space-x-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl w-fit">
-        {["overview", "users", "config", "promotions"].map((tab) => (
+        {["overview", "users", "tickets", "config", "promotions"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -28,6 +28,7 @@ export default function AdminDashboard() {
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6 shadow-xl">
         {activeTab === "overview" && <OverviewTab />}
         {activeTab === "users" && <UsersTab />}
+        {activeTab === "tickets" && <TicketsTab />}
         {activeTab === "config" && <ConfigTab />}
         {activeTab === "promotions" && <PromotionsTab />}
       </div>
@@ -331,6 +332,95 @@ function PromotionsTab() {
               </tr>
             ))}
             {promos.length === 0 && <tr><td colSpan={4} className="py-8 text-center text-zinc-500">No promotions found</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ---------------- TICKETS TAB ---------------- //
+function TicketsTab() {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTickets = async (isMounted = true) => {
+    const res = await fetch("/api/admin/tickets");
+    const data = await res.json();
+    if (isMounted) {
+      if (!data.error) setTickets(data);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchTickets(isMounted);
+    return () => { isMounted = false; };
+  }, []);
+
+  const convertToArtifact = async (ticketId: string) => {
+    if (!confirm("Are you sure you want to convert this ticket into a Workspace Artifact?")) return;
+    try {
+      const res = await fetch(`/api/admin/tickets/${ticketId}/convert`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert("Converted successfully!");
+      fetchTickets();
+    } catch(e: any) {
+      alert("Error: " + e.message);
+    }
+  };
+
+  if (loading) return <div>Loading tickets...</div>;
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-white">Support & Sales Tickets</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-zinc-200 dark:border-white/10 text-zinc-500">
+              <th className="pb-3 font-medium">Customer</th>
+              <th className="pb-3 font-medium">Type & Status</th>
+              <th className="pb-3 font-medium">Subject</th>
+              <th className="pb-3 font-medium">Date</th>
+              <th className="pb-3 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+            {tickets.map(ticket => (
+              <tr key={ticket.id}>
+                <td className="py-4">
+                  <div className="font-medium text-zinc-900 dark:text-white">{ticket.name}</div>
+                  <div className="text-zinc-500">{ticket.email}</div>
+                  {ticket.company && <div className="text-xs text-zinc-400">{ticket.company}</div>}
+                </td>
+                <td className="py-4">
+                  <div className="capitalize font-medium text-violet-600 dark:text-violet-400">{ticket.type.replace('_', ' ')}</div>
+                  <div className={`text-xs mt-1 ${ticket.status === 'open' ? 'text-emerald-500' : 'text-zinc-500'}`}>{ticket.status.toUpperCase()}</div>
+                </td>
+                <td className="py-4 max-w-xs">
+                  <div className="font-medium truncate" title={ticket.subject}>{ticket.subject}</div>
+                  <div className="text-xs text-zinc-500 truncate mt-1" title={ticket.message}>{ticket.message}</div>
+                </td>
+                <td className="py-4 text-zinc-500">
+                  {new Date(ticket.createdAt).toLocaleDateString()}
+                </td>
+                <td className="py-4 text-right space-x-2">
+                  <button 
+                    onClick={() => convertToArtifact(ticket.id)}
+                    className="px-3 py-1 bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-500/20 dark:text-fuchsia-400 rounded-lg text-xs font-medium hover:bg-fuchsia-200 dark:hover:bg-fuchsia-500/30"
+                  >
+                    Generate Artifact
+                  </button>
+                  <button className="px-3 py-1 bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300 rounded-lg text-xs font-medium hover:bg-zinc-200 dark:hover:bg-white/20">
+                    View
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {tickets.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-zinc-500">No tickets found</td></tr>}
           </tbody>
         </table>
       </div>

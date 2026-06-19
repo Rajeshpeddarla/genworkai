@@ -42,8 +42,7 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   const resolvedParams = use(params);
   const [dbId, setDbId] = useState<string | null>(resolvedParams.id);
   const [query, setQuery] = useState('SELECT * FROM information_schema.tables;');
-  const [results, setResults] = useState<any[] | null>(null);
-  const [columns, setColumns] = useState<string[]>([]);
+  const [resultSets, setResultSets] = useState<any[][] | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [schema, setSchema] = useState<any>(null);
@@ -57,9 +56,11 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   ]);
   const [chatInput, setChatInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
 
   const monaco = useMonaco();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const schemaPanelRef = useRef<any>(null);
 
   useEffect(() => {
     if (dbId) {
@@ -91,7 +92,16 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
     
     // Register custom SQL completion provider for Redgate-like experience
     monaco.languages.registerCompletionItemProvider('sql', {
+      triggerCharacters: [' ', '.'],
       provideCompletionItems: (model, position) => {
+        const word = model.getWordUntilPosition(position);
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn,
+        };
+
         const suggestions: any[] = [];
 
         // Add SSMS snippet 'ssf'
@@ -101,15 +111,25 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
           insertText: 'SELECT * FROM ',
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           detail: 'SSMS Snippet',
-          documentation: 'Generates SELECT * FROM '
+          documentation: 'Generates SELECT * FROM ',
+          range
         });
         
         flattenSchema(dbSchema).forEach(({ table, columns }) => {
-          suggestions.push({ label: table, kind: monaco.languages.CompletionItemKind.Struct, insertText: table, detail: 'Table' });
+          suggestions.push({ 
+            label: table, 
+            kind: monaco.languages.CompletionItemKind.Struct, 
+            insertText: table, 
+            detail: 'Table',
+            range 
+          });
           if (Array.isArray(columns)) {
             columns.forEach((col:any) => suggestions.push({
-              label: col.column, kind: monaco.languages.CompletionItemKind.Field,
-              insertText: col.column, detail: `Column in ${table} (${col.type})` 
+              label: col.column, 
+              kind: monaco.languages.CompletionItemKind.Field,
+              insertText: col.column, 
+              detail: `Column in ${table} (${col.type})`,
+              range
             }));
           }
         });
@@ -131,24 +151,41 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   };
 
   const executeQuery = async () => {
-    if (!dbId || !query.trim()) return;
+    let queryToRun = query;
+    if (editorInstance) {
+      const selection = editorInstance.getSelection();
+      if (selection && !selection.isEmpty()) {
+        queryToRun = editorInstance.getModel().getValueInRange(selection);
+      }
+    }
+
+    if (!dbId || !queryToRun.trim()) return;
     setIsExecuting(true);
     setError(null);
-    setResults(null);
-    setColumns([]);
+    setResultSets(null);
 
     try {
       const res = await fetch(`/api/databases/${dbId}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ query: queryToRun })
       });
       const data = await res.json();
 
       if (res.ok) {
-        setResults(data.results);
-        if (data.results && data.results.length > 0) {
-          setColumns(Object.keys(data.results[0]));
+        // data.results is now an array of result sets (each result set is an array of rows)
+        // Check if backend returned array of arrays, fallback gracefully if not
+        const rs = data.results;
+        if (Array.isArray(rs)) {
+          if (rs.length > 0 && Array.isArray(rs[0])) {
+            setResultSets(rs);
+          } else if (rs.length > 0 && !Array.isArray(rs[0])) {
+            setResultSets([rs]); // Wrap legacy single resultset
+          } else {
+            setResultSets([]);
+          }
+        } else {
+          setResultSets([]);
         }
       } else {
         setError(data.error);
@@ -192,12 +229,40 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
     }
   };
 
+  const copyAsJSON = (rows: any[]) => {
+    if (!rows) return;
+    navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
+  };
+
+  const copyAsMarkdown = (rows: any[], cols: string[]) => {
+    if (!rows || rows.length === 0) return;
+    let md = `| ${cols.join(' | ')} |\n| ${cols.map(() => '---').join(' | ')} |\n`;
+    rows.forEach(row => {
+      md += `| ${cols.map(c => row[c] ?? 'NULL').join(' | ')} |\n`;
+    });
+    navigator.clipboard.writeText(md);
+  };
+
+  const copyAsText = (rows: any[], cols: string[]) => {
+    if (!rows || rows.length === 0) return;
+    let text = cols.join('\t') + '\n';
+    rows.forEach(row => {
+      text += cols.map(c => row[c] ?? 'NULL').join('\t') + '\n';
+    });
+    navigator.clipboard.writeText(text);
+  };
+
+  const copyHeaders = (cols: string[]) => {
+    if (!cols || cols.length === 0) return;
+    navigator.clipboard.writeText(cols.join(', '));
+  };
+
   return (
     <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans">
       <PanelGroup direction="horizontal">
         
         {/* Schema Explorer Panel */}
-        <Panel defaultSize={20} minSize={15} maxSize={35}>
+        <Panel ref={schemaPanelRef} collapsible={true} defaultSize={20} minSize={15} maxSize={35}>
           <div className="h-full bg-[#111] border-r border-gray-800 flex flex-col">
             <div className="h-14 border-b border-gray-800 flex items-center px-4 gap-2">
               <Database className="w-4 h-4 text-indigo-400" />
@@ -244,10 +309,22 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
             {/* Header Bar */}
             <div className="h-14 border-b border-gray-800 bg-[#111] flex items-center justify-between px-4 shrink-0">
               <div className="flex items-center gap-3">
-                <Link href="/databases" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/databases" className="text-gray-400 hover:text-white transition-colors" title="Back to Databases">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
-                <Database className="w-5 h-5 text-indigo-500" />
+                <button 
+                  onClick={() => {
+                    const panel = schemaPanelRef.current;
+                    if (panel) {
+                      if (panel.isCollapsed()) panel.expand();
+                      else panel.collapse();
+                    }
+                  }}
+                  className="text-gray-400 hover:text-indigo-400 transition-colors p-1"
+                  title="Toggle Schema Explorer"
+                >
+                  <Database className="w-5 h-5 text-indigo-500" />
+                </button>
                 <span className="font-semibold text-gray-200">AI SQL Studio</span>
               </div>
               <button 
@@ -274,6 +351,7 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                       theme="vs-dark"
                       value={query}
                       onChange={(val) => setQuery(val || '')}
+                      onMount={(editor) => setEditorInstance(editor)}
                       options={{
                         minimap: { enabled: false },
                         fontSize: 14,
@@ -296,46 +374,67 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                     <div className="h-10 bg-[#111] border-b border-gray-800 flex items-center px-4 gap-2 shrink-0">
                       <Terminal className="w-4 h-4 text-gray-400" />
                       <span className="text-sm font-medium text-gray-300">Results</span>
-                      {results && <span className="ml-auto text-xs text-gray-500">{results.length} rows</span>}
                     </div>
                     
-                    <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+                    <div className="flex-1 overflow-auto p-4 custom-scrollbar flex flex-col gap-8">
                       {error && (
                         <div className="text-red-400 font-mono text-sm bg-red-900/10 p-4 rounded border border-red-900/30">
                           {error}
                         </div>
                       )}
                       
-                      {results && results.length === 0 && (
-                        <div className="text-gray-500 italic text-sm">Query executed successfully. 0 rows returned.</div>
+                      {resultSets && resultSets.length === 0 && (
+                        <div className="text-gray-500 italic text-sm">Query executed successfully. 0 results returned.</div>
                       )}
                       
-                      {results && results.length > 0 && (
-                        <div className="inline-block min-w-full">
-                          <table className="min-w-full text-left text-sm whitespace-nowrap">
-                            <thead className="border-b border-gray-800">
-                              <tr>
-                                {columns.map(col => (
-                                  <th key={col} className="px-4 py-2 font-semibold text-gray-300 bg-[#111] sticky top-0">{col}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-800/50 font-mono text-gray-400">
-                              {results.map((row, i) => (
-                                <tr key={i} className="hover:bg-gray-800/20">
-                                  {columns.map(col => (
-                                    <td key={`${i}-${col}`} className="px-4 py-2">
-                                      {row[col] !== null ? String(row[col]) : <span className="text-gray-600 italic">NULL</span>}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                      {resultSets && resultSets.map((rows, setIndex) => {
+                        const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+                        return (
+                          <div key={setIndex} className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3 bg-[#111] p-2 rounded border border-gray-800">
+                               <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Result Set {setIndex + 1}</span>
+                               <span className="text-xs text-gray-500">{rows.length} rows</span>
+                               <div className="ml-auto flex items-center gap-1">
+                                  <button onClick={() => copyAsJSON(rows)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as JSON">JSON</button>
+                                  <button onClick={() => copyAsMarkdown(rows, cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as Markdown table">MD</button>
+                                  <button onClick={() => copyAsText(rows, cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as Tab-Separated Text">TXT</button>
+                                  <button onClick={() => copyHeaders(cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy Headers only">Headers</button>
+                               </div>
+                            </div>
+                            
+                            {rows.length === 0 ? (
+                               <div className="text-gray-500 italic text-sm p-2">0 rows returned.</div>
+                            ) : (
+                              <div className="inline-block min-w-full overflow-hidden border border-gray-800 rounded bg-[#0a0a0a]">
+                                <div className="overflow-x-auto custom-scrollbar">
+                                  <table className="min-w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="border-b border-gray-800 bg-[#111]">
+                                      <tr>
+                                        {cols.map(col => (
+                                          <th key={col} className="px-4 py-2 font-semibold text-gray-300">{col}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-800/50 font-mono text-gray-400">
+                                      {rows.map((row: any, i: number) => (
+                                        <tr key={i} className="hover:bg-gray-800/20">
+                                          {cols.map(col => (
+                                            <td key={`${i}-${col}`} className="px-4 py-2">
+                                              {row[col] !== null ? String(row[col]) : <span className="text-gray-600 italic">NULL</span>}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                       
-                      {!results && !error && !isExecuting && (
+                      {!resultSets && !error && !isExecuting && (
                         <div className="text-gray-600 italic text-sm flex items-center justify-center h-full">
                           Execute a query to see results here.
                         </div>

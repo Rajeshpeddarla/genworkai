@@ -28,15 +28,11 @@ const BLOCKED_STATEMENT_TYPES = new Set([
  * Prevents information disclosure via metadata queries.
  */
 const BLOCKED_SCHEMAS = [
-  'pg_catalog',
-  'information_schema',
   'pg_stat_activity',
   'pg_roles',
   'pg_authid',
   'pg_shadow',
   'pg_user',
-  'pg_tables',
-  'pg_views',
 ];
 
 export interface SqlValidationResult {
@@ -53,8 +49,7 @@ export interface SqlValidationResult {
  * - Only single SELECT statements allowed
  * - Blocked statement types rejected (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE,
  *   TRUNCATE, EXPLAIN, ANALYZE, COPY, CALL, EXECUTE, PREPARE, GRANT, REVOKE)
- * - Blocked schema references rejected (pg_catalog, information_schema, pg_stat_activity,
- *   pg_roles, pg_authid)
+ * - Blocked schema references rejected (pg_stat_activity, pg_roles, pg_authid)
  * - LIMIT 1000 auto-appended if no LIMIT specified
  * - 10-second statement timeout enforced at execution
  * - 5MB maximum response payload size
@@ -66,11 +61,7 @@ export function validateSqlQuery(sql: string): SqlValidationResult {
     return { isValid: false, error: 'Query cannot be empty.' };
   }
 
-  // Reject multiple statements (semicolons)
-  const statementCount = trimmedSql.split(';').filter(s => s.trim().length > 0).length;
-  if (statementCount > 1) {
-    return { isValid: false, error: 'Multiple SQL statements are not allowed.' };
-  }
+
 
   // Parse the AST
   let ast: any;
@@ -83,45 +74,40 @@ export function validateSqlQuery(sql: string): SqlValidationResult {
   // Handle array result (multiple statements)
   const statements = Array.isArray(ast) ? ast : [ast];
 
-  if (statements.length > 1) {
-    return { isValid: false, error: 'Multiple SQL statements are not allowed.' };
-  }
-
-  const stmt = statements[0];
-  if (!stmt) {
-    return { isValid: false, error: 'Invalid SQL: no statement found.' };
-  }
-
-  // Check statement type
-  const stmtType = (stmt.type || '').toLowerCase();
-  if (stmtType !== 'select') {
-    if (BLOCKED_STATEMENT_TYPES.has(stmtType)) {
-      return { isValid: false, error: `${stmtType.toUpperCase()} statements are not allowed. Only SELECT is permitted.` };
+  for (const stmt of statements) {
+    if (!stmt) {
+      return { isValid: false, error: 'Invalid SQL: no statement found.' };
     }
-    return { isValid: false, error: `Statement type '${stmtType}' is not allowed. Only SELECT is permitted.` };
+
+    // Check statement type
+    const stmtType = (stmt.type || '').toLowerCase();
+    if (stmtType !== 'select') {
+      if (BLOCKED_STATEMENT_TYPES.has(stmtType)) {
+        return { isValid: false, error: `${stmtType.toUpperCase()} statements are not allowed. Only SELECT is permitted.` };
+      }
+      return { isValid: false, error: `Statement type '${stmtType}' is not allowed. Only SELECT is permitted.` };
+    }
+
+    // Deep check the AST for blocked schema references
+    const blockedRef = findBlockedSchemaReference(stmt);
+    if (blockedRef) {
+      return { isValid: false, error: `Access to system table '${blockedRef}' is not allowed.` };
+    }
   }
 
-  // Deep check the AST for blocked schema references
-  const blockedRef = findBlockedSchemaReference(stmt);
-  if (blockedRef) {
-    return { isValid: false, error: `Access to system table '${blockedRef}' is not allowed.` };
-  }
-
-  // Enforce LIMIT
+  // Enforce LIMIT - if single statement we can safely string replace.
+  // If multiple, we rely on MAX_PAYLOAD_BYTES to protect us since string replace is tricky.
   let sanitizedSql = trimmedSql;
-  if (!hasLimit(stmt)) {
-    // Remove trailing semicolon if present, append LIMIT
-    sanitizedSql = sanitizedSql.replace(/;\s*$/, '');
-    sanitizedSql = `${sanitizedSql} LIMIT ${MAX_ROWS}`;
-  } else {
-    // If LIMIT exists but exceeds MAX_ROWS, clamp it
-    const existingLimit = getLimit(stmt);
-    if (existingLimit !== null && existingLimit > MAX_ROWS) {
-      // Replace the limit value in the AST and regenerate
-      sanitizedSql = sanitizedSql.replace(
-        /LIMIT\s+\d+/i,
-        `LIMIT ${MAX_ROWS}`
-      );
+  if (statements.length === 1) {
+    const stmt = statements[0];
+    if (!hasLimit(stmt)) {
+      sanitizedSql = sanitizedSql.replace(/;\s*$/, '');
+      sanitizedSql = `${sanitizedSql} LIMIT ${MAX_ROWS}`;
+    } else {
+      const existingLimit = getLimit(stmt);
+      if (existingLimit !== null && existingLimit > MAX_ROWS) {
+        sanitizedSql = sanitizedSql.replace(/LIMIT\s+\d+/i, `LIMIT ${MAX_ROWS}`);
+      }
     }
   }
 

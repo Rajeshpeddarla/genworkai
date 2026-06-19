@@ -4,6 +4,7 @@ import { connectedDatabases, knowledgeSources, knowledgeBases } from '../../../d
 import { eq } from 'drizzle-orm';
 import { requireUser, requireOwnership } from '../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../lib/errors';
+import { logAuditEvent } from '../../../lib/security/audit';
 
 export async function GET(req: Request) {
   try {
@@ -14,24 +15,33 @@ export async function GET(req: Request) {
     const kbId = url.searchParams.get('kbId');
 
     let dbsQuery: any[] = [];
-    if (kbId) {
+    if (kbId && kbId !== 'none') {
       const ownershipError = await requireOwnership('knowledge_base', parseInt(kbId, 10), user.id);
       if (ownershipError) return ownershipError;
 
       dbsQuery = await db.select().from(connectedDatabases).where(eq(connectedDatabases.kbId, parseInt(kbId, 10)));
     } else {
-      // Fetch all DBs across all user's KBs
+      // Fetch all DBs directly owned by the user (now that we have a userId column)
+      // Also fetch any DBs attached to KBs the user owns just to be thorough
+      
       const userKbs = await db.select({ id: knowledgeBases.id }).from(knowledgeBases).where(eq(knowledgeBases.userId, user.id));
       const userKbIds = userKbs.map(kb => kb.id);
       
-      if (userKbIds.length === 0) {
-        dbsQuery = [];
-      } else {
-        dbsQuery = await db.select()
-          .from(connectedDatabases)
-          .innerJoin(knowledgeBases, eq(connectedDatabases.kbId, knowledgeBases.id))
-          .where(eq(knowledgeBases.userId, user.id))
-          .then(res => res.map(r => r.connected_databases));
+      dbsQuery = await db.select().from(connectedDatabases)
+        .where(
+          // For simplicity in MVP, fetch databases where userId matches OR kbId is in the list
+          eq(connectedDatabases.userId, user.id)
+        );
+      
+      // If we didn't migrate some old data, add kbId matching as fallback
+      if (userKbIds.length > 0) {
+        const legacyDbs = await db.select().from(connectedDatabases).where(require('drizzle-orm').inArray(connectedDatabases.kbId, userKbIds));
+        const newDbIds = new Set(dbsQuery.map(d => d.id));
+        for (const lDb of legacyDbs) {
+           if (!newDbIds.has(lDb.id)) {
+              dbsQuery.push(lDb);
+           }
+        }
       }
     }
 
@@ -77,7 +87,7 @@ export async function DELETE(req: Request) {
     if (!targetDb || targetDb.length === 0) {
       throw new ValidationError('Database not found');
     }
-    const ownershipError = await requireOwnership('knowledge_base', targetDb[0]!.kbId as number, user.id);
+    const ownershipError = await requireOwnership('database', targetDb[0]!.id, user.id);
     if (ownershipError) return ownershipError;
 
     // Delete the database. Due to constraints, deleting from connectedDatabases might not automatically
@@ -87,6 +97,14 @@ export async function DELETE(req: Request) {
     // For MVP, just delete the connected_databases record, and let dangling sources be harmless
     // or manually clean them if schema is strict
     await db.delete(connectedDatabases).where(eq(connectedDatabases.id, parseInt(dbId, 10)));
+
+    await logAuditEvent({
+      userId: user.id,
+      action: 'DELETE_DATABASE',
+      resourceType: 'database',
+      resourceId: parseInt(dbId, 10),
+      metadata: { kbId: targetDb[0]!.kbId }
+    });
     
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

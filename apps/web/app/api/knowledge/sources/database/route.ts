@@ -21,16 +21,15 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { connectionString, host, port, database, databaseName, username, password, engine = 'pg', kbId } = body;
     
-    if (!kbId) {
-      throw new ValidationError('Knowledge Base ID (kbId) is required');
-    }
-
     const finalDatabaseName = databaseName || database;
-    const targetKbId = parseInt(kbId, 10);
+    let targetKbId: number | null = null;
     
     // 2. Ownership Verification
-    const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
-    if (ownershipError) return ownershipError;
+    if (kbId && kbId !== 'none') {
+       targetKbId = parseInt(kbId, 10);
+       const ownershipError = await requireOwnership('knowledge_base', targetKbId, user.id);
+       if (ownershipError) return ownershipError;
+    }
 
     const portNum = port ? parseInt(String(port), 10) : undefined;
     const config: DBConnectionConfig = {
@@ -50,6 +49,7 @@ export async function POST(req: Request) {
 
     // 1. Create Connected Database Record
     const newDb = await db.insert(connectedDatabases).values({
+      userId: user.id,
       kbId: targetKbId,
       name: `Database: ${finalDatabaseName || 'Custom'}`,
       engine,
@@ -70,6 +70,7 @@ export async function POST(req: Request) {
 
     // 4. Create or Update Knowledge Source
     const newSource = await db.insert(knowledgeSources).values({
+      userId: user.id,
       kbId: targetKbId,
       name: `Database: ${finalDatabaseName || 'Custom'}`,
       type: 'database',

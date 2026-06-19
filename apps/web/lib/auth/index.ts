@@ -144,14 +144,20 @@ export async function requireOwnership(
       }
 
       case 'database': {
-        const dbRecord = await db.select({ kbId: connectedDatabases.kbId })
+        const dbRecord = await db.select({ kbId: connectedDatabases.kbId, userId: connectedDatabases.userId })
           .from(connectedDatabases)
           .where(eq(connectedDatabases.id, id))
           .limit(1);
         if (!dbRecord[0]) {
           return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
         }
-        return requireOwnership('knowledge_base', dbRecord[0].kbId!, userId);
+        if (dbRecord[0].userId === userId) {
+          return null; // Directly owned
+        }
+        if (dbRecord[0].kbId) {
+          return requireOwnership('knowledge_base', dbRecord[0].kbId, userId);
+        }
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
 
       case 'chat': {
@@ -199,14 +205,20 @@ export async function requireOwnership(
       }
 
       case 'source': {
-        const source = await db.select({ kbId: knowledgeSources.kbId })
+        const source = await db.select({ kbId: knowledgeSources.kbId, userId: knowledgeSources.userId })
           .from(knowledgeSources)
           .where(eq(knowledgeSources.id, id))
           .limit(1);
         if (!source[0]) {
           return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
         }
-        return requireOwnership('knowledge_base', source[0].kbId!, userId);
+        if (source[0].userId === userId) {
+           return null;
+        }
+        if (source[0].kbId) {
+           return requireOwnership('knowledge_base', source[0].kbId, userId);
+        }
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
 
       case 'document': {

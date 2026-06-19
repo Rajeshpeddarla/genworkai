@@ -32,7 +32,16 @@ export async function PATCH(req: Request) {
     const { userId, updates } = await req.json();
     if (!userId || !updates) return NextResponse.json({ error: 'Missing payload' }, { status: 400 });
 
-    const updated = await db.update(profiles).set(updates).where(eq(profiles.id, userId)).returning();
+    // Prevent mass assignment by only allowing specific fields
+    const safeUpdates: Partial<typeof profiles.$inferInsert> = {};
+    if (updates.isAdmin !== undefined) safeUpdates.isAdmin = updates.isAdmin;
+    if (updates.isActive !== undefined) safeUpdates.isActive = updates.isActive;
+    
+    if (Object.keys(safeUpdates).length === 0) {
+       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
+    const updated = await db.update(profiles).set(safeUpdates).where(eq(profiles.id, userId)).returning();
 
     // Audit log the profile update (e.g., admin granting another user admin access)
     await logAuditEvent({

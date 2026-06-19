@@ -7,6 +7,10 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.85",
+    "@ai-sdk/google": "^3.0.83",
+    "@ai-sdk/openai": "^3.0.73",
+    "ai": "^6.0.208",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

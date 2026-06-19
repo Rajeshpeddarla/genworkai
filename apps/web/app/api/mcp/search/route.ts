@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { documentChunks, documents } from '../../../../db/schema';
+import { documentChunks, documents, mcpApiKeys, mcpServers } from '../../../../db/schema';
 import { generateEmbedding } from '../../../../lib/embeddings';
 import { cosineDistance, eq } from 'drizzle-orm';
+import crypto from 'crypto';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,19 +18,33 @@ export async function OPTIONS() {
 // Example MCP / REST Endpoint for External Agents
 export async function POST(req: Request) {
   try {
-    // 1. Basic Authentication
-    // For V1, we use a simple x-api-key header check.
     const apiKeyHeader = req.headers.get('x-api-key');
-    const validApiKey = process.env.GENWORKAI_MCP_API_KEY || 'dev-mcp-key-123';
-    
-    if (apiKeyHeader !== validApiKey) {
-      return NextResponse.json({ error: 'Unauthorized. Invalid API Key.' }, { status: 401, headers: corsHeaders });
+    if (!apiKeyHeader) {
+      return NextResponse.json({ error: 'Unauthorized. Missing API Key.' }, { status: 401, headers: corsHeaders });
     }
 
     const { query, kbId, limit = 5 } = await req.json();
 
     if (!query || !kbId) {
       return NextResponse.json({ error: 'Query and kbId are required' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Hash the provided API key to check against database
+    const keyHash = crypto.createHash('sha256').update(apiKeyHeader).digest('hex');
+
+    const keys = await db.select().from(mcpApiKeys).where(eq(mcpApiKeys.keyHash, keyHash)).limit(1);
+    const validKey = keys[0];
+
+    if (!validKey) {
+      return NextResponse.json({ error: 'Unauthorized. Invalid API Key.' }, { status: 401, headers: corsHeaders });
+    }
+
+    // Verify the server has access to this kbId
+    const servers = await db.select().from(mcpServers).where(eq(mcpServers.id, validKey.serverId!)).limit(1);
+    const server = servers[0];
+
+    if (!server || !server.kbIds || !Array.isArray(server.kbIds) || !server.kbIds.includes(parseInt(kbId, 10))) {
+      return NextResponse.json({ error: 'Forbidden. Server does not have access to this Knowledge Base.' }, { status: 403, headers: corsHeaders });
     }
 
     // 2. Generate embedding for the search query

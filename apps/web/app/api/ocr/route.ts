@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import Tesseract from 'tesseract.js';
+import { requireUser } from '../../../lib/auth';
+import { RateLimitService } from '../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { imageBase64 } = await req.json();
 
     if (!imageBase64) {

@@ -1,15 +1,18 @@
-import dns from "node:dns";
-
-// Fix Windows Node.js IPv6-first DNS resolution causing external API failures.
-try {
-  dns.setDefaultResultOrder("ipv4first");
-} catch (e) {
-  // Ignored in browser context
-}
+import { generateText, CoreMessage } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
+}
+
+export interface ProviderConfig {
+  provider: string; // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', 'ckey', 'custom'
+  apiKey: string;
+  baseUrl?: string;
+  defaultModel?: string;
 }
 
 export interface ChatCompletionOptions {
@@ -21,77 +24,71 @@ export interface ChatCompletionOptions {
   agentRole?: 'reasoning' | 'fast' | 'formatting'; // Smart routing selector
   onLog?: (msg: string) => void;
   timeoutMs?: number;
+  providerConfig?: ProviderConfig; // Optional BYOK config
 }
 
 export interface ChatCompletionResult {
   content: string;
   model: string;
-  provider: "ckey";
+  provider: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
 }
 
 // ─── Smart Model Routing ─────────────────────────────────────────
+const DEFAULT_CKEY_MODEL = "deepseek-v4-flash";
 
-const MODEL_ROUTING: Record<string, string> = {
-  reasoning:  "deepseek-v4-flash",
-  fast:       "deepseek-v4-flash",
-  formatting: "deepseek-v4-flash",
-};
-const DEFAULT_MODEL = "deepseek-v4-flash";
-
-function selectModel(agentRole?: string): string {
-  if (agentRole && agentRole in MODEL_ROUTING) {
-    return MODEL_ROUTING[agentRole] || DEFAULT_MODEL;
-  }
-  return DEFAULT_MODEL;
-}
-
-// ─── Ckey.vn API Call ────────────────────────────────────────────
-
-async function callCkey(options: ChatCompletionOptions, apiKey: string, apiUrl: string): Promise<ChatCompletionResult> {
-  const model = selectModel(options.agentRole);
-  options.onLog?.(`AI: calling Ckey.vn ${model}`);
-
-  const body: Record<string, unknown> = {
-    model,
-    messages: options.messages,
-    max_tokens: options.maxTokens ?? 4096,
-    temperature: options.temperature ?? 0.2,
-  };
-
-  if (options.topP !== undefined) {
-    body.top_p = options.topP;
+function getModelInstance(options: ChatCompletionOptions, fallbackApiKey: string, fallbackUrl: string) {
+  const config = options.providerConfig;
+  
+  // 1. Fallback / Platform Default
+  if (!config || !config.provider) {
+    const openai = createOpenAI({
+      apiKey: fallbackApiKey,
+      baseURL: fallbackUrl,
+    });
+    return openai(DEFAULT_CKEY_MODEL);
   }
 
-  if (options.responseFormatJson) {
-    body.response_format = { type: "json_object" };
+  // 2. BYOK Routing
+  const provider = config.provider.toLowerCase();
+  const apiKey = config.apiKey;
+  const modelName = config.defaultModel || 'gpt-4o'; // Fallback generic name if missing
+
+  switch (provider) {
+    case 'openai':
+    case 'openrouter':
+    case 'ollama':
+    case 'custom':
+    case 'ckey': {
+      // All these are OpenAI-compatible endpoints
+      const openai = createOpenAI({
+        apiKey: apiKey,
+        baseURL: config.baseUrl,
+      });
+      return openai(modelName);
+    }
+    case 'anthropic': {
+      const anthropic = createAnthropic({
+        apiKey: apiKey,
+        baseURL: config.baseUrl,
+      });
+      return anthropic(modelName);
+    }
+    case 'gemini':
+    case 'google': {
+      const google = createGoogleGenerativeAI({
+        apiKey: apiKey,
+        baseURL: config.baseUrl,
+      });
+      return google(modelName);
+    }
+    default:
+      throw new Error(`Unsupported provider: ${provider}`);
   }
-
-  const res = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-    cache: "no-store",
-    signal: AbortSignal.timeout(options.timeoutMs ?? 120000),
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => "unknown");
-    throw new Error(`Ckey.vn HTTP ${res.status}: ${err.slice(0, 300)}`);
-  }
-
-  const data = await res.json() as any;
-  const content = data.choices?.[0]?.message?.content;
-  const usedModel = data.model || model;
-
-  if (typeof content !== "string" || !content.trim()) {
-    throw new Error(`Ckey.vn ${model} returned empty completion`);
-  }
-
-  options.onLog?.(`AI: Ckey.vn ${usedModel} succeeded`);
-  return { content, model: usedModel, provider: "ckey" };
 }
 
 // ─── Main entry ─────────────────────────────────────────────────
@@ -99,27 +96,49 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function generateWithFallbacks(
   options: ChatCompletionOptions,
-  apiKey: string,
-  apiUrl: string = "https://ckey.vn/v1/chat/completions",
+  fallbackApiKey: string,
+  fallbackUrl: string = "https://ckey.vn/v1/chat/completions",
   maxRetries = 3
 ): Promise<ChatCompletionResult> {
   let attempt = 0;
   
   while (attempt < maxRetries) {
     try {
-      return await callCkey(options, apiKey, apiUrl);
+      const model = getModelInstance(options, fallbackApiKey, fallbackUrl);
+      const providerName = options.providerConfig?.provider || 'ckey (platform)';
+      
+      options.onLog?.(`AI: Routing to ${providerName}`);
+
+      const { text, usage } = await generateText({
+        model: model,
+        messages: options.messages as CoreMessage[],
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        abortSignal: AbortSignal.timeout(options.timeoutMs ?? 120000),
+      });
+
+      options.onLog?.(`AI: ${providerName} succeeded`);
+
+      return { 
+        content: text, 
+        model: model.modelId, 
+        provider: providerName,
+        usage: {
+          promptTokens: usage?.promptTokens || 0,
+          completionTokens: usage?.completionTokens || 0,
+          totalTokens: usage?.totalTokens || 0,
+        }
+      };
+      
     } catch (err: any) {
       attempt++;
       const msg = err?.message || 'unknown error';
-      console.warn(`[LLM] Ckey.vn attempt ${attempt} failed: ${msg}`);
-      
-      if (msg.includes('HTTP 4') && !msg.includes('HTTP 429')) {
-        throw new Error(`Ckey.vn API call failed (unrecoverable): ${msg}`);
-      }
+      console.warn(`[LLM] AI Attempt ${attempt} failed: ${msg}`);
       
       if (attempt >= maxRetries) {
-        options.onLog?.(`AI: Ckey.vn failed after ${maxRetries} attempts`);
-        throw new Error(`Ckey.vn API call failed after ${maxRetries} attempts: ${msg}.`);
+        options.onLog?.(`AI: Failed after ${maxRetries} attempts`);
+        throw new Error(`AI generation failed after ${maxRetries} attempts: ${msg}`);
       }
       
       const delay = Math.pow(3, attempt) * 1000;

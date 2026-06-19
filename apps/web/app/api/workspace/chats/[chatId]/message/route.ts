@@ -4,14 +4,25 @@ import { workspaceChats, workspaceMessages, workspaceArtifacts, workspaceArtifac
 import { eq, asc, sql } from 'drizzle-orm';
 import { createOpenAI } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import { requireUser, requireOwnership } from '../../../../../../lib/auth';
+import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 
 export async function POST(req: Request, { params }: { params: Promise<{ chatId: string }> }) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const resolvedParams = await params;
     const chatId = parseInt(resolvedParams.chatId);
     if (isNaN(chatId)) {
       return NextResponse.json({ error: "Invalid chat ID" }, { status: 400 });
     }
+
+    const ownershipError = await requireOwnership('chat', chatId, user.id);
+    if (ownershipError) return ownershipError;
 
     const { content } = await req.json();
     if (!content) {

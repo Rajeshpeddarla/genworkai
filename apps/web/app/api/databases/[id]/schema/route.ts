@@ -17,7 +17,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       throw new ValidationError('Database not found');
     }
 
-    const ownershipError = await requireOwnership('knowledge_base', targetDb[0]!.kbId as number, user.id);
+    const ownershipError = await requireOwnership('database', dbId, user.id);
     if (ownershipError) return ownershipError;
 
     const schemas = await db.select().from(databaseSchemas).where(eq(databaseSchemas.databaseId, dbId));

@@ -132,20 +132,33 @@ export class DatabaseService {
       await client.query(`SET statement_timeout = ${STATEMENT_TIMEOUT_MS}`);
       const res = await client.query(safeQuery);
       await client.end();
-      result = res.rows;
+      if (Array.isArray(res)) {
+        result = res.map(r => r.rows);
+      } else {
+        result = [res.rows];
+      }
     } else if (this.config.engine === 'mysql') {
       const connection = await mysql.createConnection(this.getMysqlConfig());
       // MySQL timeout is set in config
       const [rows] = await connection.query(safeQuery);
       await connection.end();
-      result = rows;
+      // mysql2 with multipleStatements returns array of arrays
+      if (Array.isArray(rows) && rows.length > 0 && Array.isArray((rows as any)[0])) {
+        result = rows;
+      } else {
+        result = [rows];
+      }
     } else if (this.config.engine === 'mssql') {
       const pool = await sql.connect(this.getMssqlConfig());
       const req = pool.request();
       (req as any).timeout = STATEMENT_TIMEOUT_MS;
       const res = await req.query(safeQuery);
       await pool.close();
-      result = res.recordset;
+      if (res.recordsets && Array.isArray(res.recordsets) && res.recordsets.length > 0) {
+        result = res.recordsets;
+      } else {
+        result = [res.recordset];
+      }
     } else {
       throw new Error('Unsupported engine');
     }
@@ -176,7 +189,8 @@ export class DatabaseService {
     if (this.config.connectionString) {
       return { 
         connectionString: this.config.connectionString,
-        statement_timeout: STATEMENT_TIMEOUT_MS
+        statement_timeout: STATEMENT_TIMEOUT_MS,
+        connectionTimeoutMillis: STATEMENT_TIMEOUT_MS
       };
     }
     
@@ -187,6 +201,7 @@ export class DatabaseService {
       user: this.config.username,
       password: this.config.password,
       statement_timeout: STATEMENT_TIMEOUT_MS,
+      connectionTimeoutMillis: STATEMENT_TIMEOUT_MS,
       ssl: process.env.PG_REQUIRE_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
     };
   }
@@ -200,6 +215,7 @@ export class DatabaseService {
       user: this.config.username,
       password: this.config.password,
       connectTimeout: STATEMENT_TIMEOUT_MS,
+      multipleStatements: true,
     };
   }
 

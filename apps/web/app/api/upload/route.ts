@@ -8,9 +8,17 @@ import { documents, documentChunks, knowledgeBases } from '../../../db/schema';
 import { chunkText, generateEmbedding } from '../../../lib/embeddings';
 import { validateUpload } from '../../../lib/security/file-upload';
 import { safeErrorResponse, ValidationError } from '../../../lib/errors';
+import { requireUser } from '../../../lib/auth';
+import { RateLimitService } from '../../../lib/security/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    const { user, error: authError } = await requireUser();
+    if (authError) return authError;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'upload');
+    if (rateLimitResponse) return rateLimitResponse;
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 

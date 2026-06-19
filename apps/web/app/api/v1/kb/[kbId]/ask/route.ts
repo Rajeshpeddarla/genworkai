@@ -1,0 +1,161 @@
+import { NextResponse } from 'next/server';
+import { db } from '../../../../../../db';
+import { sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
+import { generateEmbedding } from '../../../../../../lib/embeddings';
+import { generateWithFallbacks } from '@repo/ai';
+import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
+import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
+
+const askSchema = z.object({
+  question: z.string().min(1, 'Question is required'),
+});
+
+export async function POST(req: Request, { params }: { params: { kbId: string } }) {
+  const startTime = Date.now();
+  let authResult;
+  let metrics = { vector_searches: 0, requests: 1, llm_tokens: 0 };
+
+  try {
+    const kbId = parseInt(params.kbId, 10);
+    if (isNaN(kbId)) {
+      throw new ValidationError('Invalid Knowledge Base ID');
+    }
+
+    // 1. Authenticate using the API Gateway Service
+    const authHeader = req.headers.get('authorization');
+    authResult = await ApiAuthService.validateRequest(authHeader, 'kb:read', 'kb', kbId);
+    
+    if (!authResult.isValid) {
+      return NextResponse.json({ error: authResult.error }, { status: 401 });
+    }
+
+    // 2. Parse and Validate Payload
+    const body = await req.json().catch(() => ({}));
+    const parsed = askSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
+    }
+    const { question } = parsed.data;
+
+    // 3. Generate query embedding & Search
+    const queryVector = await generateEmbedding(question);
+    const queryVectorString = `[${queryVector.join(',')}]`;
+    metrics.vector_searches += 1;
+
+    const searchSql = sql`
+      WITH vector_search AS (
+        SELECT c.id, c.embedding <=> ${queryVectorString}::vector as distance,
+               ROW_NUMBER() OVER (ORDER BY c.embedding <=> ${queryVectorString}::vector ASC) as vector_rank
+        FROM document_chunks c
+        JOIN documents d ON d.id = c.document_id
+        WHERE d.kb_id = ${kbId}
+        ORDER BY distance ASC
+        LIMIT 10
+      ),
+      keyword_search AS (
+        SELECT c.id, ts_rank(to_tsvector('english', c.content), plainto_tsquery('english', ${question})) as bm25_rank,
+               ROW_NUMBER() OVER (ORDER BY ts_rank(to_tsvector('english', c.content), plainto_tsquery('english', ${question})) DESC) as keyword_rank
+        FROM document_chunks c
+        JOIN documents d ON d.id = c.document_id
+        WHERE d.kb_id = ${kbId}
+          AND to_tsvector('english', c.content) @@ plainto_tsquery('english', ${question})
+        ORDER BY bm25_rank DESC
+        LIMIT 10
+      ),
+      rrf AS (
+        SELECT 
+          COALESCE(v.id, k.id) as chunk_id,
+          (COALESCE(1.0 / (60 + v.vector_rank), 0.0) +
+           COALESCE(1.0 / (60 + k.keyword_rank), 0.0)) as rrf_score
+        FROM vector_search v
+        FULL OUTER JOIN keyword_search k ON v.id = k.id
+      )
+      SELECT 
+        c.content,
+        d.title as "documentTitle",
+        d.source_type as "sourceType"
+      FROM rrf r
+      JOIN document_chunks c ON c.id = r.chunk_id
+      JOIN documents d ON d.id = c.document_id
+      ORDER BY r.rrf_score DESC
+      LIMIT 5
+    `;
+
+    const { rows: contexts } = await db.execute(searchSql);
+    const contextText = contexts.map(c => `[Source: ${c.documentTitle}]\n${c.content}`).join('\n\n');
+
+    // 4. Generate answer with citations
+    const providerConfig = await AiRoutingService.resolveProviderForUser(authResult.userId!, 'knowledge');
+    
+    const systemPrompt = `You are an intelligent knowledge base assistant. Answer the user's question based strictly on the provided context. If the answer is not contained in the context, say so.
+Return your response STRICTLY as a JSON object matching this schema:
+{
+  "answer": "Your detailed answer",
+  "sources": ["Array of source titles used"],
+  "confidence": 0.95 // Number between 0 and 1 indicating how confident you are that the context answers the question
+}
+
+Context:
+${contextText}
+`;
+
+    const llmRes = await generateWithFallbacks(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question }
+        ],
+        agentRole: 'reasoning',
+        maxTokens: 2000,
+        responseFormatJson: true,
+        providerConfig
+      },
+      process.env.OPENAI_API_KEY || "dummy", 
+      process.env.OLLAMA_URL ? `${process.env.OLLAMA_URL}/v1/chat/completions` : undefined
+    );
+
+    // Rough token estimation
+    metrics.llm_tokens += Math.floor((systemPrompt.length + contextText.length + question.length + llmRes.content.length) / 4);
+
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(llmRes.content);
+    } catch (e) {
+      // Fallback if LLM didn't return perfect JSON
+      parsedResponse = { answer: llmRes.content, sources: [], confidence: 0.5 };
+    }
+
+    // 5. Log API usage asynchronously
+    const durationMs = Date.now() - startTime;
+    ApiAuthService.logUsage({
+      userId: authResult.userId!,
+      apiKeyId: authResult.apiKeyId,
+      endpoint: `/v1/kb/${kbId}/ask`,
+      resourceType: 'kb',
+      resourceId: kbId,
+      status: 200,
+      durationMs,
+      metrics
+    });
+
+    return NextResponse.json(parsedResponse);
+
+  } catch (error: unknown) {
+    const durationMs = Date.now() - startTime;
+    if (authResult?.isValid) {
+      ApiAuthService.logUsage({
+        userId: authResult.userId!,
+        apiKeyId: authResult.apiKeyId,
+        endpoint: `/v1/kb/${params.kbId}/ask`,
+        resourceType: 'kb',
+        resourceId: parseInt(params.kbId, 10),
+        status: error instanceof ValidationError ? 400 : 500,
+        durationMs,
+        metrics
+      });
+    }
+    return safeErrorResponse(error, 'V1 Knowledge Ask');
+  }
+}

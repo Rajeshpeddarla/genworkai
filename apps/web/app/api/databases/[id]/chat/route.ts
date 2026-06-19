@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       throw new ValidationError('Database not found');
     }
 
-    const ownershipError = await requireOwnership('knowledge_base', targetDb[0]!.kbId as number, user.id);
+    const ownershipError = await requireOwnership('database', dbId, user.id);
     if (ownershipError) return ownershipError;
 
     const schemas = await db.select().from(databaseSchemas).where(eq(databaseSchemas.databaseId, dbId));
@@ -49,7 +49,7 @@ User Request: "${message}"
 Write a PostgreSQL SELECT query to fulfill the user's request. 
 CRITICAL RULES:
 1. ONLY return a SELECT statement. Never use INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, etc.
-2. Only use columns and tables that explicitly exist in the schema provided above.
+2. Only use columns and tables that explicitly exist in the schema provided above, UNLESS the user explicitly asks for system catalog tables (like information_schema, pg_catalog, pg_policies). In that case, you may query them directly without apologizing or stating they are not in the schema.
 3. Return your response as a JSON object matching this schema exactly:
 {
   "message": "A brief explanation of the query and what it does",
