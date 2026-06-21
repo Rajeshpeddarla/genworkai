@@ -4,12 +4,13 @@ import { apiKeys } from '../../../../../db/schema';
 import { requireUser } from '../../../../../lib/auth';
 import { eq, and } from 'drizzle-orm';
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { user, error } = await requireUser();
     if (error) return error;
 
-    const keyId = parseInt(params.id, 10);
+    const { id } = await params;
+    const keyId = parseInt(id, 10);
     if (isNaN(keyId)) {
       return NextResponse.json({ error: 'Invalid Key ID' }, { status: 400 });
     }

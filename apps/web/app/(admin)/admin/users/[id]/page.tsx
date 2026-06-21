@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, User, Mail, Calendar, Shield, Database, BrainCircuit, Terminal, Activity, Zap, Ticket } from "lucide-react";
 
-export default function UserDetailPage({ params }: { params: { id: string } }) {
+export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [activeTab, setActiveTab] = useState("profile");
 
   return (
