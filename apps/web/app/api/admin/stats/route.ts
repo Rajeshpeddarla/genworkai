@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { profiles, knowledgeBases, workspaceArtifacts, documents } from '@/db/schema';
 import { count, eq, sum } from 'drizzle-orm';
-import { requireUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { safeErrorResponse } from '@/lib/errors';
 
 export async function GET(req: Request) {
   try {
-    const { user, error } = await requireUser();
+    const { user, error } = await requireAdmin();
     if (error) return error;
-
-    const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
-    if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     // Aggregate stats
     const totalUsersReq = db.select({ value: count() }).from(profiles);

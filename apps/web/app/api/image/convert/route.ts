@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { validateUpload } from "../../../../lib/security/uploads";
 import sharp from 'sharp';
 
 export async function POST(req: Request) {
@@ -7,8 +8,9 @@ export async function POST(req: Request) {
     const file = formData.get('file') as Blob;
     const format = formData.get('format') as string;
     
-    if (!file || !format) {
-      return NextResponse.json({ error: "Missing file or format" }, { status: 400 });
+    const { valid, error, status } = validateUpload(file as any, 'image');
+    if (!valid) {
+      return NextResponse.json({ error }, { status: status || 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
@@ -59,3 +61,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+

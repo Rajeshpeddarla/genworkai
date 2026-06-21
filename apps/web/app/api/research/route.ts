@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { chromium } from 'playwright';
 import * as cheerio from 'cheerio';
 import { requireUser } from '../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../lib/errors';
@@ -27,14 +26,17 @@ export async function POST(req: Request) {
       throw new ValidationError(`Invalid or unsafe URL: ${ssrfError}`);
     }
 
-    const browser = await chromium.launch({ headless: true });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-    
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    
-    const html = await page.content();
-    await browser.close();
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    if (!response.ok) {
+      throw new ValidationError(`Failed to fetch URL: ${response.statusText}`);
+    }
+
+    const html = await response.text();
 
     const $ = cheerio.load(html);
     

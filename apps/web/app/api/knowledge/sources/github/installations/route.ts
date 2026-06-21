@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { App } from 'octokit';
+import { db } from '@/db';
+import { githubInstallations } from '@/db/schema';
+import { requireUser } from '@/lib/auth';
+import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,28 +16,28 @@ export async function GET() {
       return NextResponse.json({ error: 'GitHub App ID or Private Key is missing from environment variables.' }, { status: 500 });
     }
 
+    const authResult = await requireUser();
+    if (authResult.error) return authResult.error;
+
     // Initialize the GitHub App
     const app = new App({
       appId,
       privateKey,
     });
 
-    // Fetch all installations of this app
-    let installations;
-    try {
-      const response = await app.octokit.rest.apps.listInstallations();
-      installations = response.data;
-    } catch (e: any) {
-      console.error("Failed to list GitHub App installations:", e);
-      return NextResponse.json({ error: 'Failed to authenticate as GitHub App. Check your Private Key and App ID.' }, { status: 500 });
+    const userInstallations = await db.select().from(githubInstallations).where(eq(githubInstallations.userId, authResult.user.id));
+    const userInstallationIds = userInstallations.map(ui => ui.installationId);
+
+    if (userInstallationIds.length === 0) {
+      return NextResponse.json({ success: true, repositories: [] });
     }
 
     const allRepos = [];
 
     // For each installation, fetch the accessible repositories
-    for (const installation of installations) {
+    for (const installationId of userInstallationIds) {
       try {
-        const octokit = await app.getInstallationOctokit(installation.id);
+        const octokit = await app.getInstallationOctokit(installationId);
         const reposResponse = await octokit.rest.apps.listReposAccessibleToInstallation();
         
         for (const repo of reposResponse.data.repositories) {
@@ -44,13 +48,13 @@ export async function GET() {
             private: repo.private,
             url: repo.html_url,
             defaultBranch: repo.default_branch,
-            installationId: installation.id,
+            installationId: installationId,
             ownerAvatarUrl: repo.owner.avatar_url,
             ownerLogin: repo.owner.login
           });
         }
       } catch (err) {
-        console.error(`Failed to fetch repos for installation ${installation.id}:`, err);
+        console.error(`Failed to fetch repos for installation ${installationId}:`, err);
         // Continue to the next installation even if one fails
       }
     }

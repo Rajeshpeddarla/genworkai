@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
-import { sql } from 'drizzle-orm';
+import { knowledgeBases } from '../../../../../../db/schema';
+import { sql, eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { generateEmbedding } from '../../../../../../lib/embeddings';
 import { generateWithFallbacks } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
+import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 
 const generateSchema = z.object({
@@ -13,13 +15,15 @@ const generateSchema = z.object({
   outputType: z.enum(['summary', 'flashcards', 'report']),
 });
 
-export async function POST(req: Request, { params }: { params: { kbId: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ kbId: string }> }) {
   const startTime = Date.now();
   let authResult;
   let metrics = { vector_searches: 0, requests: 1, llm_tokens: 0, artifacts_generated: 0 };
 
   try {
-    const kbId = parseInt(params.kbId, 10);
+    const p = await params;
+    const kbIdStr = p.kbId;
+    const kbId = parseInt(kbIdStr, 10);
     if (isNaN(kbId)) {
       throw new ValidationError('Invalid Knowledge Base ID');
     }
@@ -39,6 +43,15 @@ export async function POST(req: Request, { params }: { params: { kbId: string } 
       return NextResponse.json({ error: 'Validation failed', details: parsed.error.issues }, { status: 400 });
     }
     const { prompt, outputType } = parsed.data;
+
+    const rateLimitResponse = await RateLimitService.check(authResult.userId!, 'v1');
+    if (rateLimitResponse) return rateLimitResponse;
+
+    // 2.5 Verify ownership of Knowledge Base
+    const [kb] = await db.select().from(knowledgeBases).where(and(eq(knowledgeBases.id, kbId), eq(knowledgeBases.userId, authResult.userId!)));
+    if (!kb) {
+      throw new ValidationError('Knowledge base not found or access denied');
+    }
 
     // 3. Search for context based on the prompt
     const queryVector = await generateEmbedding(prompt);
@@ -150,9 +163,9 @@ ${schemaDefinition}`;
       ApiAuthService.logUsage({
         userId: authResult.userId!,
         apiKeyId: authResult.apiKeyId,
-        endpoint: `/v1/kb/${params.kbId}/generate`,
+        endpoint: `/v1/kb/${(await params).kbId}/generate`,
         resourceType: 'kb',
-        resourceId: parseInt(params.kbId, 10),
+        resourceId: parseInt((await params).kbId, 10),
         status: error instanceof ValidationError ? 400 : 500,
         durationMs,
         metrics

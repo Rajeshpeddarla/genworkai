@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { db } from '../../../../../db';
+import { githubInstallations } from '../../../../../db/schema';
+import { requireUser } from '../../../../../lib/auth';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,6 +12,22 @@ export async function GET(req: Request) {
   // We simply redirect them back to the knowledge base dashboard with a success parameter
   
   if (installationId) {
+    const authResult = await requireUser();
+    
+    if (authResult.user) {
+      // Create or update the mapping in the database
+      const parsedId = parseInt(installationId, 10);
+      if (!isNaN(parsedId)) {
+        await db.insert(githubInstallations).values({
+          userId: authResult.user.id,
+          installationId: parsedId,
+        }).onConflictDoUpdate({
+          target: githubInstallations.installationId,
+          set: { userId: authResult.user.id }
+        });
+      }
+    }
+
     // Redirect back to the knowledge base grid page
     return NextResponse.redirect(new URL('/knowledge?github_connected=true', req.url));
   }

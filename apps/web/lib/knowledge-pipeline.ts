@@ -1,8 +1,13 @@
 import Tesseract from 'tesseract.js';
 import mammoth from 'mammoth';
 import * as xlsx from 'xlsx';
+import crypto from 'crypto';
 import { chunkText } from './embeddings';
 import { generateWithFallbacks } from '@repo/ai';
+
+export function generateChunkHash(content: string): string {
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
 
 export async function extractTextFromBuffer(buffer: Buffer, mimeType: string, filename: string): Promise<string> {
   const fileExtension = filename.split('.').pop()?.toLowerCase() || '';
@@ -76,6 +81,13 @@ export async function enhanceTextWithAI(cleanedText: string, apiKey: string, api
     knowledgeContent: cleanedText,
     embeddingContent: cleanedText
   };
+
+  const enableEnhancement = process.env.ENABLE_AI_ENHANCEMENT !== 'false';
+  const maxSize = parseInt(process.env.MAX_AI_ENHANCEMENT_SIZE || '50000', 10);
+  
+  if (!enableEnhancement || cleanedText.length > maxSize) {
+    return enhancedData; // Skip AI enhancement for massive files or if disabled
+  }
 
   try {
     const knowledgePrompt = `You are an AI Document Synthesizer. Take the following raw extracted text and convert it into a structured, human-readable Knowledge Document. Provide an Executive Summary, Key Concepts, Best Practices, and Recommendations. Provide your output strictly as a JSON object matching this schema:

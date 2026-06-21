@@ -32,7 +32,13 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/workspace");
+  const protectedPrefixes = [
+    "/dashboard", "/workspace", "/knowledge-base", "/databases",
+    "/automation-studio", "/developer", "/admin"
+  ];
+  const isProtectedRoute = protectedPrefixes.some(prefix => 
+    request.nextUrl.pathname.startsWith(prefix) && !request.nextUrl.pathname.startsWith("/api/")
+  );
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();

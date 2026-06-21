@@ -82,8 +82,7 @@ export function decryptSecret(encryptedPayload: string): string {
     // For seamless migrations, falling back to returning the plaintext is safer
     // until all rows are confirmed encrypted.
     if (err instanceof SyntaxError) {
-      console.warn('Warning: Treating string as legacy plaintext because JSON parse failed.', err.message);
-      return encryptedPayload;
+      throw new Error('Failed to decrypt secret: Data is not in a valid encrypted format. Decryption fallback disabled for security.');
     }
     throw new Error(`Failed to decrypt secret: ${err.message}`);
   }

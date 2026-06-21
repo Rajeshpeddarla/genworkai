@@ -215,20 +215,35 @@ export class DatabaseService {
       user: this.config.username,
       password: this.config.password,
       connectTimeout: STATEMENT_TIMEOUT_MS,
-      multipleStatements: true,
+      multipleStatements: false,
     };
   }
 
   private getMssqlConfig() {
     if (this.config.connectionString) return this.config.connectionString;
-    return {
-      server: this.config.host || 'localhost',
-      port: this.config.port || 1433,
+
+    const rawHost = this.config.host || 'localhost';
+    const sep = rawHost.indexOf('\\');
+    const server = sep >= 0 ? rawHost.slice(0, sep) : rawHost;
+    const instanceName = sep >= 0 ? rawHost.slice(sep + 1) : undefined;
+
+    const options: Record<string, any> = { 
+      encrypt: true, 
+      trustServerCertificate: process.env.MSSQL_TRUST_SERVER_CERTIFICATE === 'true'
+    };
+    if (instanceName) options.instanceName = instanceName;
+
+    const config: Record<string, any> = {
+      server,
       database: this.config.database,
       user: this.config.username,
       password: this.config.password,
-      options: { encrypt: true, trustServerCertificate: true },
+      options,
     };
+    
+    if (!instanceName) config.port = this.config.port || 1433;
+
+    return config;
   }
 
   private getMongoConfig() {
@@ -236,3 +251,5 @@ export class DatabaseService {
     return `mongodb://${this.config.username}:${this.config.password}@${this.config.host}:${this.config.port || 27017}/${this.config.database}`;
   }
 }
+
+

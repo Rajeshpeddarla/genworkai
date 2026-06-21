@@ -57,11 +57,14 @@ export class ApiAuthService {
 
     // 3. Validate Resource Scope (e.g. {"kb": [12, 18]})
     const resourceScopes = keyRecord.resourceScopes as Record<string, number[]> | null;
-    if (resourceScopes) {
-      const allowedIds = resourceScopes[resourceType];
-      if (!allowedIds || (!allowedIds.includes(resourceId) && !allowedIds.includes('*' as any))) {
-        return { isValid: false, error: `Key does not have access to ${resourceType} ID ${resourceId}` };
-      }
+    
+    if (!resourceScopes) {
+      return { isValid: false, error: 'Resource scopes are missing; access denied.' };
+    }
+
+    const allowedIds = resourceScopes[resourceType];
+    if (!allowedIds || (!allowedIds.includes(resourceId) && !allowedIds.includes('*' as any))) {
+      return { isValid: false, error: `Key does not have access to ${resourceType} ID ${resourceId}` };
     }
 
     // 4. Validate Quota Enforcements
@@ -83,8 +86,12 @@ export class ApiAuthService {
       return { isValid: false, error: 'Quota Exceeded: Too many requests this month.' };
     }
 
-    // 5. Update last used
-    await db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyRecord.id));
+    // 5. Update last used (debounced to 60 minutes to reduce DB load)
+    const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+    if (!keyRecord.lastUsedAt || new Date(keyRecord.lastUsedAt) < sixtyMinutesAgo) {
+      // Run asynchronously so we don't block the API request
+      db.update(apiKeys).set({ lastUsedAt: new Date() }).where(eq(apiKeys.id, keyRecord.id)).catch(console.error);
+    }
 
     return {
       isValid: true,

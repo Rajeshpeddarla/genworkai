@@ -86,3 +86,44 @@ export async function validateUrl(url: string): Promise<string | null> {
 
   return null;
 }
+
+/**
+ * Validates a bare hostname or IP for SSRF safety.
+ * Returns the resolved IP address to prevent DNS rebinding attacks,
+ * or throws/returns an error.
+ */
+export async function isSafeHost(hostname: string): Promise<{ safe: boolean; ip?: string; error?: string }> {
+  const host = hostname.toLowerCase();
+  if (BLOCKED_HOSTNAMES.has(host)) {
+    return { safe: false, error: `Hostname blocked: ${host}` };
+  }
+
+  let allAddresses: string[] = [];
+  try {
+    const addresses = await dns.resolve4(host).catch(() => [] as string[]);
+    const addresses6 = await dns.resolve6(host).catch(() => [] as string[]);
+    allAddresses = [...addresses, ...addresses6];
+
+    if (allAddresses.length === 0) {
+      const isIp = /^[\da-f:.]+$/i.test(host);
+      if (isIp) {
+        allAddresses.push(host);
+      } else {
+        return { safe: false, error: 'Could not resolve hostname to an IP address' };
+      }
+    }
+
+    for (const ip of allAddresses) {
+      for (const pattern of BLOCKED_IP_PATTERNS) {
+        if (pattern.test(ip)) {
+          return { safe: false, error: `Access to internal networks is not allowed` };
+        }
+      }
+    }
+  } catch {
+    return { safe: false, error: 'DNS resolution failed for the provided host' };
+  }
+
+  // Return the first resolved safe IP to prevent DNS rebinding
+  return { safe: true, ip: allAddresses[0] };
+}

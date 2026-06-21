@@ -2,17 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { userLlmKeys } from '../../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { createClient } from '../../../../utils/supabase/server';
+import { requireUser } from '../../../../lib/auth';
 import { EncryptionUtil } from '../../../../lib/utils/encryption';
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     const keys = await db.select({
       id: userLlmKeys.id,
@@ -24,7 +20,7 @@ export async function GET(req: Request) {
       lastValidatedAt: userLlmKeys.lastValidatedAt,
       lastError: userLlmKeys.lastError,
       createdAt: userLlmKeys.createdAt
-    }).from(userLlmKeys).where(eq(userLlmKeys.userId, session.user.id));
+    }).from(userLlmKeys).where(eq(userLlmKeys.userId, user.id));
 
     return NextResponse.json(keys);
   } catch (error: any) {
@@ -35,12 +31,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, error } = await requireUser();
+    if (error) return error;
 
     const body = await req.json();
     
@@ -52,7 +44,7 @@ export async function POST(req: Request) {
     const encryptedKey = EncryptionUtil.encrypt(body.apiKey);
 
     const [newKey] = await db.insert(userLlmKeys).values({
-      userId: session.user.id,
+      userId: user.id,
       provider: body.provider,
       apiKey: encryptedKey,
       baseUrl: body.baseUrl,

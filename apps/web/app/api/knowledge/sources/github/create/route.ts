@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { knowledgeSources, syncJobs } from '../../../../../../db/schema';
+import { requireUser, requireOwnership } from '../../../../../../lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -10,8 +11,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'kbId and repo are required' }, { status: 400 });
     }
 
+    const authResult = await requireUser();
+    if (authResult.error) return authResult.error;
+
+    const ownershipError = await requireOwnership('knowledge_base', kbId, authResult.user.id);
+    if (ownershipError) return ownershipError;
+
     // Create the Knowledge Source
     const newSource = await db.insert(knowledgeSources).values({
+      userId: authResult.user.id,
       kbId,
       name: repo.fullName,
       type: 'github',

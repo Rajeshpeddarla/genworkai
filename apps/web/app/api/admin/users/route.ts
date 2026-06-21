@@ -2,17 +2,14 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { profiles, knowledgeBases } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireUser } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 import { safeErrorResponse } from '@/lib/errors';
 import { logAuditEvent } from '@/lib/security/audit';
 
 export async function GET(req: Request) {
   try {
-    const { user, error } = await requireUser();
+    const { user, error } = await requireAdmin();
     if (error) return error;
-
-    const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
-    if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const users = await db.select().from(profiles).orderBy(desc(profiles.createdAt));
     return NextResponse.json(users);
@@ -23,11 +20,8 @@ export async function GET(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { user, error } = await requireUser();
+    const { user, error } = await requireAdmin();
     if (error) return error;
-
-    const adminCheck = await db.select().from(profiles).where(eq(profiles.id, user.id)).limit(1);
-    if (!adminCheck[0]?.isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { userId, updates } = await req.json();
     if (!userId || !updates) return NextResponse.json({ error: 'Missing payload' }, { status: 400 });

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { documents, documentChunks, knowledgeSources } from '../../../../db/schema';
-import { generateEmbedding } from '../../../../lib/embeddings';
-import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../lib/knowledge-pipeline';
+import { knowledgeSources, syncJobs } from '../../../../db/schema';
+import { inngest } from '../../../../inngest/client';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+import crypto from 'crypto';
+import { RateLimitService } from '../../../../lib/security/rate-limit';
+import { validateUpload } from '../../../../lib/security/uploads';
 import { requireUser, requireOwnership } from '../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
 import { checkContextLimit } from '../../../../lib/limits';
@@ -30,6 +35,11 @@ export async function POST(req: Request) {
     if (ownershipError) return ownershipError;
 
     let sourceId = sourceIdStr ? parseInt(sourceIdStr, 10) : null;
+    const { valid, error: validationError, status } = validateUpload(file, 'document');
+    if (!valid) {
+      return NextResponse.json({ error: validationError }, { status: status || 400 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const mimeType = file.type;
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
@@ -56,103 +66,36 @@ export async function POST(req: Request) {
       sourceId = filesSource!.id;
     }
 
-    // Pipeline Step 1: Extraction
-    const extractedText = await extractTextFromBuffer(buffer, mimeType, file.name);
-    
-    if (!extractedText || extractedText.length < 10) {
-      throw new ValidationError("Not enough text could be extracted.");
-    }
-
-    // Pipeline Step 2: Cleaning
-    const cleanedText = cleanExtractedText(extractedText);
-
-    // Pipeline Step 3 & 4: Normalization & AI Enhancement
-    const apiKey = process.env.CKEY_API_KEY || '';
-    const enhancedData = (apiKey && !skipEnhance) ? await enhanceTextWithAI(cleanedText, apiKey, process.env.CKEY_API_URL) : {
-      summary: "",
-      topics: [],
-      keywords: [],
-      classification: "Unclassified",
-      knowledgeContent: cleanedText,
-      embeddingContent: cleanedText
-    };
-
-    // Extract relationships based on file type
-    let relType: 'flutter' | 'dotnet' | 'database' | 'openapi' | 'unknown' = 'unknown';
-    if (fileExtension === 'dart') relType = 'flutter';
-    else if (fileExtension === 'cs') relType = 'dotnet';
-    else if (fileExtension === 'sql') relType = 'database';
-    else if (file.name.includes('swagger') || file.name.includes('openapi')) relType = 'openapi';
-    
-    const relationships = extractRelationships(cleanedText, relType);
-
-    // Pipeline Step 5: Save Document
-    const newDoc = await db.insert(documents).values({
-      kbId,
+    // Create a Sync Job
+    const syncJob = await db.insert(syncJobs).values({
       sourceId,
-      title: file.name,
-      sourceType: fileExtension || 'unknown',
-      sourceUrl: file.name,
-      content: cleanedText,
-      summary: enhancedData.summary,
-      topics: enhancedData.topics,
-      keywords: enhancedData.keywords,
-      classification: enhancedData.classification,
-      knowledgeContent: enhancedData.knowledgeContent,
-      embeddingContent: enhancedData.embeddingContent,
-      sizeBytes: buffer.length,
-      metadata: { 
-        mimeType, 
-        originalName: file.name, 
-        processingStrategy: "3-artifact",
-        relationships 
-      }
+      status: 'queued',
+      startedAt: new Date()
     }).returning();
 
-    // Pipeline Step 6: Chunking
-    const chunks = smartChunkMarkdown(enhancedData.embeddingContent || cleanedText);
-    const MAX_CHUNKS = 150;
-    const processableChunks = chunks.slice(0, MAX_CHUNKS);
+    // Save buffer to a temporary file
+    const tempDir = os.tmpdir();
+    const tempFileName = `upload_${crypto.randomUUID()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const tempFilePath = path.join(tempDir, tempFileName);
     
-    // Pipeline Step 7: Embeddings
-    let embeddingsGenerated = 0;
-    for (const chunk of processableChunks) {
-      if (req.signal.aborted) {
-        console.warn("Client aborted request. Stopping embeddings.");
-        break;
-      }
-      if (chunk.length < 5) continue;
-      try {
-        const vector = await generateEmbedding(chunk);
-        await db.insert(documentChunks).values({
-          documentId: newDoc[0]!.id,
-          content: chunk,
-          embedding: vector
-        });
-        embeddingsGenerated++;
-      } catch (embedErr) {
-        console.error("Failed to embed chunk:", embedErr);
-      }
-    }
+    await fs.writeFile(tempFilePath, buffer);
 
-    // Update Source Statistics
-    if (sourceId) {
-      await db.execute(
-        require('drizzle-orm').sql`UPDATE knowledge_sources 
-        SET files_processed = files_processed + 1, 
-            chunks_generated = chunks_generated + ${chunks.length}, 
-            embeddings_generated = embeddings_generated + ${embeddingsGenerated},
-            document_count = document_count + 1,
-            chunk_count = chunk_count + ${chunks.length},
-            last_sync_at = NOW(),
-            last_successful_sync_at = NOW()
-        WHERE id = ${sourceId}`
-      );
-    }
+    // Dispatch to Inngest Worker
+    await inngest.send({
+      name: 'knowledge/process.upload',
+      data: {
+        sourceId,
+        syncJobId: syncJob[0]!.id,
+        filePath: tempFilePath,
+        originalName: file.name,
+        mimeType
+      }
+    });
 
-    return NextResponse.json({ success: true, document: newDoc[0] });
+    return NextResponse.json({ success: true, sourceId, syncJobId: syncJob[0]!.id });
 
   } catch (error: unknown) {
     return safeErrorResponse(error, 'KB Document Upload Route');
   }
 }
+

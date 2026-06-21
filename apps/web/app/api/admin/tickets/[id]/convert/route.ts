@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { tickets, workspaceArtifacts, workspaceChats } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { createApiClient } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const supabase = await createApiClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { user, error } = await requireAdmin();
+    if (error) return error;
 
     const ticketId = (await params).id;
 

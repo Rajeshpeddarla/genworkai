@@ -33,9 +33,7 @@ export async function GET(req: Request) {
     return new Response("Invalid API Key", { status: 401 });
   }
 
-  if (apiKeyRecord.expiresAt && new Date() > apiKeyRecord.expiresAt) {
-    return new Response("API Key expired", { status: 401 });
-  }
+  // No expiresAt field on mcpApiKeys schema
 
   // Get associated server
   const servers = await db.select()
@@ -56,7 +54,7 @@ export async function GET(req: Request) {
     serverId: serverRecord.id,
     userId: serverRecord.userId as string,
     kbIds: (serverRecord.kbIds as number[]) || [],
-    permissionLevel: apiKeyRecord.permissionLevel as string,
+    permissionLevel: 'read',
   };
 
   let controller: ReadableStreamDefaultController;

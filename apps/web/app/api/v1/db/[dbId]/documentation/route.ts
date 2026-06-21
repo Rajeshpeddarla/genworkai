@@ -1,19 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { connectedDatabases, databaseSchemas } from '../../../../../../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
+import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { generateWithFallbacks } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 
-export async function GET(req: Request, { params }: { params: { dbId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ dbId: string }> }) {
   const startTime = Date.now();
   let authResult;
   let metrics = { requests: 1, llm_tokens: 0 };
 
   try {
-    const dbId = parseInt(params.dbId, 10);
+    const p = await params;
+    const dbIdStr = p.dbId;
+    const dbId = parseInt(dbIdStr, 10);
     if (isNaN(dbId)) {
       throw new ValidationError('Invalid Database ID');
     }
@@ -22,10 +25,13 @@ export async function GET(req: Request, { params }: { params: { dbId: string } }
     authResult = await ApiAuthService.validateRequest(authHeader, 'db:query', 'db', dbId);
     
     if (!authResult.isValid) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
+      throw new ValidationError(authResult.error || 'Unauthorized');
     }
 
-    const [dbConnection] = await db.select().from(connectedDatabases).where(eq(connectedDatabases.id, dbId));
+    const rateLimitResponse = await RateLimitService.check(authResult.userId!, 'v1');
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const [dbConnection] = await db.select().from(connectedDatabases).where(and(eq(connectedDatabases.id, dbId), eq(connectedDatabases.userId, authResult.userId!)));
     if (!dbConnection) {
       throw new ValidationError('Database connection not found');
     }
@@ -98,9 +104,9 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
       ApiAuthService.logUsage({
         userId: authResult.userId!,
         apiKeyId: authResult.apiKeyId,
-        endpoint: `/v1/db/${params.dbId}/documentation`,
+        endpoint: `/v1/db/${(await params).dbId}/documentation`,
         resourceType: 'db',
-        resourceId: parseInt(params.dbId, 10),
+        resourceId: parseInt((await params).dbId, 10),
         status: error instanceof ValidationError ? 400 : 500,
         durationMs,
         metrics

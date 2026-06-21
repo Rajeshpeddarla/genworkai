@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import AdmZip from 'adm-zip';
 import { db } from '../../../../../db';
-import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots } from '../../../../../db/schema';
-import { generateEmbedding } from '../../../../../lib/embeddings';
-import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships } from '../../../../../lib/knowledge-pipeline';
+import { knowledgeSources, syncJobs } from '../../../../../db/schema';
+import { inngest } from '../../../../../inngest/client';
 import { eq, and } from 'drizzle-orm';
 import { requireUser, requireOwnership } from '../../../../../lib/auth';
 import { RateLimitService } from '../../../../../lib/security/rate-limit';
@@ -18,14 +16,7 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-function isProcessableFile(filename: string): boolean {
-  const ignored = [
-    '.git/', 'node_modules/', 'dist/', 'build/', '.next/', '.DS_Store', 
-    'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
-    '.png', '.jpg', '.jpeg', '.gif', '.ico', '.svg', '.woff', '.ttf', '.eot', '.mp4', '.mp3'
-  ];
-  return !ignored.some(i => filename.includes(i));
-}
+
 
 export async function POST(req: Request) {
   try {
@@ -113,7 +104,7 @@ export async function POST(req: Request) {
         type: 'github',
         classification,
         configuration: { repoUrl, owner, repo, branch, isPrivate: repoData.private },
-        syncStatus: 'syncing',
+        syncStatus: 'pending',
         latestHash
       }).returning();
       sourceId = newSource[0]!.id;
@@ -122,133 +113,25 @@ export async function POST(req: Request) {
     // Create a Sync Job
     const syncJob = await db.insert(syncJobs).values({
       sourceId,
-      status: 'processing',
+      status: 'queued',
       startedAt: new Date()
     }).returning();
 
-    // 4. Download Zipball
-    const zipRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`, { headers });
-    if (!zipRes.ok) {
-      throw new Error(`Failed to download zipball: ${zipRes.statusText}`);
-    }
-    const arrayBuffer = await zipRes.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // 5. Process Zip
-    const zip = new AdmZip(buffer);
-    const zipEntries = zip.getEntries();
-    
-    let filesProcessed = 0;
-    let chunksGenerated = 0;
-    let embeddingsGenerated = 0;
-    let errorsCount = 0;
-
-    const apiKey = process.env.CKEY_API_KEY || '';
-
-    for (const zipEntry of zipEntries) {
-      if (zipEntry.isDirectory || !isProcessableFile(zipEntry.entryName)) {
-        continue;
-      }
-
-      try {
-        const fileBuffer = zipEntry.getData();
-        const fullPath = zipEntry.entryName; 
-        // GitHub zipball wraps contents in a root folder (e.g. owner-repo-hash/...)
-        const filename = fullPath.substring(fullPath.indexOf('/') + 1); 
-        const fileExtension = filename.split('.').pop()?.toLowerCase() || '';
-
-        const extractedText = await extractTextFromBuffer(fileBuffer, 'application/octet-stream', filename);
-        if (!extractedText || extractedText.length < 10) continue;
-
-        const cleanedText = cleanExtractedText(extractedText);
-
-        const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.CKEY_API_URL) : {
-          summary: "", topics: [], keywords: [], classification: "Unclassified",
-          knowledgeContent: cleanedText, embeddingContent: cleanedText
-        };
-
-        let relType: 'flutter' | 'dotnet' | 'database' | 'openapi' | 'unknown' = 'unknown';
-        if (fileExtension === 'dart') relType = 'flutter';
-        else if (fileExtension === 'cs') relType = 'dotnet';
-        else if (fileExtension === 'sql') relType = 'database';
-        
-        const relationships = extractRelationships(cleanedText, relType);
-
-        const newDoc = await db.insert(documents).values({
-          kbId: parseInt(kbId, 10),
-          sourceId,
-          title: filename,
-          sourceType: fileExtension || 'unknown',
-          sourceUrl: filename,
-          content: cleanedText,
-          summary: enhancedData.summary,
-          topics: enhancedData.topics,
-          keywords: enhancedData.keywords,
-          classification: enhancedData.classification,
-          knowledgeContent: enhancedData.knowledgeContent,
-          embeddingContent: enhancedData.embeddingContent,
-          sizeBytes: fileBuffer.length,
-          metadata: { originalName: filename, processingStrategy: "3-artifact", relationships }
-        }).returning();
-
-        const chunks = smartChunkMarkdown(enhancedData.embeddingContent || cleanedText);
-        chunksGenerated += chunks.length;
-
-        for (const chunk of chunks) {
-          if (chunk.length < 5) continue;
-          try {
-            const vector = await generateEmbedding(chunk);
-            await db.insert(documentChunks).values({
-              documentId: newDoc[0]!.id,
-              content: chunk,
-              embedding: vector
-            });
-            embeddingsGenerated++;
-          } catch (embedErr) {
-            console.error("Failed to embed chunk:", embedErr);
-          }
-        }
-        
-        filesProcessed++;
-      } catch (err) {
-        console.error(`Error processing zip entry ${zipEntry.entryName}:`, err);
-        errorsCount++;
-      }
-    }
-
-    // Add Source Snapshot
-    if (latestHash) {
-      await db.insert(sourceSnapshots).values({
+    // 4. Dispatch to Inngest
+    await inngest.send({
+      name: 'knowledge/process.github',
+      data: {
         sourceId,
-        hash: latestHash,
-        metadata: { filesProcessed, chunksGenerated }
-      });
-    }
+        syncJobId: syncJob[0]!.id,
+        owner,
+        repo,
+        branch,
+        oauthToken,
+        classification
+      }
+    });
 
-    // Update Source Statistics & Sync Job
-    await db.execute(
-      require('drizzle-orm').sql`UPDATE knowledge_sources 
-      SET files_processed = files_processed + ${filesProcessed}, 
-          chunks_generated = chunks_generated + ${chunksGenerated}, 
-          embeddings_generated = embeddings_generated + ${embeddingsGenerated},
-          document_count = document_count + ${filesProcessed},
-          chunk_count = chunk_count + ${chunksGenerated},
-          errors_count = errors_count + ${errorsCount},
-          latest_hash = ${latestHash},
-          last_sync_at = NOW(),
-          last_successful_sync_at = NOW(),
-          sync_status = 'success',
-          classification = ${JSON.stringify(classification)}::jsonb
-      WHERE id = ${sourceId}`
-    );
-
-    await db.execute(
-      require('drizzle-orm').sql`UPDATE sync_jobs
-      SET status = 'completed', finished_at = NOW()
-      WHERE id = ${syncJob[0]!.id}`
-    );
-
-    return NextResponse.json({ success: true, sourceId, filesProcessed }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, sourceId, syncJobId: syncJob[0]!.id }, { headers: corsHeaders });
 
   } catch (error: any) {
     console.error('GitHub Import error:', error);

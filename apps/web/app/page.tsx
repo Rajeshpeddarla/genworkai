@@ -37,25 +37,88 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="pt-40 pb-20 px-6 max-w-7xl mx-auto text-center relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-violet-600/20 blur-[120px] rounded-full pointer-events-none" />
         
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-zinc-300 mb-8 backdrop-blur-lg">
+        {/* Animated Background Grid & Neurons */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none w-full flex justify-center">
+          {/* Mask that fades out gracefully at bottom and completely fades out at left/right edges */}
+          <div className="absolute inset-0 w-full h-[120%] [mask-image:radial-gradient(ellipse_60%_100%_at_50%_0%,#000_10%,transparent_80%)]">
+            {/* The Grid itself */}
+            <motion.div
+              animate={{ backgroundPosition: ["0px 0px", "0px 40px"] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              className="absolute inset-0 w-full h-full bg-[linear-gradient(to_right,rgba(139,92,246,0.2)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.2)_1px,transparent_1px)] bg-[size:40px_40px]"
+            />
+            
+            {/* Horizontal Neurons (synced to vertical grid scrolling) */}
+            <motion.div 
+              animate={{ y: [0, 40] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+              className="absolute inset-0"
+            >
+              <motion.div
+                animate={{ left: ["-20%", "120%"] }}
+                transition={{ repeat: Infinity, duration: 3, ease: "linear", delay: 0 }}
+                className="absolute top-[120px] w-[30%] h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] opacity-80"
+              />
+              <motion.div
+                animate={{ left: ["120%", "-20%"] }}
+                transition={{ repeat: Infinity, duration: 4.5, ease: "linear", delay: 1 }}
+                className="absolute top-[280px] w-[40%] h-[2px] bg-gradient-to-r from-transparent via-violet-400 to-transparent shadow-[0_0_15px_#8b5cf6] opacity-80"
+              />
+              <motion.div
+                animate={{ left: ["-20%", "120%"] }}
+                transition={{ repeat: Infinity, duration: 2.5, ease: "linear", delay: 2.5 }}
+                className="absolute top-[440px] w-[20%] h-[2px] bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent shadow-[0_0_15px_#d946ef] opacity-80"
+              />
+            </motion.div>
+
+            {/* Vertical Neurons (static lines, fixed exact grid multiples) */}
+            <motion.div
+              animate={{ top: ["-20%", "120%"] }}
+              transition={{ repeat: Infinity, duration: 5, ease: "linear", delay: 0.5 }}
+              className="absolute left-[160px] h-[40%] w-[2px] bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] opacity-80"
+            />
+            <motion.div
+              animate={{ top: ["120%", "-20%"] }}
+              transition={{ repeat: Infinity, duration: 6, ease: "linear", delay: 1.5 }}
+              className="absolute left-[640px] h-[30%] w-[2px] bg-gradient-to-b from-transparent via-violet-400 to-transparent shadow-[0_0_15px_#8b5cf6] opacity-80"
+            />
+            <motion.div
+              animate={{ top: ["-20%", "120%"] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "linear", delay: 3 }}
+              className="absolute left-[1280px] h-[50%] w-[2px] bg-gradient-to-b from-transparent via-fuchsia-400 to-transparent shadow-[0_0_15px_#d946ef] opacity-80"
+            />
+            <motion.div
+              animate={{ top: ["120%", "-20%"] }}
+              transition={{ repeat: Infinity, duration: 3.5, ease: "linear", delay: 2 }}
+              className="absolute left-[1800px] h-[25%] w-[2px] bg-gradient-to-b from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#22d3ee] opacity-80"
+            />
+          </div>
+        </div>
+
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3], rotate: [0, 90, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-violet-600/20 blur-[120px] rounded-full pointer-events-none z-0" 
+        />
+        
+        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-zinc-300 mb-8 backdrop-blur-lg relative z-10">
           <Sparkles className="w-4 h-4 text-cyan-400" /> 
           <span>GenWorkAI is now in Early Access</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tighter">
+        <h1 className="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tighter relative z-10">
           Build Applications <br className="hidden md:block"/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-violet-400 to-fuchsia-400">
             From Knowledge.
           </span>
         </h1>
 
-        <p className="text-xl md:text-2xl text-zinc-400 max-w-3xl mx-auto mb-12 leading-relaxed">
+        <p className="text-xl md:text-2xl text-zinc-400 max-w-3xl mx-auto mb-12 leading-relaxed relative z-10">
           Turn repositories, databases, documents, websites, and business knowledge into APIs, MCP servers, streaming endpoints, and application-ready intelligence.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20 relative z-10">
           <Link href="/signup" className="w-full sm:w-auto bg-white text-black px-8 py-4 rounded-xl text-lg font-bold transition-transform hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.2)]">
             Start Building Free
           </Link>
@@ -77,15 +140,19 @@ export default function LandingPage() {
 
             {/* Core */}
             <div className="flex-shrink-0 relative">
-              <ArrowRight className="w-8 h-8 text-violet-500 absolute -left-12 top-1/2 -translate-y-1/2 hidden md:block" />
-              <div className="w-48 h-48 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 p-1 flex items-center justify-center shadow-[0_0_50px_rgba(139,92,246,0.5)]">
-                <div className="w-full h-full bg-[#020202] rounded-full flex flex-col items-center justify-center relative overflow-hidden">
-                  <BrainCircuit className="w-12 h-12 text-white mb-2 relative z-10" />
-                  <span className="font-bold text-sm relative z-10">Knowledge<br/>Engine</span>
-                  <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
+              <ArrowRight className="w-8 h-8 text-violet-500 absolute -left-12 top-1/2 -translate-y-1/2 hidden md:block z-10" />
+
+              <div className="relative">
+                <div className="w-48 h-48 rounded-full p-[2px] bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center relative shadow-[0_0_60px_rgba(139,92,246,0.6)] z-10">
+                  <div className="w-full h-full bg-[#020202] rounded-full flex flex-col items-center justify-center relative overflow-hidden">
+                    <BrainCircuit className="w-12 h-12 text-white mb-2 relative z-10" />
+                    <span className="font-bold text-sm relative z-10 text-center">Knowledge<br/>Engine</span>
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
+                  </div>
                 </div>
               </div>
-              <ArrowRight className="w-8 h-8 text-fuchsia-500 absolute -right-12 top-1/2 -translate-y-1/2 hidden md:block" />
+
+              <ArrowRight className="w-8 h-8 text-fuchsia-500 absolute -right-12 top-1/2 -translate-y-1/2 hidden md:block z-10" />
             </div>
 
             {/* Outputs */}

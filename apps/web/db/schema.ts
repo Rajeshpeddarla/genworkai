@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, varchar, jsonb, integer, vector, boolean, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, varchar, jsonb, integer, vector, boolean, uuid, bigint } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const profiles = pgTable('profiles', {
@@ -45,6 +45,15 @@ export const tickets = pgTable('tickets', {
   
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const ticketMessages = pgTable('ticket_messages', {
+  id: serial('id').primaryKey(),
+  ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'cascade' }).notNull(),
+  senderId: uuid('sender_id').references(() => profiles.id, { onDelete: 'set null' }), // null for system, or an agent ID
+  isAgent: boolean('is_agent').default(false).notNull(),
+  content: text('content').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const earlyAccessRequests = pgTable('early_access_requests', {
@@ -102,6 +111,7 @@ export const documentChunks = pgTable('document_chunks', {
   id: serial('id').primaryKey(),
   documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
+  hash: varchar('hash', { length: 64 }), // sha256 chunk hash for deduplication
   // bge-m3 produces 1024-dimensional embeddings
   embedding: vector('embedding', { dimensions: 1024 }),
 });
@@ -135,7 +145,7 @@ export const knowledgeSources = pgTable('knowledge_sources', {
   // Health Tracking
   lastSyncAt: timestamp('last_sync_at'),
   lastSuccessfulSyncAt: timestamp('last_successful_sync_at'),
-  syncStatus: varchar('sync_status', { length: 50 }).default('pending'), // pending, syncing, success, failed
+  syncStatus: varchar('sync_status', { length: 50 }).default('pending'), // pending, processing, partially_completed, success, failed, cancelled
   documentCount: integer('document_count').default(0),
   chunkCount: integer('chunk_count').default(0),
 
@@ -144,12 +154,22 @@ export const knowledgeSources = pgTable('knowledge_sources', {
   chunksGenerated: integer('chunks_generated').default(0),
   embeddingsGenerated: integer('embeddings_generated').default(0),
   errorsCount: integer('errors_count').default(0),
+  progress: jsonb('progress'), // Detailed progress object
 
   // Optimization
   latestHash: varchar('latest_hash', { length: 255 }), // commit hash, schema hash
+  lastSuccessfulHash: varchar('last_successful_hash', { length: 255 }), 
 
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const githubInstallations = pgTable('github_installations', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  installationId: integer('installation_id').notNull().unique(),
+  accountName: varchar('account_name', { length: 255 }), // e.g. the organization or user name on GitHub
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const sourceSnapshots = pgTable('source_snapshots', {
@@ -163,7 +183,8 @@ export const sourceSnapshots = pgTable('source_snapshots', {
 export const syncJobs = pgTable('sync_jobs', {
   id: serial('id').primaryKey(),
   sourceId: integer('source_id').references(() => knowledgeSources.id, { onDelete: 'cascade' }),
-  status: varchar('status', { length: 50 }).default('queued'), // queued, processing, completed, failed
+  status: varchar('status', { length: 50 }).default('queued'), // queued, processing, partially_completed, completed, failed, cancelled
+  progress: jsonb('progress'), // { stage, current_step, total_documents, ... }
   error: text('error'),
   startedAt: timestamp('started_at'),
   finishedAt: timestamp('finished_at'),
@@ -387,6 +408,72 @@ export const aiProfiles = pgTable('ai_profiles', {
   databaseModelId: integer('database_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
   automationModelId: integer('automation_model_id').references(() => userLlmKeys.id, { onDelete: 'set null' }),
   
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const subscriptionPlans = pgTable('subscription_plans', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  slug: varchar('slug', { length: 100 }).notNull().unique(),
+  description: text('description'),
+  monthlyPrice: integer('monthly_price').default(0), // stored in cents
+  yearlyPrice: integer('yearly_price').default(0),
+  isActive: boolean('is_active').default(true),
+
+  // Limits
+  knowledgeBaseLimit: integer('knowledge_base_limit').default(0),
+  databaseLimit: integer('database_limit').default(0),
+  workspaceLimit: integer('workspace_limit').default(0),
+  automationLimit: integer('automation_limit').default(0),
+  apiRequestLimit: integer('api_request_limit').default(0),
+  contextLimit: bigint('context_limit', { mode: 'number' }).default(0), // in bytes
+  mcpServerLimit: integer('mcp_server_limit').default(0),
+  mcpToolLimit: integer('mcp_tool_limit').default(0),
+  mcpRequestLimit: integer('mcp_request_limit').default(0),
+
+  // Features
+  knowledgeBaseEnabled: boolean('knowledge_base_enabled').default(false),
+  databaseIntelligenceEnabled: boolean('database_intelligence_enabled').default(false),
+  automationStudioEnabled: boolean('automation_studio_enabled').default(false),
+  apiAccessEnabled: boolean('api_access_enabled').default(false),
+  mcpEnabled: boolean('mcp_enabled').default(false),
+  byokEnabled: boolean('byok_enabled').default(false),
+  prioritySupportEnabled: boolean('priority_support_enabled').default(false),
+
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const promotionTemplates = pgTable('promotion_templates', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  description: text('description'),
+  type: varchar('type', { length: 50 }).notNull(), // 'discount', 'free_months', 'feature_unlock'
+  value: jsonb('value'), // e.g. { months: 1 } or { discountPercent: 20 }
+  duration: integer('duration'), // duration in months, null for lifetime
+  isActive: boolean('is_active').default(true),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const adminAuditLogs = pgTable('admin_audit_logs', {
+  id: serial('id').primaryKey(),
+  adminId: uuid('admin_id').references(() => profiles.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 255 }).notNull(),
+  entityType: varchar('entity_type', { length: 100 }), // 'user', 'plan', 'promotion', etc.
+  entityId: varchar('entity_id', { length: 255 }),
+  previousValue: jsonb('previous_value'),
+  newValue: jsonb('new_value'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const featureFlags = pgTable('feature_flags', {
+  id: serial('id').primaryKey(),
+  key: varchar('key', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  isEnabled: boolean('is_enabled').default(false),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

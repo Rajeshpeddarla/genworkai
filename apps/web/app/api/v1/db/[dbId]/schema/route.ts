@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { connectedDatabases, databaseSchemas } from '../../../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 import { DatabaseService, DBConnectionConfig } from '../../../../../../lib/database/DatabaseService';
+import { decryptSecret } from '../../../../../../lib/security/encryption';
+import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 
-export async function GET(req: Request, { params }: { params: { dbId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ dbId: string }> }) {
   const startTime = Date.now();
   let authResult;
   let metrics = { requests: 1 };
 
   try {
-    const dbId = parseInt(params.dbId, 10);
+    const p = await params;
+    const dbIdStr = p.dbId;
+    const dbId = parseInt(dbIdStr, 10);
     if (isNaN(dbId)) {
       throw new ValidationError('Invalid Database ID');
     }
@@ -21,22 +25,25 @@ export async function GET(req: Request, { params }: { params: { dbId: string } }
     authResult = await ApiAuthService.validateRequest(authHeader, 'db:query', 'db', dbId);
     
     if (!authResult.isValid) {
-      return NextResponse.json({ error: authResult.error }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || 'Unauthorized' }, { status: 401 });
     }
 
-    const [dbConnection] = await db.select().from(connectedDatabases).where(eq(connectedDatabases.id, dbId));
+    const rateLimitResponse = await RateLimitService.check(authResult.userId!, 'v1');
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const [dbConnection] = await db.select().from(connectedDatabases).where(and(eq(connectedDatabases.id, dbId), eq(connectedDatabases.userId, authResult.userId!)));
     if (!dbConnection) {
       throw new ValidationError('Database connection not found');
     }
 
     const dbService = new DatabaseService({
       engine: dbConnection.engine as DBConnectionConfig['engine'],
-      connectionString: dbConnection.connectionString || undefined,
+      connectionString: dbConnection.connectionString ? decryptSecret(dbConnection.connectionString) : undefined,
       host: dbConnection.host || undefined,
       port: dbConnection.port || undefined,
       database: dbConnection.databaseName || undefined,
       username: dbConnection.username || undefined,
-      password: dbConnection.password || undefined,
+      password: dbConnection.password ? decryptSecret(dbConnection.password) : undefined,
     });
 
     let schemaResult;
@@ -79,9 +86,9 @@ export async function GET(req: Request, { params }: { params: { dbId: string } }
       ApiAuthService.logUsage({
         userId: authResult.userId!,
         apiKeyId: authResult.apiKeyId,
-        endpoint: `/v1/db/${params.dbId}/schema`,
+        endpoint: `/v1/db/${(await params).dbId}/schema`,
         resourceType: 'db',
-        resourceId: parseInt(params.dbId, 10),
+        resourceId: parseInt((await params).dbId, 10),
         status: error instanceof ValidationError ? 400 : 500,
         durationMs,
         metrics

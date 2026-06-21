@@ -1,27 +1,31 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { connectedDatabases, databaseSchemas, databaseQueryLogs } from '../../../../../../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 import { DatabaseService, DBConnectionConfig } from '../../../../../../lib/database/DatabaseService';
 import { generateWithFallbacks } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
+import { decryptSecret } from '../../../../../../lib/security/encryption';
+import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 
 const askSchema = z.object({
   question: z.string().min(1, 'Question is required'),
   execute: z.boolean().default(true),
 });
 
-export async function POST(req: Request, { params }: { params: { dbId: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ dbId: string }> }) {
   const startTime = Date.now();
   let authResult;
   let metrics = { requests: 1, db_queries: 0, llm_tokens: 0 };
   let generatedSql = '';
 
   try {
-    const dbId = parseInt(params.dbId, 10);
+    const p = await params;
+    const dbIdStr = p.dbId;
+    const dbId = parseInt(dbIdStr, 10);
     if (isNaN(dbId)) {
       throw new ValidationError('Invalid Database ID');
     }
@@ -43,7 +47,14 @@ export async function POST(req: Request, { params }: { params: { dbId: string } 
     const { question, execute } = parsed.data;
 
     // 3. Get DB connection & cached schema
-    const [dbConnection] = await db.select().from(connectedDatabases).where(eq(connectedDatabases.id, dbId));
+    const [dbConnection] = await db.select().from(connectedDatabases).where(and(eq(connectedDatabases.id, dbId), eq(connectedDatabases.userId, authResult.userId!)));
+    if (!authResult.isValid) {
+      throw new ValidationError(authResult.error || 'Unauthorized');
+    }
+
+    const rateLimitResponse = await RateLimitService.check(authResult.userId!, 'v1');
+    if (rateLimitResponse) return rateLimitResponse;
+
     if (!dbConnection) {
       throw new ValidationError('Database connection not found');
     }
@@ -112,12 +123,12 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
       metrics.db_queries += 1;
       const dbService = new DatabaseService({
         engine: dbConnection.engine as DBConnectionConfig['engine'],
-        connectionString: dbConnection.connectionString || undefined,
+        connectionString: dbConnection.connectionString ? decryptSecret(dbConnection.connectionString) : undefined,
         host: dbConnection.host || undefined,
         port: dbConnection.port || undefined,
         database: dbConnection.databaseName || undefined,
         username: dbConnection.username || undefined,
-        password: dbConnection.password || undefined,
+        password: dbConnection.password ? decryptSecret(dbConnection.password) : undefined,
       });
 
       const execStart = Date.now();
@@ -125,8 +136,12 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
         results = await dbService.executeQuery(generatedSql);
         rowCount = Array.isArray(results) ? results.length : (Array.isArray(results?.[0]) ? results[0].length : 0);
       } catch (e: any) {
-        executionError = e.message;
-        throw e; // Bubble up execution errors
+        // Generate a correlation ID
+        const correlationId = Math.random().toString(36).substring(2, 10);
+        // Log the real error internally for debugging, but scrub it for the user
+        console.error(`[DB Ask Execution Error] [${correlationId}]`, e.message || e);
+        executionError = `Execution failed (Error ID: ${correlationId}). Please check the SQL logic and database connection.`;
+        throw new ValidationError(executionError);
       } finally {
         executionTimeMs = Date.now() - execStart;
       }
@@ -169,7 +184,7 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
     if (authResult?.isValid && generatedSql) {
       await db.insert(databaseQueryLogs).values({
         userId: authResult.userId!,
-        databaseId: parseInt(params.dbId, 10),
+        databaseId: parseInt((await params).dbId, 10),
         question: typeof (error as any)?.question === 'string' ? (error as any).question : 'Unknown',
         generatedSql,
         success: false,
@@ -182,9 +197,9 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
       ApiAuthService.logUsage({
         userId: authResult.userId!,
         apiKeyId: authResult.apiKeyId,
-        endpoint: `/v1/db/${params.dbId}/ask`,
+        endpoint: `/v1/db/${(await params).dbId}/ask`,
         resourceType: 'db',
-        resourceId: parseInt(params.dbId, 10),
+        resourceId: parseInt((await params).dbId, 10),
         status: error instanceof ValidationError ? 400 : 500,
         durationMs,
         metrics

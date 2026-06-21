@@ -1,4 +1,4 @@
-import { generateText, CoreMessage } from 'ai';
+import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -111,12 +111,12 @@ export async function generateWithFallbacks(
 
       const { text, usage } = await generateText({
         model: model,
-        messages: options.messages as CoreMessage[],
+        messages: options.messages as any,
         maxTokens: options.maxTokens,
         temperature: options.temperature,
         topP: options.topP,
         abortSignal: AbortSignal.timeout(options.timeoutMs ?? 120000),
-      });
+      } as any);
 
       options.onLog?.(`AI: ${providerName} succeeded`);
 
@@ -125,9 +125,9 @@ export async function generateWithFallbacks(
         model: model.modelId, 
         provider: providerName,
         usage: {
-          promptTokens: usage?.promptTokens || 0,
-          completionTokens: usage?.completionTokens || 0,
-          totalTokens: usage?.totalTokens || 0,
+          promptTokens: (usage as any)?.promptTokens || 0,
+          completionTokens: (usage as any)?.completionTokens || 0,
+          totalTokens: (usage as any)?.totalTokens || 0,
         }
       };
       

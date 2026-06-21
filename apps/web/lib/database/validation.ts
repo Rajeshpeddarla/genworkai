@@ -54,7 +54,7 @@ export interface SqlValidationResult {
  * - 10-second statement timeout enforced at execution
  * - 5MB maximum response payload size
  */
-export function validateSqlQuery(sql: string): SqlValidationResult {
+export function validateSqlQuery(sql: string, engine?: 'postgresql' | 'mysql' | 'mssql' | 'mongodb'): SqlValidationResult {
   const trimmedSql = sql.trim();
 
   if (!trimmedSql) {
@@ -66,13 +66,19 @@ export function validateSqlQuery(sql: string): SqlValidationResult {
   // Parse the AST
   let ast: any;
   try {
-    ast = parser.astify(trimmedSql, { database: 'PostgreSQL' });
+    let dialect = 'PostgreSQL';
+    if (engine === 'mysql') dialect = 'MySQL';
+    if (engine === 'mssql') dialect = 'TransactSQL';
+    ast = parser.astify(trimmedSql, { database: dialect as any });
   } catch (parseError: any) {
     return { isValid: false, error: 'Invalid SQL syntax.' };
   }
 
-  // Handle array result (multiple statements)
-  const statements = Array.isArray(ast) ? ast : [ast];
+  // Reject multiple statements
+  if (Array.isArray(ast)) {
+    return { isValid: false, error: 'Multiple SQL statements are not allowed.' };
+  }
+  const statements = [ast];
 
   for (const stmt of statements) {
     if (!stmt) {
@@ -101,13 +107,24 @@ export function validateSqlQuery(sql: string): SqlValidationResult {
   if (statements.length === 1) {
     const stmt = statements[0];
     if (!hasLimit(stmt)) {
-      sanitizedSql = sanitizedSql.replace(/;\s*$/, '');
-      sanitizedSql = `${sanitizedSql} LIMIT ${MAX_ROWS}`;
+      stmt.limit = {
+        seperator: '',
+        value: [{ type: 'number', value: MAX_ROWS }],
+      };
     } else {
       const existingLimit = getLimit(stmt);
       if (existingLimit !== null && existingLimit > MAX_ROWS) {
-        sanitizedSql = sanitizedSql.replace(/LIMIT\s+\d+/i, `LIMIT ${MAX_ROWS}`);
+        if (Array.isArray(stmt.limit.value) && stmt.limit.value.length > 0) {
+          stmt.limit.value[0].value = MAX_ROWS;
+        } else {
+          stmt.limit.value = MAX_ROWS;
+        }
       }
+    }
+    try {
+      sanitizedSql = parser.sqlify(ast);
+    } catch (e: any) {
+      return { isValid: false, error: 'Query too complex to securely rewrite with a strict LIMIT.' };
     }
   }
 

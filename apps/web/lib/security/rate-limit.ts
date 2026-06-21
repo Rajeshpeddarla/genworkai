@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
  * Requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars.
  */
 
-export type RateLimitTier = 'ai' | 'upload' | 'database' | 'auth' | 'mcp' | 'default';
+export type RateLimitTier = 'ai' | 'upload' | 'database' | 'auth' | 'mcp' | 'default' | 'v1';
 
 const RATE_LIMITS: Record<RateLimitTier, { requests: number; window: string }> = {
   ai: { requests: 30, window: '1 m' },
@@ -18,6 +18,7 @@ const RATE_LIMITS: Record<RateLimitTier, { requests: number; window: string }> =
   auth: { requests: 5, window: '1 m' },
   mcp: { requests: 60, window: '1 m' },
   default: { requests: 60, window: '1 m' },
+  v1: { requests: 60, window: '1 m' },
 };
 
 let redisInstance: Redis | null = null;

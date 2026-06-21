@@ -2,17 +2,18 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 
-// We require a 32-byte (64 char hex) key. Fallback to a hardcoded one for development only if missing.
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+if (!ENCRYPTION_KEY) {
+  throw new Error('FATAL: ENCRYPTION_KEY environment variable is missing.');
+}
 
 if (Buffer.from(ENCRYPTION_KEY, 'hex').length !== 32) {
-  console.warn('WARNING: ENCRYPTION_KEY must be exactly 32 bytes (64 hex characters). Defaulting to development key.');
+  throw new Error('FATAL: ENCRYPTION_KEY must be exactly 32 bytes (64 hex characters).');
 }
 
 const getKey = () => {
-  const key = Buffer.from(ENCRYPTION_KEY, 'hex');
-  if (key.length === 32) return key;
-  return Buffer.from('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 'hex');
+  return Buffer.from(ENCRYPTION_KEY, 'hex');
 };
 
 export const EncryptionUtil = {

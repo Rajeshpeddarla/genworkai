@@ -4,7 +4,7 @@ import { userLlmKeys } from '../../../../../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { createClient } from '../../../../../utils/supabase/server';
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -13,7 +13,8 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const id = parseInt(params.id, 10);
+    const idParam = (await params).id;
+    const id = parseInt(idParam, 10);
     if (isNaN(id)) {
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
