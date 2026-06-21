@@ -11,9 +11,9 @@ export const embedBatch: any = inngest.createFunction(
     // Concurrency controls could be added here to prevent overwhelming the local Ollama instance
     concurrency: {
       limit: 2, // Maximum 2 concurrent embedding batches
-    }
+    },
+    triggers: [{ event: "knowledge/embed.batch" }]
   },
-  { event: "knowledge/embed.batch" },
   async ({ event, step }: any) => {
     const { sourceId, syncJobId, chunkIds } = event.data;
 

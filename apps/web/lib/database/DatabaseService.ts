@@ -219,7 +219,7 @@ export class DatabaseService {
     };
   }
 
-  private getMssqlConfig() {
+  private getMssqlConfig(): any {
     if (this.config.connectionString) return this.config.connectionString;
 
     const rawHost = this.config.host || 'localhost';
