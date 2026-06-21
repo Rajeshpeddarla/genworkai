@@ -6,6 +6,9 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
+  // Simple frontend auth bypass
+  const hasFrontendAuth = request.cookies.has("frontend_auth");
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -34,21 +37,23 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
   const protectedPrefixes = [
     "/dashboard", "/workspace", "/knowledge-base", "/databases",
-    "/automation-studio", "/developer", "/admin"
+    "/automation-studio", "/developer", "/admin", "/billing"
   ];
   const isProtectedRoute = protectedPrefixes.some(prefix => 
     request.nextUrl.pathname.startsWith(prefix) && !request.nextUrl.pathname.startsWith("/api/")
   );
 
-  if (!user && isProtectedRoute) {
+  const isAuthenticated = user || hasFrontendAuth;
+
+  if (!isAuthenticated && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
-  if (user && isAuthRoute) {
+  if (isAuthenticated && isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/workspace";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

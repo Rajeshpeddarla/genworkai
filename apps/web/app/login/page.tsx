@@ -28,6 +28,14 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
+    // Default frontend-only auth bypass
+    if (email === "test@example.com" && password === "password123") {
+      document.cookie = "frontend_auth=true; path=/; max-age=86400"; // 1 day expiration
+      router.push("/billing");
+      router.refresh();
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
