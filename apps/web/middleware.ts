@@ -37,7 +37,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
   const protectedPrefixes = [
     "/dashboard", "/workspace", "/knowledge-base", "/databases",
-    "/automation-studio", "/developer", "/admin", "/billing"
+    "/automation-studio", "/developer", "/admin"
   ];
   const isProtectedRoute = protectedPrefixes.some(prefix => 
     request.nextUrl.pathname.startsWith(prefix) && !request.nextUrl.pathname.startsWith("/api/")
