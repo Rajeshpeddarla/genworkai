@@ -17,6 +17,11 @@ export const profiles = pgTable('profiles', {
   socialUrl: text('social_url'),
   country: varchar('country', { length: 100 }),
 
+  // Paddle Billing
+  paddleCustomerId: varchar('paddle_customer_id', { length: 255 }),
+  paddleSubscriptionId: varchar('paddle_subscription_id', { length: 255 }),
+  paddleSubscriptionStatus: varchar('paddle_subscription_status', { length: 50 }), // 'active', 'canceled', 'past_due'
+
   createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -421,6 +426,11 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   yearlyPrice: integer('yearly_price').default(0),
   isActive: boolean('is_active').default(true),
 
+  // Paddle Price IDs
+  paddleProductId: varchar('paddle_product_id', { length: 255 }),
+  paddleMonthlyPriceId: varchar('paddle_monthly_price_id', { length: 255 }),
+  paddleYearlyPriceId: varchar('paddle_yearly_price_id', { length: 255 }),
+
   // Limits
   knowledgeBaseLimit: integer('knowledge_base_limit').default(0),
   databaseLimit: integer('database_limit').default(0),
@@ -452,6 +462,7 @@ export const promotionTemplates = pgTable('promotion_templates', {
   type: varchar('type', { length: 50 }).notNull(), // 'discount', 'free_months', 'feature_unlock'
   value: jsonb('value'), // e.g. { months: 1 } or { discountPercent: 20 }
   duration: integer('duration'), // duration in months, null for lifetime
+  paddleDiscountId: varchar('paddle_discount_id', { length: 255 }), // Paddle Discount ID
   isActive: boolean('is_active').default(true),
   expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -475,5 +486,45 @@ export const featureFlags = pgTable('feature_flags', {
   description: text('description'),
   isEnabled: boolean('is_enabled').default(false),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const userSubscriptions = pgTable('user_subscriptions', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  planId: integer('plan_id').references(() => subscriptionPlans.id, { onDelete: 'restrict' }),
+  status: varchar('status', { length: 50 }).notNull(), // 'trialing', 'active', 'past_due', 'grace_period', 'cancelled', 'expired'
+  billingCycle: varchar('billing_cycle', { length: 50 }), // 'monthly', 'yearly'
+  paddleCustomerId: varchar('paddle_customer_id', { length: 255 }),
+  paddleSubscriptionId: varchar('paddle_subscription_id', { length: 255 }),
+  startedAt: timestamp('started_at'),
+  renewsAt: timestamp('renews_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const billingEvents = pgTable('billing_events', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  amount: integer('amount').notNull(), // Stored in cents
+  currency: varchar('currency', { length: 10 }).notNull().default('USD'),
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'payment_success', 'payment_failed', 'subscription_created', etc.
+  paddleTransactionId: varchar('paddle_transaction_id', { length: 255 }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const usageCounters = pgTable('usage_counters', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  month: varchar('month', { length: 7 }).notNull(), // format 'YYYY-MM'
+  apiRequests: integer('api_requests').default(0).notNull(),
+  kbCount: integer('kb_count').default(0).notNull(),
+  databaseCount: integer('database_count').default(0).notNull(),
+  automationCount: integer('automation_count').default(0).notNull(),
+  mcpCount: integer('mcp_count').default(0).notNull(),
+  contextUsed: bigint('context_used', { mode: 'number' }).default(0).notNull(), // in bytes
+  artifactsGenerated: integer('artifacts_generated').default(0).notNull(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

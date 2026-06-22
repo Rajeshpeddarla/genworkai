@@ -26,6 +26,7 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
       type: type,
       description: formData.get("description") as string || `${type} promotion`,
       value: valueObj,
+      paddleDiscountId: formData.get("paddleDiscountId") as string || null,
       isActive: true,
     };
 
@@ -70,6 +71,9 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
               <p className="text-lg font-medium text-zinc-900 dark:text-white">
                 {promo.type === 'discount' ? `${promo.value?.discountPercent || 0}% off` : `${promo.value?.freeMonths || 0} Months Free`}
               </p>
+              {promo.paddleDiscountId && (
+                <p className="text-xs font-mono text-zinc-500">Paddle ID: {promo.paddleDiscountId}</p>
+              )}
             </div>
 
             <div className="pt-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center text-sm text-zinc-500">
@@ -114,6 +118,10 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
                 <div>
                   <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Description</label>
                   <input name="description" type="text" placeholder="e.g. 20% off all plans" className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Paddle Discount ID (Optional)</label>
+                  <input name="paddleDiscountId" type="text" placeholder="e.g. dsc_01h8..." className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-zinc-900 dark:text-white outline-none font-mono text-sm" />
                 </div>
               </div>
             </div>

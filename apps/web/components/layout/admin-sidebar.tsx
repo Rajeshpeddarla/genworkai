@@ -16,7 +16,8 @@ import {
   ArrowLeft,
   ShieldCheck,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  LogOut
 } from "lucide-react";
 
 const navigation = [
@@ -126,6 +127,23 @@ export function AdminSidebar() {
                   </li>
                 );
               })}
+              <li>
+                <button
+                  onClick={() => window.location.href = '/api/auth/signout'}
+                  className={cn(
+                    "w-full flex text-zinc-400 hover:text-white hover:bg-white/5",
+                    "group gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors",
+                    isCollapsed && "justify-center px-0"
+                  )}
+                  title={isCollapsed ? "Log Out" : undefined}
+                >
+                  <LogOut
+                    className="h-5 w-5 shrink-0 text-zinc-500 group-hover:text-rose-400 transition-colors"
+                    aria-hidden="true"
+                  />
+                  {!isCollapsed && "Log Out"}
+                </button>
+              </li>
             </ul>
           </li>
         </ul>

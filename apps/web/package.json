@@ -15,6 +15,8 @@
     "@imgly/background-removal": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@monaco-editor/react": "^4.7.0",
+    "@paddle/paddle-js": "^1.6.4",
+    "@paddle/paddle-node-sdk": "^3.8.0",
     "@repo/ai": "*",
     "@repo/ui": "*",
     "@supabase/ssr": "^0.10.3",

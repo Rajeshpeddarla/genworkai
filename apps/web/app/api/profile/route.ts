@@ -54,9 +54,16 @@ export async function GET() {
       referrals.members = referredUsers;
     }
 
+      const { db: dbLocal } = await import('@/db');
+      const { subscriptionPlans } = await import('@/db/schema');
+      const { eq: eqLocal } = await import('drizzle-orm');
+      
+      const activePlans = await dbLocal.select().from(subscriptionPlans).where(eqLocal(subscriptionPlans.isActive, true));
+
     return NextResponse.json({
       profile,
       referrals,
+      plans: activePlans,
       limits: {
         knowledgeBases: kbLimit,
         flows: flowLimit,

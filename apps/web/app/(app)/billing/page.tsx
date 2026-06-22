@@ -2,18 +2,72 @@
 
 import { useBillingStore } from "../../../store/billing";
 import { Check, CreditCard, Star, Zap, Users, Building } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { initializePaddle, Paddle } from "@paddle/paddle-js";
 
 export default function BillingPage() {
-  const { tier, upgrade, downgrade } = useBillingStore();
+  const { tier, downgrade } = useBillingStore();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paddle, setPaddle] = useState<Paddle>();
+  const [plans, setPlans] = useState<any[]>([]);
+  const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
+
+  useEffect(() => {
+    fetch('/api/profile')
+      .then(res => res.json())
+      .then(d => {
+        if (d.plans) setPlans(d.plans);
+
+        const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '';
+        const env = token.startsWith('live_') ? 'production' : 'sandbox';
+        initializePaddle({ environment: env as any, token }).then(async p => {
+          if (p) {
+            setPaddle(p);
+            
+            // Fetch localized prices for internal billing page
+            if (d.plans) {
+              const priceIds = d.plans.flatMap((plan: any) => [plan.paddleMonthlyPriceId, plan.paddleYearlyPriceId].filter(Boolean));
+              if (priceIds.length > 0) {
+                try {
+                  const preview = await p.PricePreview({
+                    items: priceIds.map((id: string) => ({ priceId: id, quantity: 1 }))
+                  });
+                  
+                  const newPrices: Record<string, { formatted: string, raw: number }> = {};
+                  preview.data.details.lineItems.forEach((item: any) => {
+                    newPrices[item.price.id] = {
+                      formatted: item.formattedTotals.total,
+                      raw: item.totals.total
+                    };
+                  });
+                  setLocalizedPrices(newPrices);
+                } catch (e) {
+                  console.error("Failed to fetch price previews in billing studio", e);
+                }
+              }
+            }
+          }
+        });
+      })
+      .catch(console.error);
+  }, []);
 
   const handleUpgrade = () => {
+    if (!paddle) {
+      alert("Billing system is initializing, please wait a moment.");
+      return;
+    }
+    const proPlan = plans.find((p: any) => p.slug === 'pro');
+    if (!proPlan?.paddleMonthlyPriceId) {
+      alert("Pro plan price ID is not configured yet. Please configure it in the Admin Billing Studio.");
+      return;
+    }
     setIsProcessing(true);
-    setTimeout(() => {
-      upgrade();
-      setIsProcessing(false);
-    }, 1500); // Mock network request
+    paddle.Checkout.open({
+      items: [{ priceId: proPlan.paddleMonthlyPriceId, quantity: 1 }]
+    });
+    // Reset processing state after a slight delay
+    setTimeout(() => setIsProcessing(false), 2000);
   };
 
   const handleDowngrade = () => {
@@ -87,10 +141,11 @@ export default function BillingPage() {
             </div>
             <div className="mb-6 flex-1">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">$19</span>
+                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
+                  {localizedPrices[plans.find(p => p.slug === 'pro')?.paddleMonthlyPriceId]?.formatted || '$19'}
+                </span>
                 <span className="text-zinc-500 dark:text-zinc-400">/month</span>
               </div>
-              <p className="text-xs text-violet-600 dark:text-violet-400 mt-1 font-medium">Regional Pricing Available (e.g. ₹599 in IN)</p>
               <p className="text-sm text-zinc-500 mt-2">For independent researchers and developers.</p>
             </div>
             <ul className="space-y-4 mb-8 text-sm">
@@ -130,10 +185,11 @@ export default function BillingPage() {
             </div>
             <div className="mb-6 flex-1">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">$39</span>
+                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
+                  {localizedPrices[plans.find(p => p.slug === 'teams')?.paddleMonthlyPriceId]?.formatted || '$39'}
+                </span>
                 <span className="text-zinc-500 dark:text-zinc-400">/seat</span>
               </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 font-medium">Regional Pricing Available (e.g. ₹1.5k in IN)</p>
               <p className="text-sm text-zinc-500 mt-2">For growing teams requiring collaboration.</p>
             </div>
             <ul className="space-y-4 mb-8 text-sm">

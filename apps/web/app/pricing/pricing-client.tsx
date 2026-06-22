@@ -3,10 +3,82 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Zap, Shield, Blocks, Server, Database, BrainCircuit, Activity, Clock } from "lucide-react";
+import { initializePaddle, Paddle } from "@paddle/paddle-js";
 
 export default function PricingClient({ plans, activePromo }: { plans: any[], activePromo: any }) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
+  const [paddle, setPaddle] = useState<Paddle>();
+  const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '';
+    const env = token.startsWith('live_') ? 'production' : 'sandbox';
+    
+    initializePaddle({
+      environment: env,
+      token: token,
+    }).then(async (paddleInstance: Paddle | undefined) => {
+      if (paddleInstance) {
+        setPaddle(paddleInstance);
+        
+        // Phase 6: Dynamic Pricing System - fetch localized prices
+        const priceIds = plans
+          .filter(p => p.slug !== 'enterprise')
+          .flatMap(p => [p.paddleMonthlyPriceId, p.paddleYearlyPriceId].filter(Boolean));
+        
+        if (priceIds.length > 0) {
+          try {
+            const preview = await paddleInstance.PricePreview({
+              items: priceIds.map(id => ({ priceId: id, quantity: 1 }))
+            });
+            
+            const newPrices: Record<string, { formatted: string, raw: number }> = {};
+            preview.data.details.lineItems.forEach((item: any) => {
+              newPrices[item.price.id] = {
+                formatted: item.formattedTotals.total,
+                raw: item.totals.total
+              };
+            });
+            setLocalizedPrices(newPrices);
+          } catch (e) {
+            console.error("Failed to fetch price previews", e);
+          }
+        }
+
+        // Handle auto-checkout from internal app links
+        const params = new URLSearchParams(window.location.search);
+        const checkoutSlug = params.get('checkout');
+        if (checkoutSlug) {
+          const plan = plans.find(p => p.slug === checkoutSlug);
+          if (plan && plan.paddleMonthlyPriceId) {
+            setTimeout(() => {
+              paddleInstance.Checkout.open({
+                items: [{ priceId: plan.paddleMonthlyPriceId, quantity: 1 }],
+              });
+            }, 500); // Small delay to ensure UI renders
+          }
+        }
+      }
+    });
+  }, [plans]);
+
+  const handleCheckout = (priceId: string | null) => {
+    console.log("handleCheckout triggered with priceId:", priceId);
+    console.log("Paddle initialized:", !!paddle);
+
+    if (!priceId) {
+      alert("Billing is not fully configured yet. Missing Price ID. Please try again later.");
+      return;
+    }
+    if (paddle) {
+      paddle.Checkout.open({
+        items: [{ priceId, quantity: 1 }],
+      });
+    } else {
+      alert("Billing gateway (Paddle) is still initializing or failed to load. Please refresh the page.");
+    }
+  };
 
   useEffect(() => {
     if (!activePromo?.expiresAt) return;
@@ -133,7 +205,13 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
                     <span className="text-3xl font-bold text-white">Contact Us</span>
                   ) : (
                     <div className="flex items-end gap-1">
-                      <span className="text-4xl font-bold text-white tracking-tight">${price}</span>
+                      <span className="text-4xl font-bold text-white tracking-tight">
+                        {(() => {
+                          const activePriceId = billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId;
+                          const localized = activePriceId ? localizedPrices[activePriceId] : undefined;
+                          return localized ? localized.formatted : `$${price}`;
+                        })()}
+                      </span>
                       <span className="text-sm text-zinc-500 mb-1 font-medium">/mo</span>
                     </div>
                   )}
@@ -143,18 +221,25 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
                   {billingCycle === 'yearly' && !isEnterprise && <div className="text-xs font-bold text-emerald-400 mt-2">Billed annually</div>}
                 </div>
 
-                <Link 
-                  href={isEnterprise ? "/contact" : "/signup"} 
-                  className={`w-full py-3 rounded-xl text-center font-bold mb-8 transition-colors ${
-                    isPro 
-                    ? 'bg-violet-600 hover:bg-violet-500 text-white' 
-                    : isEnterprise 
-                      ? 'bg-white text-black hover:bg-zinc-200' 
+                {isEnterprise ? (
+                  <Link 
+                    href="/contact" 
+                    className={`w-full block py-3 rounded-xl text-center font-bold mb-8 transition-colors bg-white text-black hover:bg-zinc-200`}
+                  >
+                    Contact Sales
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => handleCheckout(billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId)}
+                    className={`w-full py-3 rounded-xl text-center font-bold mb-8 transition-colors ${
+                      isPro 
+                      ? 'bg-violet-600 hover:bg-violet-500 text-white' 
                       : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  {isEnterprise ? "Contact Sales" : "Get Started"}
-                </Link>
+                    }`}
+                  >
+                    Get Started
+                  </button>
+                )}
 
                 <div className="flex-1">
                   {isEnterprise ? (

@@ -8,10 +8,12 @@ import { useTheme } from "next-themes";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { initializePaddle, Paddle } from "@paddle/paddle-js";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [data, setData] = useState<any>(null);
+  const [paddle, setPaddle] = useState<Paddle>();
   const [loading, setLoading] = useState(true);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
@@ -27,14 +29,55 @@ export default function SettingsPage() {
       .then(d => {
         setData(d);
         setLoading(false);
+
+        // Initialize Paddle for direct checkout
+        const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '';
+        const env = token.startsWith('live_') ? 'production' : 'sandbox';
+        initializePaddle({ environment: env as any, token }).then(p => {
+          if (p) setPaddle(p);
+        });
       })
       .catch(() => setLoading(false));
   }, []);
 
+  const handleUpgrade = () => {
+    if (!paddle) {
+      alert("Billing system is initializing, please wait a moment.");
+      return;
+    }
+    const proPlan = data?.plans?.find((p: any) => p.slug === 'pro');
+    if (!proPlan?.paddleMonthlyPriceId) {
+      alert("Pro plan price ID is not configured yet. Please contact support.");
+      return;
+    }
+    
+    console.log("=== PADDLE CHECKOUT DEBUG ===");
+    console.log("Token:", process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN);
+    console.log("Environment:", process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN?.startsWith('live_') ? 'production' : 'sandbox');
+    console.log("Price ID being sent:", proPlan.paddleMonthlyPriceId);
+    console.log("Full Plan Object:", proPlan);
+    
+    try {
+      paddle.Checkout.open({
+        items: [{ priceId: proPlan.paddleMonthlyPriceId, quantity: 1 }]
+      });
+    } catch (e) {
+      console.error("Paddle Checkout Error:", e);
+    }
+  };
+
   const handleLogout = async () => {
+    // Clear local Supabase session
     await supabase.auth.signOut();
-    router.push('/login');
-    router.refresh();
+    
+    // Clear server Supabase session and frontend_auth cookie
+    await fetch('/api/auth/signout', { method: 'POST' });
+    
+    // Fallback manual frontend_auth clear just in case
+    document.cookie = "frontend_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    
+    // Hard redirect to login to bypass client router cache
+    window.location.href = '/login';
   };
 
   const tabs = [
@@ -141,9 +184,14 @@ export default function SettingsPage() {
                       <p className="text-white/80">{isPro ? "You have unlimited access to all features." : "Upgrade to Pro to unlock unlimited KBs, Flows, and MCP servers."}</p>
                     </div>
                     {!isPro && (
-                      <Link href="/billing" className="bg-white text-zinc-900 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-white/25 transition-all hover:-translate-y-0.5 inline-block">
+                      <button onClick={handleUpgrade} className="bg-white text-zinc-900 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-white/25 transition-all hover:-translate-y-0.5 inline-block">
                         Upgrade Now
-                      </Link>
+                      </button>
+                    )}
+                    {isPro && profile?.paddleCustomerId && (
+                      <a href={`https://paddle.com/portal/customer/${profile.paddleCustomerId}`} target="_blank" rel="noopener noreferrer" className="bg-white/20 text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:bg-white/30 transition-all hover:-translate-y-0.5 inline-block backdrop-blur-md">
+                        Manage Billing
+                      </a>
                     )}
                  </div>
               </div>

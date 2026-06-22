@@ -1,0 +1,1 @@
+ALTER TABLE "promotion_templates" ADD COLUMN "paddle_discount_id" varchar(255);
