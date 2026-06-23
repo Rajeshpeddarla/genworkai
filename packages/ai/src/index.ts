@@ -60,14 +60,26 @@ function getModelInstance(options: ChatCompletionOptions, fallbackApiKey: string
 
   switch (provider) {
     case 'openai':
-    case 'openrouter':
-    case 'ollama':
     case 'custom':
     case 'ckey': {
       // All these are OpenAI-compatible endpoints
       const openai = createOpenAI({
         apiKey: apiKey,
         baseURL: config.baseUrl,
+      });
+      return openai(modelName);
+    }
+    case 'openrouter': {
+      const openai = createOpenAI({
+        apiKey: apiKey,
+        baseURL: config.baseUrl || 'https://openrouter.ai/api/v1',
+      });
+      return openai(modelName);
+    }
+    case 'ollama': {
+      const openai = createOpenAI({
+        apiKey: apiKey || 'ollama', // ollama requires some string
+        baseURL: config.baseUrl || 'http://localhost:11434/v1',
       });
       return openai(modelName);
     }

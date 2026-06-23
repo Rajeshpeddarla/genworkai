@@ -2,14 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { CheckCircle2, XCircle, Zap, Shield, Blocks, Server, Database, BrainCircuit, Activity, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Zap, Shield, Blocks, Server, Database, BrainCircuit, Activity, Clock, Loader2 } from "lucide-react";
 import { initializePaddle, Paddle } from "@paddle/paddle-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-export default function PricingClient({ plans, activePromo }: { plans: any[], activePromo: any }) {
+export default function PricingClient({ plans: rawPlans, activePromo }: { plans: any[], activePromo: any }) {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
   const [paddle, setPaddle] = useState<Paddle>();
   const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  // Filter and sort plans
+  const plans = rawPlans
+    .filter(p => p.slug !== 'team' && p.slug !== 'teams')
+    .sort((a, b) => {
+      const order = { 'free': 1, 'pro': 2, 'enterprise': 3 };
+      return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
+    });
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+  );
 
   useEffect(() => {
     const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || '';
@@ -42,8 +57,12 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
             });
             setLocalizedPrices(newPrices);
           } catch (e) {
-            console.error("Failed to fetch price previews", e);
+            // Silently fail if Paddle API rejects local domain
+          } finally {
+            setIsLoadingPrices(false);
           }
+        } else {
+          setIsLoadingPrices(false);
         }
 
         // Handle auto-checkout from internal app links
@@ -63,9 +82,17 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
     });
   }, [plans]);
 
-  const handleCheckout = (priceId: string | null) => {
-    console.log("handleCheckout triggered with priceId:", priceId);
-    console.log("Paddle initialized:", !!paddle);
+  const handleCheckout = async (priceId: string | null, planSlug: string) => {
+    if (planSlug === 'free') {
+      window.location.href = '/login';
+      return;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.href = `/login?checkout=${planSlug}`;
+      return;
+    }
 
     if (!priceId) {
       alert("Billing is not fully configured yet. Missing Price ID. Please try again later.");
@@ -125,18 +152,18 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
       
       {/* Navbar */}
       <nav className="fixed top-0 z-50 w-full bg-[#020202]/80 backdrop-blur-xl border-b border-white/5 shadow-sm">
-        <div className="flex items-center justify-between p-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between py-5 px-6 max-w-7xl mx-auto">
           <Link href="/" className="flex items-center gap-3">
-            <img src="/logo.png" alt="GenWorkAI" className="w-8 h-8 rounded-lg shadow-lg shadow-violet-500/20 object-cover" />
-            <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">GenWork<span className="text-violet-500">AI</span></span>
+            <img src="/logo.png" alt="GenWorkAI" className="w-10 h-10 rounded-lg shadow-lg shadow-violet-500/20 object-cover" />
+            <span className="text-2xl font-bold tracking-tight text-white drop-shadow-md">GenWork<span className="text-violet-500">AI</span></span>
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
+          <div className="hidden md:flex items-center gap-10 text-base font-medium text-zinc-400">
             <Link href="/#features" className="hover:text-white transition-colors">Features</Link>
             <Link href="/#workflow" className="hover:text-white transition-colors">Workflow</Link>
             <Link href="/pricing" className="text-white font-bold transition-colors">Pricing</Link>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/login" className="px-5 py-2 text-sm font-bold bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Sign In</Link>
+            <Link href="/login" className="px-6 py-2.5 text-base font-bold bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">Sign In</Link>
           </div>
         </div>
       </nav>
@@ -181,7 +208,7 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
         </div>
 
         {/* PRICING CARDS */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 xl:gap-4 mb-32 relative z-10">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-32 relative z-10">
           {plans.map(plan => {
             const isEnterprise = plan.slug === 'enterprise';
             const price = isEnterprise ? "Custom" : formatPrice(billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice, billingCycle);
@@ -190,7 +217,7 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
             const isPro = plan.slug === 'pro';
 
             return (
-              <div key={plan.id} className={`flex flex-col bg-[#0a0a0a] rounded-3xl border ${isPro ? 'border-violet-500 shadow-[0_0_40px_rgba(139,92,246,0.15)] relative xl:scale-105 z-20' : 'border-zinc-800 hover:border-zinc-700'} p-6 transition-all duration-300`}>
+              <div key={plan.id} className={`flex flex-col bg-[#0a0a0a] rounded-3xl border ${isPro ? 'border-violet-500 shadow-[0_0_40px_rgba(139,92,246,0.15)] relative xl:scale-105 z-20' : 'border-zinc-800 hover:border-zinc-700'} p-6 xl:p-8 transition-all duration-300`}>
                 {isPro && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-violet-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">
                     Most Popular
@@ -198,21 +225,30 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
                 )}
                 
                 <h3 className="text-xl font-bold text-white mb-2">{plan.name}</h3>
-                <p className="text-xs text-zinc-400 mb-6 min-h-[40px] leading-relaxed">{plan.description}</p>
+                <p className="text-sm text-zinc-400 mb-6 min-h-[48px] leading-relaxed">{plan.description}</p>
                 
-                <div className="mb-8">
+                <div className="mb-8 h-[80px] flex flex-col justify-start">
                   {isEnterprise ? (
                     <span className="text-3xl font-bold text-white">Contact Us</span>
                   ) : (
                     <div className="flex items-end gap-1">
                       <span className="text-4xl font-bold text-white tracking-tight">
                         {(() => {
+                          if (plan.slug === 'free') {
+                            if (isLoadingPrices) return <Loader2 className="w-8 h-8 animate-spin text-zinc-500 mb-1" />;
+                            const firstPrice = Object.values(localizedPrices)[0];
+                            const zeroPrice = firstPrice 
+                              ? firstPrice.formatted.replace(/[\d.,]+/g, '0').replace(/0+/g, '0') 
+                              : "$0";
+                            return zeroPrice;
+                          }
+                          if (isLoadingPrices) return <Loader2 className="w-8 h-8 animate-spin text-zinc-500 mb-1" />;
                           const activePriceId = billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId;
                           const localized = activePriceId ? localizedPrices[activePriceId] : undefined;
                           return localized ? localized.formatted : `$${price}`;
                         })()}
                       </span>
-                      <span className="text-sm text-zinc-500 mb-1 font-medium">/mo</span>
+                      {(!isLoadingPrices || plan.slug === 'free') && <span className="text-sm text-zinc-500 mb-1 font-medium">/mo</span>}
                     </div>
                   )}
                   {isDiscounted && !isEnterprise && (
@@ -230,7 +266,7 @@ export default function PricingClient({ plans, activePromo }: { plans: any[], ac
                   </Link>
                 ) : (
                   <button 
-                    onClick={() => handleCheckout(billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId)}
+                    onClick={() => handleCheckout(billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId, plan.slug)}
                     className={`w-full py-3 rounded-xl text-center font-bold mb-8 transition-colors ${
                       isPro 
                       ? 'bg-violet-600 hover:bg-violet-500 text-white' 

@@ -47,8 +47,14 @@ export default function LoginPage() {
     } else {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        const params = new URLSearchParams(window.location.search);
+        const checkoutSlug = params.get('checkout');
+        
         const { data: profile } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
-        if (profile?.is_admin) {
+        
+        if (checkoutSlug) {
+          router.push(`/settings?checkout=${checkoutSlug}`);
+        } else if (profile?.is_admin) {
           router.push("/admin");
         } else {
           router.push("/dashboard");

@@ -9,6 +9,12 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
         <div>
           <h2 className="text-xl font-bold mb-4">Developer Portal</h2>
           <nav className="flex flex-col gap-2">
+            <Link href="/developer/docs" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
+              Documentation
+            </Link>
+            <Link href="/developer/playground" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
+              API Playground
+            </Link>
             <Link href="/developer/keys" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
               API Keys
             </Link>
@@ -18,11 +24,8 @@ export default function DeveloperLayout({ children }: { children: ReactNode }) {
             <Link href="/developer/usage" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
               Usage & Metering
             </Link>
-            <Link href="/developer/playground" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
-              API Playground
-            </Link>
-            <Link href="/api/openapi.json" target="_blank" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
-              OpenAPI Docs ↗
+            <Link href="/developer/integrations" className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors">
+              SDK & Integrations
             </Link>
           </nav>
         </div>

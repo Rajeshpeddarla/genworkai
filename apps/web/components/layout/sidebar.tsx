@@ -33,7 +33,7 @@ const navigation = [
 
 const secondaryNavigation = [
   { name: "Support", href: "/support", icon: LifeBuoy },
-  { name: "Developer", href: "/developer/keys", icon: Terminal },
+  { name: "Developer", href: "/developer/docs", icon: Terminal },
   { name: "Admin", href: "/admin", icon: ShieldCheck },
   { name: "Billing Studio", href: "/billing", icon: CreditCard },
   { name: "Settings", href: "/settings", icon: Settings },

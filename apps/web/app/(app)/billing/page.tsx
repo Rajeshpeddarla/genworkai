@@ -11,6 +11,15 @@ export default function BillingPage() {
   const [paddle, setPaddle] = useState<Paddle>();
   const [plans, setPlans] = useState<any[]>([]);
   const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
+  const [isLoadingPrices, setIsLoadingPrices] = useState(true);
+
+  // Filter and sort plans
+  const displayPlans = plans
+    .filter(p => p.slug !== 'team' && p.slug !== 'teams')
+    .sort((a, b) => {
+      const order = { 'free': 1, 'pro': 2, 'enterprise': 3 };
+      return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
+    });
 
   useEffect(() => {
     fetch('/api/profile')
@@ -42,9 +51,15 @@ export default function BillingPage() {
                   });
                   setLocalizedPrices(newPrices);
                 } catch (e) {
-                  console.error("Failed to fetch price previews in billing studio", e);
+                  // Silently fail if Paddle API rejects local domain
+                } finally {
+                  setIsLoadingPrices(false);
                 }
+              } else {
+                setIsLoadingPrices(false);
               }
+            } else {
+              setIsLoadingPrices(false);
             }
           }
         });
@@ -94,7 +109,16 @@ export default function BillingPage() {
             </div>
             <div className="mb-6 flex-1">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">$0</span>
+                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
+                  {(() => {
+                    if (isLoadingPrices) return '...';
+                    const firstPrice = Object.values(localizedPrices)[0];
+                    const zeroPrice = firstPrice 
+                      ? firstPrice.formatted.replace(/[\d.,]+/g, '0').replace(/0+/g, '0') 
+                      : "$0";
+                    return zeroPrice;
+                  })()}
+                </span>
                 <span className="text-zinc-500 dark:text-zinc-400">/month</span>
               </div>
               <p className="text-sm text-zinc-500 mt-2">For individuals exploring the platform.</p>
@@ -142,7 +166,7 @@ export default function BillingPage() {
             <div className="mb-6 flex-1">
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-bold text-zinc-900 dark:text-white">
-                  {localizedPrices[plans.find(p => p.slug === 'pro')?.paddleMonthlyPriceId]?.formatted || '$19'}
+                  {isLoadingPrices ? '...' : localizedPrices[plans.find(p => p.slug === 'pro')?.paddleMonthlyPriceId]?.formatted || '$19'}
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400">/month</span>
               </div>
@@ -175,45 +199,7 @@ export default function BillingPage() {
             </button>
           </div>
 
-          {/* Team Tier */}
-          <div className={`p-6 rounded-2xl border flex flex-col border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50 transition-all`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Team</h2>
-            </div>
-            <div className="mb-6 flex-1">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
-                  {localizedPrices[plans.find(p => p.slug === 'teams')?.paddleMonthlyPriceId]?.formatted || '$39'}
-                </span>
-                <span className="text-zinc-500 dark:text-zinc-400">/seat</span>
-              </div>
-              <p className="text-sm text-zinc-500 mt-2">For growing teams requiring collaboration.</p>
-            </div>
-            <ul className="space-y-4 mb-8 text-sm">
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <span>Everything in Pro</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <span className="font-medium text-zinc-900 dark:text-white">Shared Knowledge Bases</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <span>RBAC (Role-Based Access)</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                <span>Audit Logs</span>
-              </li>
-            </ul>
-            <button className="w-full py-2.5 rounded-lg font-medium transition-colors text-sm bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900">
-              Upgrade to Team
-            </button>
-          </div>
+          {/* Removed Team Tier */}
 
           {/* Business Tier */}
           <div className={`p-6 rounded-2xl border flex flex-col border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50 transition-all`}>
