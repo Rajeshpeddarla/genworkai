@@ -21,11 +21,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Node ID and Name are required' }, { status: 400, headers: corsHeaders });
     }
 
-    const apiKey = process.env.CKEY_API_KEY;
-    const apiUrl = process.env.CKEY_API_URL || 'https://ckey.vn/v1/chat/completions';
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'CKEY_API_KEY is missing' }, { status: 500, headers: corsHeaders });
+      return NextResponse.json({ error: 'DEEPSEEK_API_KEY is missing' }, { status: 500, headers: corsHeaders });
     }
 
     const systemPrompt = `You are a Principal Technical Architect at GenWorkAI.

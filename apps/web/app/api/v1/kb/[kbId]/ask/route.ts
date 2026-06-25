@@ -4,8 +4,8 @@ import { knowledgeBases } from '../../../../../../db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
-import { generateEmbedding } from '../../../../../../lib/embeddings';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateEmbedding, rerankDocuments } from '../../../../../../lib/embeddings';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
@@ -97,10 +97,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ kbId: s
       JOIN document_chunks c ON c.id = r.chunk_id
       JOIN documents d ON d.id = c.document_id
       ORDER BY r.rrf_score DESC
-      LIMIT 5
+      LIMIT 20
     `;
 
-    const { rows: contexts } = await db.execute(searchSql);
+    const { rows: initialContexts } = await db.execute(searchSql);
+    
+    let contexts = initialContexts;
+    if (initialContexts.length > 0) {
+      const docsToRerank = initialContexts.map((row: any) => row.content);
+      try {
+        const reranked = await rerankDocuments(question, docsToRerank, 5);
+        contexts = reranked.map(r => initialContexts[r.index]).filter((c): c is Record<string, unknown> => c !== undefined);
+      } catch (err) {
+        console.error("Reranking failed, falling back to RRF results", err);
+        contexts = initialContexts.slice(0, 5);
+      }
+    }
     const contextText = contexts.map(c => `[Source: ${c.documentTitle}]\n${c.content}`).join('\n\n');
 
     // 4. Generate answer with citations
@@ -124,13 +136,13 @@ ${contextText}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: question }
         ],
-        agentRole: 'reasoning',
+        taskCategory: TaskCategory.REASONING,
         maxTokens: 2000,
         responseFormatJson: true,
         providerConfig
       },
-      process.env.OPENAI_API_KEY || "dummy", 
-      process.env.OLLAMA_URL ? `${process.env.OLLAMA_URL}/v1/chat/completions` : undefined
+      process.env.DEEPSEEK_API_KEY || "dummy", 
+      process.env.DEEPSEEK_API_URL
     );
 
     // Rough token estimation

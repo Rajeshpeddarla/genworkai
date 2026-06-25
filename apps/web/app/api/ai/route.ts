@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { requireUser } from '../../../lib/auth';
 import { RateLimitService } from '../../../lib/security/rate-limit';
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Markdown content is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.CKEY_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
       if (type === "clean_and_analyze") {
         // Fallback basic regex cleaning to simulate AI optimization
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
           data: `*⚠️ AI API Key not configured. Showing basic regex-cleaned fallback.*\n\n---\n\n${basicClean.substring(0, 3000)}...\n\n[Content Truncated]` 
         });
       } else {
-        return NextResponse.json({ success: true, data: "I am a simulated AI. Set CKEY_API_KEY to enable real AI responses." });
+        return NextResponse.json({ success: true, data: "I am a simulated AI. Set DEEPSEEK_API_KEY to enable real AI responses." });
       }
     }
 
@@ -52,8 +52,8 @@ export async function POST(req: Request) {
         { role: "system", content: systemPrompt },
         { role: "user", content: type === "summary" ? markdown : prompt }
       ],
-      agentRole: type === "summary" ? "formatting" : "reasoning",
-    }, apiKey, process.env.CKEY_API_URL);
+      taskCategory: type === "summary" ? TaskCategory.STRUCTURED : TaskCategory.REASONING,
+    }, apiKey, process.env.DEEPSEEK_API_URL);
 
     return NextResponse.json({ success: true, data: result.content });
   } catch (error: any) {

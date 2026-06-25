@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { knowledgeBases, documents } from '../../../../db/schema';
+import { knowledgeBases, documents, syncJobs, knowledgeSources } from '../../../../db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { requireUser } from '../../../../lib/auth';
 import { safeErrorResponse } from '../../../../lib/errors';
@@ -31,14 +31,30 @@ export async function GET() {
       .where(inArray(documents.kbId, kbIds))
       .groupBy(documents.kbId);
 
+      // Get active sync jobs per KB
+      const activeJobs = await db.select({
+        kbId: knowledgeSources.kbId,
+        count: sql<number>`count(*)::int`
+      })
+      .from(syncJobs)
+      .innerJoin(knowledgeSources, eq(syncJobs.sourceId, knowledgeSources.id))
+      .where(
+        sql`${knowledgeSources.kbId} IN ${kbIds} AND ${syncJobs.status} IN ('queued', 'processing')`
+      )
+      .groupBy(knowledgeSources.kbId);
+
+      const allDocs = await db.select().from(documents).where(inArray(documents.kbId, kbIds));
+
       // Create a map for quick lookup
       const countMap = new Map(docCounts.map(dc => [dc.kbId, dc.count]));
+      const activeJobsMap = new Map(activeJobs.map(aj => [aj.kbId, aj.count]));
 
       kbWithDocs = kbs.map((kb: any) => {
         return { 
           ...kb, 
-          documents: [], // Do not return all docs in the list view to save memory and bandwidth
-          documentCount: countMap.get(kb.id) || 0 
+          documents: allDocs.filter(d => d.kbId === kb.id),
+          documentCount: countMap.get(kb.id) || 0,
+          activeJobsCount: activeJobsMap.get(kb.id) || 0
         };
       });
     }

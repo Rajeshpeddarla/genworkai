@@ -5,7 +5,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 
 export async function GET(req: Request, { params }: { params: Promise<{ dbId: string }> }) {
@@ -66,13 +66,13 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: 'Generate schema documentation' }
         ],
-        agentRole: 'reasoning',
+        taskCategory: TaskCategory.STRUCTURED,
         maxTokens: 4000,
         responseFormatJson: true,
         providerConfig
       },
-      process.env.OPENAI_API_KEY || "dummy", 
-      process.env.OLLAMA_URL ? `${process.env.OLLAMA_URL}/v1/chat/completions` : undefined
+      process.env.DEEPSEEK_API_KEY || "dummy", 
+      process.env.DEEPSEEK_API_URL
     );
 
     metrics.llm_tokens += Math.floor((systemPrompt.length + llmRes.content.length) / 4);

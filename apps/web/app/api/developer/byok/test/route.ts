@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateWithFallbacks, ProviderConfig } from '@repo/ai';
+import { generateWithFallbacks, ProviderConfig, TaskCategory } from '@repo/ai';
 import { createClient } from '../../../../../utils/supabase/server';
 
 export async function POST(req: Request) {

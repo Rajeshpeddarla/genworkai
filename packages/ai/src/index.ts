@@ -2,6 +2,9 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { AIRouter, TaskCategory, RouterOptions, RouterResult } from './router';
+
+export { TaskCategory, AIRouter } from './router';
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -9,7 +12,7 @@ export interface ChatMessage {
 }
 
 export interface ProviderConfig {
-  provider: string; // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', 'ckey', 'custom'
+  provider: string; // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', 'deepseek', 'custom'
   apiKey: string;
   baseUrl?: string;
   defaultModel?: string;
@@ -21,10 +24,15 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   temperature?: number;
   topP?: number;
-  agentRole?: 'reasoning' | 'fast' | 'formatting'; // Smart routing selector
+  
+  // Intelligent Routing Configuration
+  taskCategory?: TaskCategory;
+  documentCount?: number;
+  toolCount?: number;
+  
   onLog?: (msg: string) => void;
   timeoutMs?: number;
-  providerConfig?: ProviderConfig; // Optional BYOK config
+  providerConfig?: ProviderConfig; // BYOK config
 }
 
 export interface ChatCompletionResult {
@@ -35,58 +43,49 @@ export interface ChatCompletionResult {
     promptTokens: number;
     completionTokens: number;
     totalTokens: number;
+    estimatedCost: string;
   };
 }
 
 // ─── Smart Model Routing ─────────────────────────────────────────
-const DEFAULT_CKEY_MODEL = "deepseek-v4-flash";
 
-function getModelInstance(options: ChatCompletionOptions, fallbackApiKey: string, fallbackUrl: string) {
+function getModelInstance(
+  route: RouterResult, 
+  options: ChatCompletionOptions, 
+  fallbackApiKey: string, 
+  fallbackUrl: string
+) {
   const config = options.providerConfig;
+  const isPlatformProvider = !config || !config.provider;
   
-  // 1. Fallback / Platform Default
-  if (!config || !config.provider) {
-    const openai = createOpenAI({
-      apiKey: fallbackApiKey,
-      baseURL: fallbackUrl,
-    });
-    return openai(DEFAULT_CKEY_MODEL);
-  }
+  const providerType = isPlatformProvider ? route.provider : config.provider.toLowerCase();
+  const apiKey = isPlatformProvider ? fallbackApiKey : config.apiKey;
+  const baseUrl = isPlatformProvider ? fallbackUrl : config.baseUrl;
+  const modelName = route.model;
 
-  // 2. BYOK Routing
-  const provider = config.provider.toLowerCase();
-  const apiKey = config.apiKey;
-  const modelName = config.defaultModel || 'gpt-4o'; // Fallback generic name if missing
-
-  switch (provider) {
+  switch (providerType) {
     case 'openai':
     case 'custom':
-    case 'ckey': {
+    case 'deepseek': {
       // All these are OpenAI-compatible endpoints
       const openai = createOpenAI({
         apiKey: apiKey,
-        baseURL: config.baseUrl,
+        baseURL: baseUrl,
       });
-      return openai(modelName);
+      return openai.chat(modelName);
     }
     case 'openrouter': {
       const openai = createOpenAI({
         apiKey: apiKey,
-        baseURL: config.baseUrl || 'https://openrouter.ai/api/v1',
+        baseURL: baseUrl || 'https://openrouter.ai/api/v1',
       });
-      return openai(modelName);
+      return openai.chat(modelName);
     }
-    case 'ollama': {
-      const openai = createOpenAI({
-        apiKey: apiKey || 'ollama', // ollama requires some string
-        baseURL: config.baseUrl || 'http://localhost:11434/v1',
-      });
-      return openai(modelName);
-    }
+
     case 'anthropic': {
       const anthropic = createAnthropic({
         apiKey: apiKey,
-        baseURL: config.baseUrl,
+        baseURL: baseUrl,
       });
       return anthropic(modelName);
     }
@@ -94,12 +93,12 @@ function getModelInstance(options: ChatCompletionOptions, fallbackApiKey: string
     case 'google': {
       const google = createGoogleGenerativeAI({
         apiKey: apiKey,
-        baseURL: config.baseUrl,
+        baseURL: baseUrl,
       });
       return google(modelName);
     }
     default:
-      throw new Error(`Unsupported provider: ${provider}`);
+      throw new Error(`Unsupported provider: ${providerType}`);
   }
 }
 
@@ -109,17 +108,27 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateWithFallbacks(
   options: ChatCompletionOptions,
   fallbackApiKey: string,
-  fallbackUrl: string = "https://ckey.vn/v1/chat/completions",
+  fallbackUrl: string = "https://api.deepseek.com/v1", // Default DeepSeek API
   maxRetries = 3
 ): Promise<ChatCompletionResult> {
   let attempt = 0;
   
+  // Calculate full context size for routing
+  const contextStr = options.messages.map(m => m.content).join('\n');
+  const taskCategory = options.taskCategory || TaskCategory.FAST;
+  
+  let currentRoute = AIRouter.getOptimalModel(taskCategory, contextStr, {
+    providerConfig: options.providerConfig,
+    documentCount: options.documentCount,
+    toolCount: options.toolCount
+  });
+
   while (attempt < maxRetries) {
     try {
-      const model = getModelInstance(options, fallbackApiKey, fallbackUrl);
-      const providerName = options.providerConfig?.provider || 'ckey (platform)';
+      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl);
+      const providerName = options.providerConfig?.provider || 'platform_deepseek';
       
-      options.onLog?.(`AI: Routing to ${providerName}`);
+      options.onLog?.(`AI: Routing to ${providerName} using model ${currentRoute.model}`);
 
       const { text, usage } = await generateText({
         model: model,
@@ -130,25 +139,37 @@ export async function generateWithFallbacks(
         abortSignal: AbortSignal.timeout(options.timeoutMs ?? 120000),
       } as any);
 
-      options.onLog?.(`AI: ${providerName} succeeded`);
+      options.onLog?.(`AI: ${providerName} (${currentRoute.model}) succeeded`);
+
+      const pTokens = (usage as any)?.promptTokens || 0;
+      const cTokens = (usage as any)?.completionTokens || 0;
+      const tTokens = (usage as any)?.totalTokens || 0;
+      const estimatedCost = AIRouter.calculateCost(currentRoute.model, pTokens, cTokens);
 
       return { 
         content: text, 
-        model: model.modelId, 
+        model: currentRoute.model, 
         provider: providerName,
         usage: {
-          promptTokens: (usage as any)?.promptTokens || 0,
-          completionTokens: (usage as any)?.completionTokens || 0,
-          totalTokens: (usage as any)?.totalTokens || 0,
+          promptTokens: pTokens,
+          completionTokens: cTokens,
+          totalTokens: tTokens,
+          estimatedCost: estimatedCost
         }
       };
       
     } catch (err: any) {
       attempt++;
       const msg = err?.message || 'unknown error';
-      console.warn(`[LLM] AI Attempt ${attempt} failed: ${msg}`);
+      console.warn(`[LLM] AI Attempt ${attempt} failed with ${currentRoute.model}: ${msg}`);
       
-      if (attempt >= maxRetries) {
+      // Fallback Engine Logic
+      const fallbackModel = AIRouter.getFallbackModel(currentRoute.model);
+      
+      if (fallbackModel && attempt < maxRetries) {
+        options.onLog?.(`AI: Falling back from ${currentRoute.model} to ${fallbackModel}`);
+        currentRoute.model = fallbackModel;
+      } else if (attempt >= maxRetries) {
         options.onLog?.(`AI: Failed after ${maxRetries} attempts`);
         throw new Error(`AI generation failed after ${maxRetries} attempts: ${msg}`);
       }

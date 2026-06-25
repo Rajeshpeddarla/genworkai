@@ -436,6 +436,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   databaseLimit: integer('database_limit').default(0),
   workspaceLimit: integer('workspace_limit').default(0),
   automationLimit: integer('automation_limit').default(0),
+  apiKeyLimit: integer('api_key_limit').default(0),
   apiRequestLimit: integer('api_request_limit').default(0),
   contextLimit: bigint('context_limit', { mode: 'number' }).default(0), // in bytes
   mcpServerLimit: integer('mcp_server_limit').default(0),
@@ -527,4 +528,17 @@ export const usageCounters = pgTable('usage_counters', {
   contextUsed: bigint('context_used', { mode: 'number' }).default(0).notNull(), // in bytes
   artifactsGenerated: integer('artifacts_generated').default(0).notNull(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const aiUsageLogs = pgTable('ai_usage_logs', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  workspaceId: integer('workspace_id'), // Nullable for future compatibility
+  model: varchar('model', { length: 100 }).notNull(),
+  promptTokens: integer('prompt_tokens').notNull().default(0),
+  completionTokens: integer('completion_tokens').notNull().default(0),
+  totalTokens: integer('total_tokens').notNull().default(0),
+  estimatedCost: varchar('estimated_cost', { length: 50 }).notNull().default('0'), // Store as string to prevent floating point loss
+  taskCategory: varchar('task_category', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
 });

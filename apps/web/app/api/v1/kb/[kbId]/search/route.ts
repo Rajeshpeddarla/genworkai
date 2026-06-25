@@ -4,7 +4,7 @@ import { knowledgeBases } from '../../../../../../db/schema';
 import { sql, eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
-import { generateEmbedding } from '../../../../../../lib/embeddings';
+import { generateEmbedding, rerankDocuments } from '../../../../../../lib/embeddings';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 
@@ -98,10 +98,28 @@ export async function POST(req: Request, { params }: { params: Promise<{ kbId: s
       JOIN document_chunks c ON c.id = r.chunk_id
       JOIN documents d ON d.id = c.document_id
       ORDER BY r.rrf_score DESC
-      LIMIT ${limit}
+      LIMIT 20
     `;
 
     const { rows } = await db.execute(searchSql);
+
+    // 4.5 Rerank the top 20 results using Jina AI
+    let finalResults = rows;
+    if (rows.length > 0) {
+      const docsToRerank = rows.map((row: any) => row.content);
+      try {
+        const reranked = await rerankDocuments(query, docsToRerank, limit);
+        // Jina returns { index, document (if return_documents=true), relevance_score }
+        // We set return_documents=false, so we use index to map back
+        finalResults = reranked.map(r => ({
+          ...rows[r.index],
+          similarity: r.relevance_score
+        }));
+      } catch (err) {
+        console.error("Reranking failed, falling back to RRF results", err);
+        finalResults = rows.slice(0, limit);
+      }
+    }
 
     // 5. Log API usage asynchronously
     const durationMs = Date.now() - startTime;
@@ -116,7 +134,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ kbId: s
       metrics
     });
 
-    return NextResponse.json({ results: rows });
+    return NextResponse.json({ results: finalResults });
 
   } catch (error: unknown) {
     const durationMs = Date.now() - startTime;

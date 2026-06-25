@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../db';
-import { apiKeys } from '../../../../../db/schema';
+import { apiKeys, auditLogs } from '../../../../../db/schema';
 import { requireUser } from '../../../../../lib/auth';
 import { eq, and } from 'drizzle-orm';
 
@@ -12,25 +12,48 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const { id } = await params;
     const keyId = parseInt(id, 10);
     if (isNaN(keyId)) {
-      return NextResponse.json({ error: 'Invalid Key ID' }, { status: 400 });
+      return NextResponse.json({ 
+        code: 'INVALID_ID',
+        error: 'Invalid Key ID' 
+      }, { status: 400 });
     }
 
-    // Hard delete the API key, or you could do a soft delete (status = 'revoked')
-    const result = await db.delete(apiKeys).where(
-      and(
-        eq(apiKeys.id, keyId),
-        eq(apiKeys.userId, user.id)
-      )
-    ).returning();
+    // Soft delete the API key by setting status to 'revoked'
+    // This removes it from the active quota count
+    const result = await db.update(apiKeys)
+      .set({ status: 'revoked' })
+      .where(
+        and(
+          eq(apiKeys.id, keyId),
+          eq(apiKeys.userId, user.id)
+        )
+      ).returning();
 
     if (result.length === 0) {
-      return NextResponse.json({ error: 'Key not found or unauthorized' }, { status: 404 });
+      return NextResponse.json({ 
+        code: 'NOT_FOUND',
+        error: 'Key not found or unauthorized' 
+      }, { status: 404 });
     }
+
+    const revokedKey = result[0]!;
+
+    // Audit Log
+    await db.insert(auditLogs).values({
+      userId: user.id,
+      action: 'api_key_revoked',
+      resourceType: 'api_key',
+      resourceId: revokedKey.id,
+      metadata: { name: revokedKey.name, prefix: revokedKey.keyPrefix }
+    });
 
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
     console.error('Revoke API Key Error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to revoke API key' }, { status: 500 });
+    return NextResponse.json({ 
+      code: 'INTERNAL_ERROR',
+      error: error.message || 'Failed to revoke API key' 
+    }, { status: 500 });
   }
 }

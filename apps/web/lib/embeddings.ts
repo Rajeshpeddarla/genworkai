@@ -1,9 +1,8 @@
-// Connect to local Ollama instance
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const EMBEDDING_MODEL = 'bge-m3';
+const JINA_API_KEY = process.env.JINA_API_KEY || 'jina_752b83045b5b444cb9f5edb05f8abaf5rKiQNEpS42_jN6L8AtqqqXD2DJlx';
+const EMBEDDING_MODEL = 'jina-embeddings-v5-text-small';
 
 /**
- * Generate an embedding for a piece of text using Ollama
+ * Generate an embedding for a piece of text using Jina AI
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
@@ -11,14 +10,17 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     // 30 second timeout per embedding to prevent hanging
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    const response = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+    const response = await fetch('https://api.jina.ai/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${JINA_API_KEY}`
       },
       body: JSON.stringify({
         model: EMBEDDING_MODEL,
-        prompt: text,
+        task: 'retrieval.query',
+        normalized: true,
+        input: [text],
       }),
       signal: controller.signal
     });
@@ -26,13 +28,55 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`Ollama API returned ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Jina API returned ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
-    return data.embedding;
+    return data.data[0].embedding;
   } catch (error) {
     console.error("Error generating embedding:", error);
+    throw error;
+  }
+}
+
+/**
+ * Rerank documents for a query using Jina AI
+ */
+export async function rerankDocuments(query: string, documents: string[], topN: number = 3): Promise<{ index: number, document: string, relevance_score: number }[]> {
+  if (documents.length === 0) return [];
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const response = await fetch('https://api.jina.ai/v1/rerank', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${JINA_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'jina-reranker-v3',
+        query: query,
+        top_n: topN,
+        documents: documents,
+        return_documents: false
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Jina Reranker API returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    return data.results;
+  } catch (error) {
+    console.error("Error reranking documents:", error);
     throw error;
   }
 }

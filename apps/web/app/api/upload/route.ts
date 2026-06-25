@@ -106,14 +106,14 @@ export async function POST(req: Request) {
 
     const pageText = extractedText.substring(0, 15000); // Send up to 15000 chars to LLM
 
-    const apiKey = process.env.CKEY_API_KEY;
-    const apiUrl = process.env.CKEY_API_URL;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiUrl = process.env.DEEPSEEK_API_URL;
 
     if (!apiKey || !apiUrl) {
       return NextResponse.json({
         title: file.name,
         description: `Uploaded document: ${file.name}`,
-        insights: ["Please configure CKEY API for full insights."],
+        insights: ["Please configure DEEPSEEK API for full insights."],
         summary: "API keys are missing. Here is the first 500 chars of extracted text: " + pageText.substring(0, 500),
         risks: [],
         opportunities: []

@@ -18,6 +18,18 @@ export async function POST(req: Request) {
     const rateLimitResponse = await RateLimitService.check(user.id, 'database');
     if (rateLimitResponse) return rateLimitResponse;
 
+    const { EntitlementEngine } = require('../../../../../lib/billing/entitlements');
+
+    const featureCheck = await EntitlementEngine.hasFeature(user.id, 'database_access');
+    if (!featureCheck.allowed) {
+      throw new ValidationError(featureCheck.reason || 'Database Intelligence is disabled on your plan.');
+    }
+
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: user.id, resource: 'database_connections' });
+    if (!limitCheck.allowed) {
+      throw new ValidationError(`Limit reached. You can only connect up to ${limitCheck.limit} Databases on your plan. Upgrade for more.`);
+    }
+
     const body = await req.json();
     const { connectionString, host, port, database, databaseName, username, password, engine = 'pg', kbId } = body;
     

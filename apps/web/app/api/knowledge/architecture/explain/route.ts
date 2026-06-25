@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +43,7 @@ Write the response in clean Markdown.
       ],
       maxTokens: 1000,
       temperature: 0.3,
-    }, process.env.CKEY_API_KEY || '');
+    }, process.env.DEEPSEEK_API_KEY || '');
 
     return NextResponse.json({ 
       success: true, 

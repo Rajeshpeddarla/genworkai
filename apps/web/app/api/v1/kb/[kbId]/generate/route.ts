@@ -5,7 +5,7 @@ import { sql, eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { generateEmbedding } from '../../../../../../lib/embeddings';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
@@ -123,13 +123,13 @@ ${schemaDefinition}`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Context:\n${contextText}` }
         ],
-        agentRole: 'reasoning',
+        taskCategory: TaskCategory.STRUCTURED,
         responseFormatJson: true,
         maxTokens: 3000,
         providerConfig
       },
-      process.env.OPENAI_API_KEY || "dummy",
-      process.env.OLLAMA_URL ? `${process.env.OLLAMA_URL}/v1/chat/completions` : undefined
+      process.env.DEEPSEEK_API_KEY || "dummy",
+      process.env.DEEPSEEK_API_URL
     );
 
     metrics.llm_tokens += Math.floor((systemPrompt.length + contextText.length + llmRes.content.length) / 4);

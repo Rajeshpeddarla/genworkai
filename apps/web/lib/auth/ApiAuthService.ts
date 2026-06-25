@@ -68,22 +68,10 @@ export class ApiAuthService {
     }
 
     // 4. Validate Quota Enforcements
-    const [userProfile] = await db.select({ tier: profiles.tier }).from(profiles).where(eq(profiles.id, keyRecord.userId));
-    if (!userProfile) {
-      return { isValid: false, error: 'User profile not found' };
-    }
-
-    const tier = userProfile.tier || 'free';
-    const limitRequests = tier === 'pro' ? 100000 : 1000;
-    
-    const now = new Date();
-    const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    
-    const [counter] = await db.select().from(apiUsageCounters)
-      .where(and(eq(apiUsageCounters.userId, keyRecord.userId), eq(apiUsageCounters.period, period)));
-      
-    if (counter && counter.requests >= limitRequests) {
-      return { isValid: false, error: 'Quota Exceeded: Too many requests this month.' };
+    const { EntitlementEngine } = require('../billing/entitlements');
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: keyRecord.userId, resource: 'api_requests', incrementAmount: 1 });
+    if (!limitCheck.allowed) {
+      return { isValid: false, error: limitCheck.reason || 'Quota Exceeded: Too many requests this month.' };
     }
 
     // 5. Update last used (debounced to 60 minutes to reduce DB load)

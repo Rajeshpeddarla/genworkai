@@ -18,11 +18,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Flow name is required for generation' }, { status: 400, headers: corsHeaders });
     }
 
-    const apiKey = process.env.CKEY_API_KEY;
-    const apiUrl = process.env.CKEY_API_URL || 'https://ckey.vn/v1/chat/completions';
+    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
 
     if (!apiKey) {
-      console.warn("CKEY_API_KEY missing, falling back to mock generator");
+      console.warn("DEEPSEEK_API_KEY missing, falling back to mock generator");
       // Fallback mock if no API key
       const steps = [
         { stepName: 'User Request', description: '**Files:** `components/Form.tsx`\n\n**Methods:** `onSubmit()`\n\n**Explanation:** Captures user input.' },

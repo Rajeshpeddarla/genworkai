@@ -3,7 +3,7 @@ import mammoth from 'mammoth';
 import * as xlsx from 'xlsx';
 import crypto from 'crypto';
 import { chunkText } from './embeddings';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 
 export function generateChunkHash(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -101,9 +101,9 @@ export async function enhanceTextWithAI(cleanedText: string, apiKey: string, api
     const knowledgeRes = await generateWithFallbacks({
       messages: [
         { role: "system", content: knowledgePrompt },
-        { role: "user", content: cleanedText.substring(0, 15000) }
+        { role: "user", content: cleanedText.substring(0, 4000) } // Reduced to prevent timeouts
       ],
-      agentRole: "reasoning"
+      taskCategory: TaskCategory.FAST
     }, apiKey, apiUrl as string);
 
     try {
@@ -114,24 +114,11 @@ export async function enhanceTextWithAI(cleanedText: string, apiKey: string, api
         enhancedData.topics = parsed.topics || [];
         enhancedData.keywords = parsed.keywords || [];
         enhancedData.classification = parsed.classification || "Unclassified";
-        enhancedData.knowledgeContent = parsed.knowledgeContent || cleanedText;
+        // We do NOT overwrite the embedding content. We want the full raw document to be chunked and searchable, 
+        // not just an AI summary which would cause heavy data loss for long documents!
       }
     } catch (e) {
       console.error("Failed to parse Knowledge AI JSON", e);
-    }
-
-    const embeddingPrompt = `You are an AI Document Structurer. Your task is to take the following raw text and convert it into highly structured, discrete Markdown blocks optimized purely for vector chunking and semantic search retrieval. Focus on extracting specific implementation details, APIs, code snippets, and exact terminology. Output ONLY valid markdown. Do not wrap in JSON.`;
-    
-    const embeddingRes = await generateWithFallbacks({
-      messages: [
-        { role: "system", content: embeddingPrompt },
-        { role: "user", content: cleanedText.substring(0, 15000) }
-      ],
-      agentRole: "formatting"
-    }, apiKey, apiUrl as string);
-
-    if (embeddingRes.content && embeddingRes.content.length > 50) {
-      enhancedData.embeddingContent = embeddingRes.content.replace(/```markdown\n?/g, '').replace(/```\n?/g, '').trim();
     }
 
   } catch (e) {

@@ -81,8 +81,8 @@ export const databaseIngestion: any = inngest.createFunction(
       await updateProgress("enhancing", { stage: "enhancing", current_step: "Applying AI enhancement" });
 
       const batchStats = await step.run("process-schema", async () => {
-        const apiKey = process.env.CKEY_API_KEY || '';
-        const enhancedData = apiKey ? await enhanceTextWithAI(schemaDefinition, apiKey, process.env.CKEY_API_URL) : {
+        const apiKey = process.env.DEEPSEEK_API_KEY || '';
+        const enhancedData = apiKey ? await enhanceTextWithAI(schemaDefinition, apiKey, process.env.DEEPSEEK_API_URL) : {
           summary: "Database Schema Definition", topics: ["Database", "Schema", "Tables"], keywords: ["SQL", "Database", "Schema"], classification: "Database Schema",
           knowledgeContent: schemaDefinition, embeddingContent: schemaDefinition
         };

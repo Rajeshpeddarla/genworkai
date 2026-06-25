@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../../db';
 import { databaseSchemas, connectedDatabases } from '../../../../../db/schema';
 import { eq } from 'drizzle-orm';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { requireUser, requireOwnership } from '../../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../../lib/errors';
 
@@ -33,7 +33,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const schemaData = schemas[0]!.schemaData;
 
-    const apiKey = process.env.CKEY_API_KEY || '';
+    const apiKey = process.env.DEEPSEEK_API_KEY || '';
     if (!apiKey) {
       return NextResponse.json({ error: 'AI API Key is not configured' }, { status: 500 });
     }
@@ -59,8 +59,8 @@ CRITICAL RULES:
     const aiRes = await generateWithFallbacks({
       messages: [{ role: 'system', content: prompt }],
       responseFormatJson: true,
-      agentRole: 'reasoning'
-    }, apiKey, process.env.CKEY_API_URL);
+      taskCategory: TaskCategory.REASONING
+    }, apiKey, process.env.DEEPSEEK_API_URL);
 
     let parsed = { message: "Generated query.", sql: "" };
     try {

@@ -23,6 +23,18 @@ export async function POST(req: Request) {
     const { user, error } = await requireUser();
     if (error) return error;
 
+    const { EntitlementEngine } = require('../../../lib/billing/entitlements');
+
+    const featureCheck = await EntitlementEngine.hasFeature(user.id, 'automation_access');
+    if (!featureCheck.allowed) {
+      throw new ValidationError(featureCheck.reason || 'Automation Studio is disabled on your plan.');
+    }
+
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: user.id, resource: 'automations' });
+    if (!limitCheck.allowed) {
+      throw new ValidationError(`Limit reached. You can only create up to ${limitCheck.limit} Automations on your plan. Upgrade for more.`);
+    }
+
     const body = await req.json();
     const { name, description, category, templateId, sources, artifactTypes, executionMode, schedule, triggerEvent, goal } = body;
 

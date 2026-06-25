@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { documentChunks, documents } from '../../../../db/schema';
-import { generateEmbedding } from '../../../../lib/embeddings';
+import { generateEmbedding, rerankDocuments } from '../../../../lib/embeddings';
 import { sql } from 'drizzle-orm';
 import { requireUser, requireOwnership } from '../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
@@ -73,12 +73,27 @@ export async function POST(req: Request) {
       JOIN document_chunks c ON c.id = r.chunk_id
       JOIN documents d ON d.id = c.document_id
       ORDER BY r.rrf_score DESC
-      LIMIT 5
+      LIMIT 20
     `;
 
     const { rows } = await db.execute(searchSql);
 
-    return NextResponse.json({ results: rows });
+    let finalResults = rows;
+    if (rows.length > 0) {
+      const docsToRerank = rows.map((row: any) => row.content);
+      try {
+        const reranked = await rerankDocuments(query, docsToRerank, 5);
+        finalResults = reranked.map(r => ({
+          ...rows[r.index],
+          similarity: r.relevance_score
+        }));
+      } catch (err) {
+        console.error("Reranking failed, falling back to RRF results", err);
+        finalResults = rows.slice(0, 5);
+      }
+    }
+
+    return NextResponse.json({ results: finalResults });
   } catch (error: unknown) {
     return safeErrorResponse(error, 'Knowledge Search Route');
   }

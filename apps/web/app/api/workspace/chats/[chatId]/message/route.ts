@@ -104,21 +104,21 @@ You may also include normal conversational text outside the JSON block. Do not u
        systemPrompt += `\n\nYou have access to a knowledge base. Here is relevant context retrieved for the user's query:\n\n---\n${contextText}\n---\n\nBase your answer on the context provided.`;
     }
 
-    const apiKey = process.env.CKEY_API_KEY;
+    const apiKey = process.env.DEEPSEEK_API_KEY;
     if (!apiKey) {
       // Provide a mock stream response for local testing if no key is present
       const stream = new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode("I am a simulated AI. Set CKEY_API_KEY to generate real documents."));
+          controller.enqueue(new TextEncoder().encode("I am a simulated AI. Set DEEPSEEK_API_KEY to generate real documents."));
           controller.close();
         }
       });
       return new Response(stream, { headers: { "Content-Type": "text/plain" } });
     }
 
-    const ckey = createOpenAI({
+    const deepseek = createOpenAI({
       apiKey,
-      baseURL: process.env.CKEY_API_URL || "https://ckey.vn/v1",
+      baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1",
     });
 
     const llmMessages: {role: "system"|"user"|"assistant", content: string}[] = [
@@ -135,7 +135,7 @@ You may also include normal conversational text outside the JSON block. Do not u
     llmMessages.push({ role: "user", content });
 
     const result = streamText({
-      model: ckey('deepseek-v4-flash'),
+      model: deepseek('deepseek-v4-flash'),
       messages: llmMessages,
       async onFinish({ text }) {
         try {

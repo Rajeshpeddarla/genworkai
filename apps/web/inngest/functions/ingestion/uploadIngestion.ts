@@ -35,9 +35,7 @@ export const uploadIngestion: any = inngest.createFunction(
         const fileHash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
         const source = await db.select({ lastSuccessfulHash: knowledgeSources.lastSuccessfulHash }).from(knowledgeSources).where(eq(knowledgeSources.id, sourceId)).limit(1);
         
-        if (source[0]?.lastSuccessfulHash === fileHash) {
-          return { skipped: true, reason: "Hash unchanged" };
-        }
+        // We removed the lastSuccessfulHash skip logic for direct uploads because if a user deletes a file and re-uploads it, it was getting skipped.
 
         const sourceRecord = await db.select({ kbId: knowledgeSources.kbId }).from(knowledgeSources).where(eq(knowledgeSources.id, sourceId)).limit(1);
         const kbId = sourceRecord[0]?.kbId || 0;
@@ -50,8 +48,8 @@ export const uploadIngestion: any = inngest.createFunction(
         }
 
         const cleanedText = cleanExtractedText(extractedText);
-        const apiKey = process.env.CKEY_API_KEY || '';
-        const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.CKEY_API_URL) : {
+        const apiKey = process.env.DEEPSEEK_API_KEY || '';
+        const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.DEEPSEEK_API_URL) : {
           summary: "", topics: [], keywords: [], classification: "Unclassified",
           knowledgeContent: cleanedText, embeddingContent: cleanedText
         };

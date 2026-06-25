@@ -2,8 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
+interface Entitlements {
+  hasApiAccess: boolean;
+  apiAccessReason?: string;
+  keysLimit: number;
+  currentKeyCount: number;
+  upgradeRequired?: boolean;
+}
+
+export default function KeysManager({ initialKeys, entitlements }: { initialKeys: any[], entitlements: Entitlements }) {
   const [keys, setKeys] = useState(initialKeys);
   const [isGenerating, setIsGenerating] = useState(false);
   const [newKeyData, setNewKeyData] = useState<{ rawKey: string, key: any } | null>(null);
@@ -20,14 +29,22 @@ export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
         body: JSON.stringify({ name: 'Production API Key' })
       });
       
-      if (!res.ok) throw new Error('Failed to generate key');
-      
       const data = await res.json();
+      
+      if (!res.ok) {
+        if (data.upgradeRequired) {
+          alert(`Upgrade Required: ${data.message}`);
+          router.push('/billing');
+          return;
+        }
+        throw new Error(data.message || data.error || 'Failed to generate key');
+      }
+      
       setKeys([data.key, ...keys]);
       setNewKeyData(data);
       router.refresh();
-    } catch (err) {
-      alert(err);
+    } catch (err: any) {
+      alert(err.message || err);
     } finally {
       setIsGenerating(false);
     }
@@ -41,14 +58,22 @@ export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
         method: 'DELETE'
       });
       
-      if (!res.ok) throw new Error('Failed to revoke key');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to revoke key');
       
-      setKeys(keys.filter(k => k.id !== id));
+      // Update local state to show as revoked
+      setKeys(keys.map(k => k.id === id ? { ...k, status: 'revoked' } : k));
       router.refresh();
-    } catch (err) {
-      alert(err);
+    } catch (err: any) {
+      alert(err.message || err);
     }
   };
+
+  // Dashboard calculations
+  const { hasApiAccess, keysLimit, currentKeyCount } = entitlements;
+  const isUnlimited = keysLimit === -1;
+  const usagePercentage = isUnlimited ? 0 : Math.min(100, Math.round((currentKeyCount / (keysLimit || 1)) * 100));
+  const canGenerate = hasApiAccess && (isUnlimited || currentKeyCount < keysLimit);
 
   return (
     <>
@@ -59,12 +84,58 @@ export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
         </div>
         <button 
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || !canGenerate}
           className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
         >
           {isGenerating ? 'Generating...' : '+ Generate New Key'}
         </button>
       </div>
+
+      {/* Dashboard Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 rounded-xl">
+          <h3 className="text-sm font-medium text-neutral-500 mb-4">API Access Status</h3>
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full ${hasApiAccess ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="font-medium">{hasApiAccess ? 'Enabled' : 'Disabled'}</span>
+          </div>
+          {!hasApiAccess && (
+            <p className="text-sm text-red-500 mt-2">{entitlements.apiAccessReason}</p>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 rounded-xl">
+          <div className="flex justify-between items-end mb-2">
+            <h3 className="text-sm font-medium text-neutral-500">API Key Usage</h3>
+            <span className="font-medium">
+              {currentKeyCount} / {isUnlimited ? '∞' : keysLimit} Used
+            </span>
+          </div>
+          {!isUnlimited && (
+            <div className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-full h-2.5">
+              <div 
+                className={`h-2.5 rounded-full ${usagePercentage >= 100 ? 'bg-red-500' : 'bg-black dark:bg-white'}`} 
+                style={{ width: `${usagePercentage}%` }}
+              ></div>
+            </div>
+          )}
+          {!isUnlimited && usagePercentage >= 100 && (
+            <p className="text-sm text-red-500 mt-2">API Key limit reached. Revoke keys or upgrade your plan.</p>
+          )}
+        </div>
+      </div>
+
+      {!hasApiAccess && (
+        <div className="bg-neutral-100 dark:bg-neutral-800 p-4 rounded-lg mb-8 flex justify-between items-center">
+          <div>
+            <h3 className="font-bold">Upgrade to Pro</h3>
+            <p className="text-sm text-neutral-500">Unlock API access, higher limits, and advanced features.</p>
+          </div>
+          <Link href="/billing" className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700">
+            View Plans
+          </Link>
+        </div>
+      )}
 
       {newKeyData && (
         <div className="bg-green-50 border border-green-200 text-green-900 p-4 rounded-lg mb-8 dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-300">
@@ -82,7 +153,7 @@ export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
             <tr>
               <th className="px-6 py-4 font-medium text-sm text-neutral-500">NAME</th>
               <th className="px-6 py-4 font-medium text-sm text-neutral-500">PREFIX</th>
-              <th className="px-6 py-4 font-medium text-sm text-neutral-500">SCOPES</th>
+              <th className="px-6 py-4 font-medium text-sm text-neutral-500">STATUS</th>
               <th className="px-6 py-4 font-medium text-sm text-neutral-500">CREATED</th>
               <th className="px-6 py-4 font-medium text-sm text-neutral-500 text-right">ACTIONS</th>
             </tr>
@@ -104,24 +175,28 @@ export default function KeysManager({ initialKeys }: { initialKeys: any[] }) {
                     </code>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-1">
-                      {((key.scopes as string[]) || []).map(scope => (
-                        <span key={scope} className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                          {scope}
-                        </span>
-                      ))}
-                    </div>
+                    {key.status === 'active' ? (
+                      <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-2 py-0.5 rounded-full">
+                        Revoked
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-neutral-500">
                     {new Date(key.createdAt!).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => handleRevoke(key.id)}
-                      className="text-red-500 hover:text-red-600 font-medium text-sm"
-                    >
-                      Revoke
-                    </button>
+                    {key.status === 'active' && (
+                      <button 
+                        onClick={() => handleRevoke(key.id)}
+                        className="text-red-500 hover:text-red-600 font-medium text-sm"
+                      >
+                        Revoke
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

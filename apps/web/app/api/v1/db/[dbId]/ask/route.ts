@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { ApiAuthService } from '../../../../../../lib/auth/ApiAuthService';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
 import { DatabaseService, DBConnectionConfig } from '../../../../../../lib/database/DatabaseService';
-import { generateWithFallbacks } from '@repo/ai';
+import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 import { decryptSecret } from '../../../../../../lib/security/encryption';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
@@ -90,13 +90,13 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
           { role: 'system', content: systemPrompt },
           { role: 'user', content: question }
         ],
-        agentRole: 'reasoning',
+        taskCategory: TaskCategory.REASONING,
         responseFormatJson: true,
         maxTokens: 2000,
         providerConfig
       },
-      process.env.OPENAI_API_KEY || "dummy", 
-      process.env.OLLAMA_URL ? `${process.env.OLLAMA_URL}/v1/chat/completions` : undefined
+      process.env.DEEPSEEK_API_KEY || "dummy", 
+      process.env.DEEPSEEK_API_URL
     );
 
     metrics.llm_tokens += Math.floor((systemPrompt.length + question.length + llmRes.content.length) / 4);

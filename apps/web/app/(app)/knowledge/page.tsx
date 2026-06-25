@@ -137,25 +137,31 @@ export default function KnowledgePage() {
   const [isLoadingRepos, setIsLoadingRepos] = useState(false);
   const [uploadStats, setUploadStats] = useState({ current: 0, total: 0, filename: '' });
 
-  const fetchKBs = async () => {
-    setIsLoading(true);
+  const fetchKBs = async (background = false) => {
+    if (!background) setIsLoading(true);
     try {
       const res = await fetch('/api/knowledge/list');
       const data = await res.json();
       setKbs(data.kbs || []);
-      // If we are in detail view, update the activeKb data
-      if (activeKb) {
-        const updatedActive = (data.kbs || []).find((k: any) => k.id === activeKb.id);
-        if (updatedActive) setActiveKb(updatedActive);
-      }
+      
+      // Update activeKb using the functional updater to avoid stale closure issues during polling
+      setActiveKb((prevKb: any) => {
+        if (!prevKb) return null;
+        const updatedActive = (data.kbs || []).find((k: any) => k.id === prevKb.id);
+        return updatedActive || prevKb;
+      });
     } catch (e: any) {
       console.error("Failed to fetch KBs:", e.message || e);
     }
-    setIsLoading(false);
+    if (!background) setIsLoading(false);
   };
 
   useEffect(() => {
     fetchKBs();
+    // Poll the API every 5 seconds silently in the background
+    // This ensures background Inngest jobs (like document processing) automatically appear in the UI without a manual refresh!
+    const interval = setInterval(() => fetchKBs(true), 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCreate = async () => {
@@ -582,9 +588,16 @@ export default function KnowledgePage() {
                            >
                              <Trash2 className="w-4 h-4" />
                            </button>
-                           <span className="bg-white/5 border border-white/10 text-zinc-300 text-[10px] font-medium px-2.5 py-1 rounded-full">
-                             {kb.documentCount || 0} files
-                           </span>
+                           {kb.activeJobsCount > 0 ? (
+                             <span className="bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 text-[10px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                               <RefreshCw className="w-3 h-3 animate-spin" />
+                               Processing {kb.activeJobsCount}
+                             </span>
+                           ) : (
+                             <span className="bg-white/5 border border-white/10 text-zinc-300 text-[10px] font-medium px-2.5 py-1 rounded-full">
+                               {kb.documentCount || 0} files
+                             </span>
+                           )}
                          </div>
                        </div>
                        
@@ -672,6 +685,12 @@ export default function KnowledgePage() {
                   </div>
                   
                   <div className="divide-y divide-white/5">
+                    {activeKb.activeJobsCount > 0 && (
+                      <div className="px-6 py-4 bg-fuchsia-500/5 flex items-center justify-center gap-3 border-b border-fuchsia-500/10">
+                        <RefreshCw className="w-4 h-4 animate-spin text-fuchsia-400" />
+                        <span className="text-sm text-fuchsia-200 font-medium">Processing background tasks... New documents will appear here when ready.</span>
+                      </div>
+                    )}
                     {activeKb.documents?.length > 0 ? (
                       activeKb.documents.map((doc: any) => {
                         const badgeColors = getFileBadgeColors(doc.sourceType);

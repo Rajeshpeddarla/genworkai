@@ -159,7 +159,7 @@ export default function BYOKPage() {
         {loading ? (
           <p>Loading...</p>
         ) : providers.length === 0 ? (
-          <p className="text-neutral-500">No providers configured. The platform defaults to ckey.vn.</p>
+          <p className="text-neutral-500">No providers configured. The platform defaults to deepseek.vn.</p>
         ) : (
           <div className="space-y-4">
             {providers.map(p => (

@@ -47,6 +47,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden. Server does not have access to this Knowledge Base.' }, { status: 403, headers: corsHeaders });
     }
 
+    const { EntitlementEngine } = require('../../../../lib/billing/entitlements');
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: server.userId, resource: 'mcp_requests', incrementAmount: 1 });
+    if (!limitCheck.allowed) {
+      return NextResponse.json({ error: limitCheck.reason || 'Quota Exceeded: Too many MCP requests this month.' }, { status: 429, headers: corsHeaders });
+    }
+
     // 2. Generate embedding for the search query
     const queryVector = await generateEmbedding(query);
 

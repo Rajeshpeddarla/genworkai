@@ -7,17 +7,17 @@ import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 
 const openai = createOpenAI({
-  apiKey: process.env.CKEY_API_KEY || "",
-  baseURL: process.env.CKEY_API_URL || "https://ckey.vn/v1",
+  apiKey: process.env.DEEPSEEK_API_KEY || "",
+  baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1",
 });
 
 async function executeLLM(task: any, systemPrompt: string) {
-  if (!process.env.CKEY_API_KEY) {
-    return `# LLM Disabled\n\nNo CKEY_API_KEY found in the environment. Task: ${task.name}\nGoal: ${task.goal}`;
+  if (!process.env.DEEPSEEK_API_KEY) {
+    return `# LLM Disabled\n\nNo DEEPSEEK_API_KEY found in the environment. Task: ${task.name}\nGoal: ${task.goal}`;
   }
 
   const result = await generateText({
-    model: openai(process.env.CKEY_MODEL || "gpt-4o"),
+    model: openai(process.env.DEEPSEEK_MODEL || "gpt-4o"),
     system: systemPrompt,
     prompt: `Execute the following automation task:\n\nTask Name: ${task.name}\nDescription: ${task.description || "None"}\nGoal: ${task.goal || "None"}\nTarget Artifact Types: ${task.artifactTypes?.join(", ") || "None"}\nSources: ${task.sources?.join(", ") || "None"}\n\nPlease generate the required output artifact contents. Format as pure Markdown.`,
   });

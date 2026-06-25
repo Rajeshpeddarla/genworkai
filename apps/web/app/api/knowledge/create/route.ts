@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { knowledgeBases } from '../../../../db/schema';
-import { checkKnowledgeBaseLimit } from '../../../../lib/limits';
+import { EntitlementEngine } from '../../../../lib/billing/entitlements';
 import { requireUser } from '../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
 import { RateLimitService } from '../../../../lib/security/rate-limit';
@@ -14,9 +14,14 @@ export async function POST(req: Request) {
     const rateLimitResponse = await RateLimitService.check(user.id, 'default');
     if (rateLimitResponse) return rateLimitResponse;
 
-    const limitCheck = await checkKnowledgeBaseLimit(user.id);
+    const featureCheck = await EntitlementEngine.hasFeature(user.id, 'knowledge_base_access');
+    if (!featureCheck.allowed) {
+      throw new ValidationError(featureCheck.reason || 'Knowledge Bases are disabled on your plan.');
+    }
+
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: user.id, resource: 'knowledge_bases' });
     if (!limitCheck.allowed) {
-      throw new ValidationError(`Limit reached. You can only create up to ${limitCheck.limit} Knowledge Bases on the free plan.`);
+      throw new ValidationError(`Limit reached. You can only create up to ${limitCheck.limit} Knowledge Bases on your plan. Upgrade for more.`);
     }
 
     const { name, description, color } = await req.json();
