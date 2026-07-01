@@ -1,9 +1,10 @@
 "use client";
 
 import { useBillingStore } from "../../../store/billing";
-import { Check, CreditCard, Star, Zap, Users, Building } from "lucide-react";
+import { Check, Star, Zap, Building } from "lucide-react";
 import { useState, useEffect } from "react";
 import { initializePaddle, Paddle } from "@paddle/paddle-js";
+import Link from "next/link";
 
 export default function BillingPage() {
   const { tier, downgrade } = useBillingStore();
@@ -17,7 +18,7 @@ export default function BillingPage() {
   const displayPlans = plans
     .filter(p => p.slug !== 'team' && p.slug !== 'teams')
     .sort((a, b) => {
-      const order = { 'free': 1, 'pro': 2, 'enterprise': 3 };
+      const order = { 'free': 1, 'starter': 2, 'pro': 3, 'agency': 4, 'enterprise': 5 };
       return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
     });
 
@@ -67,19 +68,18 @@ export default function BillingPage() {
       .catch(console.error);
   }, []);
 
-  const handleUpgrade = () => {
+  const handleUpgrade = (priceId: string) => {
     if (!paddle) {
       alert("Billing system is initializing, please wait a moment.");
       return;
     }
-    const proPlan = plans.find((p: any) => p.slug === 'pro');
-    if (!proPlan?.paddleMonthlyPriceId) {
-      alert("Pro plan price ID is not configured yet. Please configure it in the Admin Billing Studio.");
+    if (!priceId) {
+      alert("This plan price ID is not configured yet. Please configure it in the Admin Billing Studio.");
       return;
     }
     setIsProcessing(true);
     paddle.Checkout.open({
-      items: [{ priceId: proPlan.paddleMonthlyPriceId, quantity: 1 }]
+      items: [{ priceId, quantity: 1 }]
     });
     // Reset processing state after a slight delay
     setTimeout(() => setIsProcessing(false), 2000);
@@ -98,146 +98,149 @@ export default function BillingPage() {
         </div>
 
         <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
-          
-          {/* Free Tier */}
-          <div className={`p-6 rounded-2xl border flex flex-col ${tier === 'free' ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-950/20' : 'border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50'} transition-all`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg">
-                <Star className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Free</h2>
-            </div>
-            <div className="mb-6 flex-1">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
-                  {(() => {
-                    if (isLoadingPrices) return '...';
-                    const firstPrice = Object.values(localizedPrices)[0];
-                    const zeroPrice = firstPrice 
-                      ? firstPrice.formatted.replace(/[\d.,]+/g, '0').replace(/0+/g, '0') 
-                      : "$0";
-                    return zeroPrice;
-                  })()}
-                </span>
-                <span className="text-zinc-500 dark:text-zinc-400">/month</span>
-              </div>
-              <p className="text-sm text-zinc-500 mt-2">For individuals exploring the platform.</p>
-            </div>
-            <ul className="space-y-4 mb-8 text-sm">
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                <span>1 Knowledge Base</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                <span>100 Documents Limit</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                <span>1 MCP Endpoint</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-                <span>Community Support</span>
-              </li>
-            </ul>
-            <button 
-              onClick={handleDowngrade}
-              disabled={tier === 'free'}
-              className={`w-full py-2.5 rounded-lg font-medium transition-colors text-sm ${tier === 'free' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
-            >
-              {tier === 'free' ? 'Current Plan' : 'Downgrade to Free'}
-            </button>
-          </div>
+          {displayPlans.map(plan => {
+            const isCurrentTier = tier === plan.slug;
+            const isEnterprise = plan.slug === 'enterprise';
+            const isCustom = isEnterprise; 
+            
+            // Generate icon and colors based on tier
+            let Icon = Star;
+            let iconColor = "text-zinc-600 dark:text-zinc-400";
+            let iconBg = "bg-zinc-100 dark:bg-zinc-800";
+            let borderColor = "border-zinc-200 dark:border-white/10";
+            let bgColor = "bg-white dark:bg-zinc-900/50";
+            let btnClasses = "";
+            let checkColor = "text-zinc-500";
+            
+            if (isCurrentTier) {
+              if (plan.slug === 'pro' || plan.slug === 'agency') {
+                borderColor = "border-fuchsia-500";
+                bgColor = "bg-fuchsia-50/50 dark:bg-fuchsia-950/20";
+              } else if (plan.slug === 'free') {
+                borderColor = "border-violet-500";
+                bgColor = "bg-violet-50/50 dark:bg-violet-950/20";
+              } else {
+                borderColor = "border-emerald-500";
+                bgColor = "bg-emerald-50/50 dark:bg-emerald-950/20";
+              }
+            }
 
-          {/* Pro Tier */}
-          <div className={`relative p-6 rounded-2xl border flex flex-col ${tier === 'pro' ? 'border-fuchsia-500 bg-fuchsia-50/50 dark:bg-fuchsia-950/20' : 'border-violet-200 dark:border-violet-900/50 bg-white dark:bg-zinc-900/50'} transition-all shadow-lg`}>
-            {tier === 'pro' && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
-                Current Plan
-              </div>
-            )}
-            <div className="flex items-center gap-3 mb-4 mt-2">
-              <div className="p-2 bg-fuchsia-100 dark:bg-fuchsia-900/30 rounded-lg">
-                <Zap className="w-5 h-5 text-fuchsia-600 dark:text-fuchsia-400" />
-              </div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Pro</h2>
-            </div>
-            <div className="mb-6 flex-1">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">
-                  {isLoadingPrices ? '...' : localizedPrices[plans.find(p => p.slug === 'pro')?.paddleMonthlyPriceId]?.formatted || '$19'}
-                </span>
-                <span className="text-zinc-500 dark:text-zinc-400">/month</span>
-              </div>
-              <p className="text-sm text-zinc-500 mt-2">For independent researchers and developers.</p>
-            </div>
-            <ul className="space-y-4 mb-8 text-sm">
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-fuchsia-500 shrink-0 mt-0.5" />
-                <span className="font-medium text-zinc-900 dark:text-white">10 Knowledge Bases</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-fuchsia-500 shrink-0 mt-0.5" />
-                <span>Unlimited Documents</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-fuchsia-500 shrink-0 mt-0.5" />
-                <span className="font-medium text-zinc-900 dark:text-white">5 MCP Endpoints</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-fuchsia-500 shrink-0 mt-0.5" />
-                <span>Automation Studio Access</span>
-              </li>
-            </ul>
-            <button 
-              onClick={handleUpgrade}
-              disabled={tier === 'pro' || isProcessing}
-              className={`w-full py-2.5 rounded-lg font-medium transition-colors flex justify-center items-center gap-2 text-sm ${tier === 'pro' ? 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 cursor-not-allowed' : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-md'}`}
-            >
-              {isProcessing ? 'Processing...' : tier === 'pro' ? 'Active' : 'Upgrade to Pro'}
-            </button>
-          </div>
+            if (plan.slug === 'pro' || plan.slug === 'starter') {
+              Icon = Zap;
+              iconColor = "text-fuchsia-600 dark:text-fuchsia-400";
+              iconBg = "bg-fuchsia-100 dark:bg-fuchsia-900/30";
+              checkColor = "text-fuchsia-500";
+              btnClasses = isCurrentTier 
+                ? "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 cursor-not-allowed" 
+                : "bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white shadow-md";
+            } else if (plan.slug === 'enterprise' || plan.slug === 'agency') {
+              Icon = Building;
+              iconColor = "text-emerald-600 dark:text-emerald-400";
+              iconBg = "bg-emerald-100 dark:bg-emerald-900/30";
+              checkColor = "text-emerald-500";
+              btnClasses = isCurrentTier 
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-not-allowed" 
+                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md";
+            } else {
+              // Free or fallback
+              checkColor = "text-violet-500";
+              btnClasses = isCurrentTier
+                ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-zinc-700";
+            }
+            
+            return (
+              <div key={plan.id} className={`relative p-6 rounded-2xl border flex flex-col ${borderColor} ${bgColor} transition-all shadow-lg`}>
+                {isCurrentTier && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">
+                    Current Plan
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mb-4 mt-2">
+                  <div className={`p-2 ${iconBg} rounded-lg`}>
+                    <Icon className={`w-5 h-5 ${iconColor}`} />
+                  </div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{plan.name}</h2>
+                </div>
+                
+                <div className="mb-6 flex-1">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-bold text-zinc-900 dark:text-white">
+                      {(() => {
+                        if (isCustom) return "Custom";
+                        if (plan.slug === 'free') {
+                          if (isLoadingPrices) return '...';
+                          const firstPrice = Object.values(localizedPrices)[0];
+                          return firstPrice ? firstPrice.formatted.replace(/[\d.,]+/g, '0').replace(/0+/g, '0') : "$0";
+                        }
+                        if (isLoadingPrices) return '...';
+                        return localizedPrices[plan.paddleMonthlyPriceId]?.formatted || `$${plan.monthlyPrice / 100}`;
+                      })()}
+                    </span>
+                    {!isCustom && <span className="text-zinc-500 dark:text-zinc-400">/month</span>}
+                  </div>
+                  <p className="text-sm text-zinc-500 mt-2">{plan.description}</p>
+                </div>
+                
+                <ul className="space-y-4 mb-8 text-sm">
+                  <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                    <span>{plan.knowledgeBaseLimit === -1 ? 'Unlimited Knowledge Bases' : `${plan.knowledgeBaseLimit} Knowledge Base${plan.knowledgeBaseLimit === 1 ? '' : 's'}`}</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                    <span>{plan.databaseLimit === -1 ? 'Unlimited Databases' : `${plan.databaseLimit} Database Connection${plan.databaseLimit === 1 ? '' : 's'}`}</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                    <span>{plan.mcpServerLimit === -1 ? 'Unlimited MCP Endpoints' : `${plan.mcpServerLimit} MCP Endpoint${plan.mcpServerLimit === 1 ? '' : 's'}`}</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                    <span>{plan.automationLimit === -1 ? 'Unlimited Automations' : `${plan.automationLimit} Automation${plan.automationLimit === 1 ? '' : 's'}`}</span>
+                  </li>
+                  <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                    <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                    <span>{plan.monthlyAiCredits === -1 ? 'Unlimited AI Credits' : `${plan.monthlyAiCredits.toLocaleString()} Monthly AI Credits`}</span>
+                  </li>
+                  {plan.byokEnabled && (
+                    <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                      <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                      <span>Bring Your Own Key (BYOK)</span>
+                    </li>
+                  )}
+                  {plan.apiAccessEnabled && (
+                    <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
+                      <Check className={`w-4 h-4 shrink-0 mt-0.5 ${checkColor}`} />
+                      <span>Public API Access</span>
+                    </li>
+                  )}
+                </ul>
 
-          {/* Removed Team Tier */}
-
-          {/* Business Tier */}
-          <div className={`p-6 rounded-2xl border flex flex-col border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50 transition-all`}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                <Building className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                {isCustom ? (
+                  <Link href="/contact" className="w-full py-2.5 rounded-lg font-medium transition-colors text-sm border border-zinc-200 dark:border-white/10 bg-transparent hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white flex justify-center items-center">
+                    Contact Sales
+                  </Link>
+                ) : plan.slug === 'free' ? (
+                  <button 
+                    onClick={handleDowngrade}
+                    disabled={isCurrentTier}
+                    className={`w-full py-2.5 rounded-lg font-medium transition-colors text-sm ${btnClasses}`}
+                  >
+                    {isCurrentTier ? 'Current Plan' : 'Downgrade to Free'}
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => handleUpgrade(plan.paddleMonthlyPriceId)}
+                    disabled={isCurrentTier || isProcessing}
+                    className={`w-full py-2.5 rounded-lg font-medium transition-colors flex justify-center items-center gap-2 text-sm ${btnClasses}`}
+                  >
+                    {isProcessing ? 'Processing...' : isCurrentTier ? 'Active' : `Upgrade to ${plan.name}`}
+                  </button>
+                )}
               </div>
-              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Business</h2>
-            </div>
-            <div className="mb-6 flex-1">
-              <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-zinc-900 dark:text-white">Custom</span>
-              </div>
-              <p className="text-sm text-zinc-500 mt-2">For large enterprises with specific security needs.</p>
-            </div>
-            <ul className="space-y-4 mb-8 text-sm">
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>Everything in Team</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>SSO / SAML Authentication</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>On-Premise Deployment</span>
-              </li>
-              <li className="flex items-start gap-3 text-zinc-600 dark:text-zinc-300">
-                <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span>Dedicated Support & SLAs</span>
-              </li>
-            </ul>
-            <button className="w-full py-2.5 rounded-lg font-medium transition-colors text-sm border border-zinc-200 dark:border-white/10 bg-transparent hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-900 dark:text-white">
-              Contact Sales
-            </button>
-          </div>
-
+            );
+          })}
         </div>
       </div>
     </div>

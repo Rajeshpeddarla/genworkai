@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       keyPrefix,
       keyHash,
       scopes: scopes && scopes.length > 0 ? scopes : ['kb:read', 'db:query'],
-      resourceScopes: {}, // Empty by default for security
+      resourceScopes: { kb: ['*'], db: ['*'], automation: ['*'], mcp: ['*'] }, // Default to full access until granular UI is built
       status: 'active',
       expiresAt: null
     }).returning();

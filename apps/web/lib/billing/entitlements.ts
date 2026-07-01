@@ -8,7 +8,8 @@ import {
   knowledgeBases,
   connectedDatabases
 } from '../../db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, sum, gte } from 'drizzle-orm';
+import { mcpServers, automationTasks, documents, workspaceArtifacts, workspaceChats } from '../../db/schema';
 
 export interface EntitlementResult {
   allowed: boolean;
@@ -32,7 +33,7 @@ export type ResourceType =
   | 'api_keys'
   | 'knowledge_bases'
   | 'database_connections'
-  | 'api_requests'
+  | 'ai_credits'
   | 'mcp_servers'
   | 'mcp_tools'
   | 'mcp_requests'
@@ -54,7 +55,7 @@ const RESOURCE_LIMIT_MAP: Record<ResourceType, keyof typeof subscriptionPlans.$i
   api_keys: 'apiKeyLimit',
   knowledge_bases: 'knowledgeBaseLimit',
   database_connections: 'databaseLimit',
-  api_requests: 'apiRequestLimit',
+  ai_credits: 'monthlyAiCredits',
   mcp_servers: 'mcpServerLimit',
   mcp_tools: 'mcpToolLimit',
   mcp_requests: 'mcpRequestLimit',
@@ -106,10 +107,13 @@ export class EntitlementEngine {
    * Checks if a user is within their allowed limit for a quantifiable resource
    */
   static async checkLimit({ userId, resource, incrementAmount = 1 }: { userId: string, resource: ResourceType, incrementAmount?: number }): Promise<EntitlementResult> {
-    // 1. Admin Override
+    // 1. Compute Current Usage Dynamically
+    const currentUsage = await this.computeUsage(userId, resource);
+
+    // 2. Admin Override
     const profile = await db.query.profiles.findFirst({ where: eq(profiles.id, userId) });
     if (profile?.isAdmin) {
-      return { allowed: true, currentUsage: 0, limit: -1 }; // -1 indicates unlimited
+      return { allowed: true, currentUsage, limit: -1 }; // -1 indicates unlimited
     }
 
     const limitKey = RESOURCE_LIMIT_MAP[resource];
@@ -117,7 +121,26 @@ export class EntitlementEngine {
       return { allowed: false, code: 'UNKNOWN_RESOURCE', reason: `Unknown resource: ${resource}` };
     }
 
-    // 2. Resolve Plan Limit
+    // SPECIAL CASE: AI Credits (uses UsageService)
+    if (resource === 'ai_credits') {
+      const { UsageService } = await import('./UsageService');
+      const balance = await UsageService.getOrCreateBalance(userId);
+      const totalAvailable = (balance?.monthlyRemainingCredits || 0) + (balance?.purchasedRemainingCredits || 0);
+
+      if (totalAvailable < incrementAmount) {
+        return {
+          allowed: false,
+          code: 'AI_CREDITS_LIMIT_REACHED',
+          reason: 'Exceeded AI Credits. Please upgrade your plan or purchase more credits.',
+          currentUsage, // actually represents total available in this specific context due to computeUsage logic
+          limit: totalAvailable,
+          upgradeRequired: true
+        };
+      }
+      return { allowed: true, currentUsage, limit: totalAvailable };
+    }
+
+    // 3. Resolve Plan Limit
     const activeSub = await this.getActiveSubscription(userId);
     let plan;
     if (activeSub) {
@@ -138,18 +161,15 @@ export class EntitlementEngine {
         code: `${resource.toUpperCase()}_DISABLED`,
         reason: `No allowance for ${resource.replace(/_/g, ' ')} on your current plan.`, 
         limit: 0, 
-        currentUsage: 0,
+        currentUsage,
         upgradeRequired: true
       };
     }
 
     // -1 can be explicitly set in DB to mean unlimited
     if (limit === -1) {
-      return { allowed: true, limit: -1 };
+      return { allowed: true, currentUsage, limit: -1 };
     }
-
-    // 3. Compute Current Usage Dynamically
-    const currentUsage = await this.computeUsage(userId, resource);
 
     if (currentUsage + incrementAmount > limit) {
       return { 
@@ -192,12 +212,48 @@ export class EntitlementEngine {
         return res[0]?.count || 0;
       }
       
+      case 'mcp_servers': {
+        const res = await db.select({ count: sql<number>`count(*)::int` })
+          .from(mcpServers)
+          .where(and(eq(mcpServers.userId, userId), eq(mcpServers.status, 'active')));
+        return res[0]?.count || 0;
+      }
+      case 'automations': {
+        const res = await db.select({ count: sql<number>`count(*)::int` })
+          .from(automationTasks)
+          .where(and(eq(automationTasks.userId, userId), eq(automationTasks.status, 'active')));
+        return res[0]?.count || 0;
+      }
       // --- Monthly Limits (Usage Counters) ---
-      case 'api_requests': {
-        const record = await db.query.usageCounters.findFirst({
-          where: and(eq(usageCounters.userId, userId), eq(usageCounters.month, currentMonth))
-        });
-        return record?.apiRequests || 0;
+      case 'ai_credits': {
+        const { UsageService } = await import('./UsageService');
+        const balance = await UsageService.getOrCreateBalance(userId);
+        return (balance?.monthlyRemainingCredits || 0) + (balance?.purchasedRemainingCredits || 0);
+      }
+      case 'context_size': {
+        const docSizes = await db
+          .select({ value: sum(documents.sizeBytes) })
+          .from(documents)
+          .innerJoin(knowledgeBases, eq(documents.kbId, knowledgeBases.id))
+          .where(eq(knowledgeBases.userId, userId));
+        return parseInt((docSizes[0]?.value as string) || "0", 10);
+      }
+      case 'workspaces': {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const artifactCount = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(workspaceArtifacts)
+          .innerJoin(workspaceChats, eq(workspaceArtifacts.chatId, workspaceChats.id))
+          .where(
+            and(
+              eq(workspaceChats.userId, userId),
+              gte(workspaceArtifacts.createdAt, startOfMonth)
+            )
+          );
+        return artifactCount[0]?.count || 0;
       }
 
       // --- Others (Default to 0 for MVP if unimplemented) ---

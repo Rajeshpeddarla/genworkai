@@ -43,7 +43,7 @@ export default async function DeveloperDashboardPage() {
   const usage = usageRes[0] || { requests: 0 };
   const tier = profile?.tier || 'free';
 
-  const limitCheck = await EntitlementEngine.checkLimit({ userId: session.user.id, resource: 'api_requests' });
+  const limitCheck = await EntitlementEngine.checkLimit({ userId: session.user.id, resource: 'ai_credits' });
   const actualLimit = limitCheck.limit ?? Infinity;
   const limitStr = actualLimit === Infinity ? 'Unlimited' : actualLimit.toLocaleString();
   const requestsUsed = usage.requests.toLocaleString();

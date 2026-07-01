@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Environment, Paddle } from '@paddle/paddle-node-sdk';
 import { db } from '@/db';
-import { profiles, userSubscriptions, billingEvents, subscriptionPlans } from '@/db/schema';
+import { profiles, userSubscriptions, billingEvents, subscriptionPlans, aiCreditPackProducts, userAiCreditPurchases, userAiCreditBalance } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
 const paddle = new Paddle(process.env.PADDLE_API_KEY || '', {
@@ -123,6 +123,48 @@ export async function POST(req: Request) {
               paddleTransactionId: transaction.id,
               metadata: { origin: transaction.origin }
             });
+
+            // Check if transaction includes credit packs
+            const items = transaction.items || [];
+            for (const item of items) {
+              const priceId = item.price?.id;
+              if (!priceId) continue;
+
+              const pack = await db.query.aiCreditPackProducts.findFirst({
+                where: eq(aiCreditPackProducts.paddlePriceId, priceId)
+              });
+
+              if (pack) {
+                const quantity = item.quantity || 1;
+                for (let i = 0; i < quantity; i++) {
+                  await db.insert(userAiCreditPurchases).values({
+                    userId: userProfile.id,
+                    purchasedCredits: pack.credits,
+                    remainingCredits: pack.credits,
+                    paddleTransactionId: transaction.id
+                  });
+                }
+                
+                // Update total usage balance
+                const balance = await db.query.userAiCreditBalance.findFirst({
+                  where: eq(userAiCreditBalance.userId, userProfile.id)
+                });
+                
+                const addAmount = pack.credits * quantity;
+                if (balance) {
+                  await db.update(userAiCreditBalance)
+                    .set({ purchasedRemainingCredits: (balance.purchasedRemainingCredits || 0) + addAmount })
+                    .where(eq(userAiCreditBalance.userId, userProfile.id));
+                } else {
+                  await db.insert(userAiCreditBalance).values({
+                    userId: userProfile.id,
+                    monthlyRemainingCredits: 0,
+                    purchasedRemainingCredits: addAmount,
+                    monthlyResetAt: new Date(),
+                  });
+                }
+              }
+            }
           }
           break;
         }

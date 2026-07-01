@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
-    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
 
     if (!apiKey) {
       console.warn("DEEPSEEK_API_KEY missing, falling back to mock generator");

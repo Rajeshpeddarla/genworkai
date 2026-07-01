@@ -108,7 +108,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateWithFallbacks(
   options: ChatCompletionOptions,
   fallbackApiKey: string,
-  fallbackUrl: string = "https://api.deepseek.com/v1", // Default DeepSeek API
+  fallbackUrl: string = "https://api.deepseek.com", // Default DeepSeek API
   maxRetries = 3
 ): Promise<ChatCompletionResult> {
   let attempt = 0;

@@ -9,6 +9,7 @@ import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { AiRoutingService } from '../../../../../../lib/ai/AiRoutingService';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
 import { safeErrorResponse, ValidationError } from '../../../../../../lib/errors';
+import { CreditService } from '../../../../../../lib/billing/CreditService';
 
 const generateSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
@@ -19,6 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ kbId: s
   const startTime = Date.now();
   let authResult;
   let metrics = { vector_searches: 0, requests: 1, llm_tokens: 0, artifacts_generated: 0 };
+  let usageId: number | undefined;
 
   try {
     const p = await params;
@@ -46,6 +48,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ kbId: s
 
     const rateLimitResponse = await RateLimitService.check(authResult.userId!, 'v1');
     if (rateLimitResponse) return rateLimitResponse;
+
+    const idempotencyKey = req.headers.get('x-idempotency-key') || crypto.randomUUID();
+    const operationKey = outputType === 'summary' ? 'summary_generation' : outputType === 'flashcards' ? 'flashcards_generation' : 'knowledge_chat';
+    const reserveResult = await CreditService.reserve(authResult.userId!, operationKey, {
+      requestId: idempotencyKey,
+      endpoint: '/api/v1/kb/[kbId]/generate',
+      billingMode: 'developer_api' // this is an API route
+    });
+    
+    if (!reserveResult.success) {
+      return NextResponse.json({ 
+        error: reserveResult.reason || "Insufficient AI Credits.",
+        code: reserveResult.errorType || 'INSUFFICIENT_AI_CREDITS'
+      }, { status: 403 });
+    }
+    usageId = reserveResult.usageId;
 
     // 2.5 Verify ownership of Knowledge Base
     const [kb] = await db.select().from(knowledgeBases).where(and(eq(knowledgeBases.id, kbId), eq(knowledgeBases.userId, authResult.userId!)));
@@ -142,6 +160,14 @@ ${schemaDefinition}`;
       throw new Error("LLM failed to return a valid JSON object.");
     }
 
+    if (usageId) {
+      await CreditService.finalize(usageId, {
+        provider: 'deepseek', // Note: assuming deepseek since generateWithFallbacks falls back to it, though technically could be dynamic
+        inputTokens: Math.floor((systemPrompt.length + contextText.length) / 4),
+        outputTokens: Math.floor(llmRes.content.length / 4)
+      });
+    }
+
     // 5. Log API usage asynchronously
     const durationMs = Date.now() - startTime;
     ApiAuthService.logUsage({
@@ -158,6 +184,9 @@ ${schemaDefinition}`;
     return NextResponse.json(parsedResponse);
 
   } catch (error: unknown) {
+    if (usageId) {
+      await CreditService.refund(usageId, error instanceof Error ? error.message : "Unknown error");
+    }
     const durationMs = Date.now() - startTime;
     if (authResult?.isValid) {
       ApiAuthService.logUsage({

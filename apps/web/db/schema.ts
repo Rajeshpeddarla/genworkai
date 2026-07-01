@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, varchar, jsonb, integer, vector, boolean, uuid, bigint } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, varchar, jsonb, integer, vector, boolean, uuid, bigint, numeric } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 export const profiles = pgTable('profiles', {
@@ -322,7 +322,7 @@ export const automationTasks = pgTable('automation_tasks', {
   userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
-  category: varchar('category', { length: 100 }).notNull(), // 'knowledge', 'documentation', 'developer', 'database', 'monitoring', 'workspace'
+  category: varchar('category', { length: 100 }).notNull(), // 'knowledge', 'documentation', 'developer', 'database', 'monitoring', 'workspace', 'ai_agent'
   templateId: varchar('template_id', { length: 100 }), // e.g., 'knowledge_digest'
   sources: jsonb('sources'), // Array of { type: string, id: number | string }
   artifactTypes: jsonb('artifact_types'), // Array of strings e.g. ['document', 'report']
@@ -330,11 +330,28 @@ export const automationTasks = pgTable('automation_tasks', {
   schedule: varchar('schedule', { length: 100 }), // e.g. 'daily', 'weekly', cron expression
   triggerEvent: varchar('trigger_event', { length: 100 }), // e.g., 'on_kb_update'
   goal: text('goal'), // The actual prompt/goal instructions
+  sqlQuery: text('sql_query'), // Stored SQL query if database automation
   status: varchar('status', { length: 50 }).default('active'), // 'draft', 'active', 'paused', 'running', 'completed', 'failed', 'archived'
   lastRunAt: timestamp('last_run_at'),
   nextRunAt: timestamp('next_run_at'),
+  successRate: integer('success_rate').default(100),
+  averageRuntimeMs: integer('average_runtime_ms').default(0),
+  creditsConsumedThisMonth: integer('credits_consumed_this_month').default(0),
+  totalRuns: integer('total_runs').default(0),
+  lastFailureAt: timestamp('last_failure_at'),
+  aiProvider: varchar('ai_provider', { length: 50 }),
+  billingMode: varchar('billing_mode', { length: 50 }).default('platform'), // 'platform', 'byok'
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const automationVersions = pgTable('automation_versions', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id').references(() => automationTasks.id, { onDelete: 'cascade' }),
+  versionNumber: integer('version_number').notNull(),
+  configSnapshot: jsonb('config_snapshot').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
 });
 
 export const automationLogs = pgTable('automation_logs', {
@@ -346,6 +363,16 @@ export const automationLogs = pgTable('automation_logs', {
   sourceSnapshot: jsonb('source_snapshot'), // Track exact state of the source at execution
   startedAt: timestamp('started_at').defaultNow(),
   finishedAt: timestamp('finished_at'),
+  durationMs: integer('duration_ms'),
+  creditsConsumed: integer('credits_consumed').default(0),
+  provider: varchar('provider', { length: 50 }),
+  model: varchar('model', { length: 100 }),
+  inputTokens: integer('input_tokens').default(0),
+  outputTokens: integer('output_tokens').default(0),
+  sqlExecuted: text('sql_executed'),
+  notificationsSent: integer('notifications_sent').default(0),
+  errorDetails: text('error_details'),
+  retryCount: integer('retry_count').default(0),
 });
 
 export const auditLogs = pgTable('audit_logs', {
@@ -442,6 +469,9 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   mcpServerLimit: integer('mcp_server_limit').default(0),
   mcpToolLimit: integer('mcp_tool_limit').default(0),
   mcpRequestLimit: integer('mcp_request_limit').default(0),
+  concurrencyLimit: integer('concurrency_limit').default(5),
+  rateLimit: integer('rate_limit').default(60),
+  monthlyAiCredits: integer('monthly_ai_credits').default(0),
 
   // Features
   knowledgeBaseEnabled: boolean('knowledge_base_enabled').default(false),
@@ -540,5 +570,237 @@ export const aiUsageLogs = pgTable('ai_usage_logs', {
   totalTokens: integer('total_tokens').notNull().default(0),
   estimatedCost: varchar('estimated_cost', { length: 50 }).notNull().default('0'), // Store as string to prevent floating point loss
   taskCategory: varchar('task_category', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const userAiCreditBalance = pgTable('user_ai_credit_balance', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull().unique(),
+  monthlyRemainingCredits: integer('monthly_remaining_credits').default(0),
+  purchasedRemainingCredits: integer('purchased_remaining_credits').default(0),
+  monthlyResetAt: timestamp('monthly_reset_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const aiCreditPackProducts = pgTable('ai_credit_pack_products', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  credits: integer('credits').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  paddleProductId: varchar('paddle_product_id', { length: 255 }),
+  paddlePriceId: varchar('paddle_price_id', { length: 255 }),
+  displayOrder: integer('display_order').default(0),
+  badge: varchar('badge', { length: 50 }),
+  isFeatured: boolean('is_featured').default(false),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const userAiCreditPurchases = pgTable('user_ai_credit_purchases', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  purchasedCredits: integer('purchased_credits').notNull(),
+  remainingCredits: integer('remaining_credits').notNull(),
+  paddleTransactionId: varchar('paddle_transaction_id', { length: 255 }),
+  status: varchar('status', { length: 50 }).default('active'), // 'active', 'exhausted'
+  purchasedAt: timestamp('purchased_at').defaultNow(),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const aiCreditCosts = pgTable('ai_credit_costs', {
+  id: serial('id').primaryKey(),
+  operationKey: varchar('operation_key', { length: 100 }).notNull().unique(),
+  displayName: varchar('display_name', { length: 100 }).notNull(),
+  credits: integer('credits').notNull(),
+  category: varchar('category', { length: 50 }),
+  description: text('description'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const aiUsageHistory = pgTable('ai_usage_history', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  workspaceId: integer('workspace_id'), // Nullable for general actions
+  operationKey: varchar('operation_key', { length: 100 }).notNull(),
+  creditsUsed: integer('credits_used').notNull(),
+  status: varchar('status', { length: 50 }).default('success'), // 'success', 'failed'
+  durationMs: integer('duration_ms'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const aiUsage = pgTable('ai_usage', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id).notNull(),
+  workspaceId: integer('workspace_id'),
+  operation: varchar('operation', { length: 100 }).notNull(),
+  featureCategory: varchar('feature_category', { length: 100 }), // The specific feature category
+  endpoint: varchar('endpoint', { length: 255 }),
+  artifactType: varchar('artifact_type', { length: 100 }),
+  
+  billingMode: varchar('billing_mode', { length: 50 }).notNull().default('platform'), // platform, byok, developer_api
+  isByok: boolean('is_byok').default(false),
+  
+  requestId: varchar('request_id', { length: 255 }),
+  correlationId: varchar('correlation_id', { length: 255 }),
+  
+  provider: varchar('provider', { length: 50 }),
+  model: varchar('model', { length: 100 }),
+  
+  inputTokens: integer('input_tokens').default(0),
+  outputTokens: integer('output_tokens').default(0),
+  embeddingTokens: integer('embedding_tokens').default(0),
+  rerankerTokens: integer('reranker_tokens').default(0),
+  
+  estimatedCredits: integer('estimated_credits').default(0),
+  reservedCredits: integer('reserved_credits').default(0),
+  actualCredits: integer('actual_credits').default(0),
+  
+  providerCost: numeric('provider_cost', { precision: 10, scale: 6 }), // exact USD cost
+  
+  status: varchar('status', { length: 50 }).default('completed'), // 'completed', 'failed'
+  reservationStatus: varchar('reservation_status', { length: 50 }), // 'reserved', 'finalized', 'refunded'
+  failureReason: text('failure_reason'),
+  
+  durationMs: integer('duration_ms'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const aiCreditLedger = pgTable('ai_credit_ledger', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  amount: integer('amount').notNull(), // Positive for additions, negative for consumption
+  type: varchar('type', { length: 50 }).notNull(), // 'refill', 'purchase', 'grant', 'consume', 'refund'
+  operationKey: varchar('operation_key', { length: 100 }), // Context if it was a consumption
+  idempotencyKey: varchar('idempotency_key', { length: 255 }).unique(), // Prevent duplicates
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const quizzes = pgTable('quizzes', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'set null' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  
+  // Rules and Config
+  rules: jsonb('rules'), // { timePerQuestion, totalTime, randomizeQuestions, randomizeOptions, passingPercentage, attemptsAllowed, showAnswersAfter, showScoreImmediately, antiCheating: { fullscreen, tabSwitch } }
+  scope: jsonb('scope'), // { type: 'entire_kb'|'folder'|'files'|'topic', value: string|string[] }
+  
+  status: varchar('status', { length: 50 }).default('draft'), // 'draft', 'published', 'archived'
+  estimatedCredits: integer('estimated_credits').default(0),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const quizQuestions = pgTable('quiz_questions', {
+  id: serial('id').primaryKey(),
+  quizId: integer('quiz_id').references(() => quizzes.id, { onDelete: 'cascade' }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'multiple_choice', 'true_false', 'short_answer', 'theory'
+  difficulty: varchar('difficulty', { length: 50 }),
+  bloomLevel: varchar('bloom_level', { length: 50 }),
+  
+  questionText: text('question_text').notNull(),
+  options: jsonb('options'), // array of strings for multiple choice
+  correctAnswer: text('correct_answer'),
+  explanation: text('explanation'),
+  
+  // Traceability
+  referenceFile: varchar('reference_file', { length: 255 }),
+  referenceSection: text('reference_section'),
+  
+  orderIndex: integer('order_index').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const quizAttempts = pgTable('quiz_attempts', {
+  id: serial('id').primaryKey(),
+  quizId: integer('quiz_id').references(() => quizzes.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  
+  status: varchar('status', { length: 50 }).default('in_progress'), // 'in_progress', 'submitted', 'graded'
+  score: numeric('score', { precision: 5, scale: 2 }).default('0'),
+  totalMarks: numeric('total_marks', { precision: 5, scale: 2 }).default('0'),
+  
+  warningsCount: integer('warnings_count').default(0),
+  antiCheatingLogs: jsonb('anti_cheating_logs'), // array of { time, event }
+  
+  startedAt: timestamp('started_at').defaultNow(),
+  finishedAt: timestamp('finished_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const quizAttemptAnswers = pgTable('quiz_attempt_answers', {
+  id: serial('id').primaryKey(),
+  attemptId: integer('attempt_id').references(() => quizAttempts.id, { onDelete: 'cascade' }).notNull(),
+  questionId: integer('question_id').references(() => quizQuestions.id, { onDelete: 'cascade' }).notNull(),
+  
+  userAnswer: text('user_answer'),
+  status: varchar('status', { length: 50 }).default('not_visited'), // 'not_visited', 'visited', 'answered', 'doubt', 'cant_answer'
+  
+  isCorrect: boolean('is_correct'),
+  marksAwarded: numeric('marks_awarded', { precision: 5, scale: 2 }),
+  aiFeedback: text('ai_feedback'), // used for theory questions
+  aiGradedAt: timestamp('ai_graded_at'),
+  
+  timeSpentMs: integer('time_spent_ms').default(0),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const questionBank = pgTable('question_bank', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'set null' }),
+  
+  type: varchar('type', { length: 50 }).notNull(),
+  difficulty: varchar('difficulty', { length: 50 }),
+  bloomLevel: varchar('bloom_level', { length: 50 }),
+  topics: jsonb('topics'),
+  
+  questionText: text('question_text').notNull(),
+  options: jsonb('options'),
+  correctAnswer: text('correct_answer'),
+  explanation: text('explanation'),
+  
+  referenceFile: varchar('reference_file', { length: 255 }),
+  referenceSection: text('reference_section'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const automationOutputs = pgTable('automation_outputs', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'set null' }),
+  
+  module: varchar('module', { length: 100 }).notNull(), // 'study_center', 'lesson_planner', etc.
+  template: varchar('template', { length: 100 }).notNull(), // 'flashcards', 'summary', etc.
+  
+  title: varchar('title', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('draft'), // 'draft', 'generating', 'completed', 'failed'
+  
+  creditsUsed: integer('credits_used').default(0),
+  provider: varchar('provider', { length: 50 }),
+  billingMode: varchar('billing_mode', { length: 50 }), // 'platform', 'byok'
+  durationMs: integer('duration_ms'),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const automationOutputVersions = pgTable('automation_output_versions', {
+  id: serial('id').primaryKey(),
+  outputId: integer('output_id').references(() => automationOutputs.id, { onDelete: 'cascade' }).notNull(),
+  
+  versionNumber: integer('version_number').notNull(),
+  content: text('content').notNull(),
+  format: varchar('format', { length: 50 }).notNull().default('markdown'), // 'markdown', 'json', 'pdf', 'csv'
+  
   createdAt: timestamp('created_at').defaultNow(),
 });

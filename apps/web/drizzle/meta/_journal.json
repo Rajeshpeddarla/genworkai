@@ -71,6 +71,13 @@
       "when": 1782151872991,
       "tag": "0009_safe_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782496732800,
+      "tag": "0010_nifty_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

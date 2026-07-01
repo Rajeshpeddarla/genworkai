@@ -68,8 +68,8 @@ export class ApiAuthService {
     }
 
     // 4. Validate Quota Enforcements
-    const { EntitlementEngine } = require('../billing/entitlements');
-    const limitCheck = await EntitlementEngine.checkLimit({ userId: keyRecord.userId, resource: 'api_requests', incrementAmount: 1 });
+    const { EntitlementEngine } = await import('../billing/entitlements');
+    const limitCheck = await EntitlementEngine.checkLimit({ userId: keyRecord.userId, resource: 'ai_credits', incrementAmount: 1 });
     if (!limitCheck.allowed) {
       return { isValid: false, error: limitCheck.reason || 'Quota Exceeded: Too many requests this month.' };
     }
@@ -107,28 +107,23 @@ export class ApiAuthService {
     };
   }) {
     try {
-      // 1. Log to fast counters (Upsert)
-      const now = new Date();
-      const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      const requests = params.metrics.requests || 0;
-      const llmTokens = params.metrics.llm_tokens || 0;
-      const dbQueries = params.metrics.db_queries || 0;
-      const vectorSearches = params.metrics.vector_searches || 0;
-      const generatedArtifacts = params.metrics.artifacts_generated || 0;
-
-      await db.execute(sql`
-        INSERT INTO api_usage_counters (user_id, period, requests, llm_tokens, db_queries, vector_searches, generated_artifacts, updated_at)
-        VALUES (${params.userId}, ${period}, ${requests}, ${llmTokens}, ${dbQueries}, ${vectorSearches}, ${generatedArtifacts}, NOW())
-        ON CONFLICT (user_id, period) DO UPDATE SET
-          requests = api_usage_counters.requests + EXCLUDED.requests,
-          llm_tokens = api_usage_counters.llm_tokens + EXCLUDED.llm_tokens,
-          db_queries = api_usage_counters.db_queries + EXCLUDED.db_queries,
-          vector_searches = api_usage_counters.vector_searches + EXCLUDED.vector_searches,
-          generated_artifacts = api_usage_counters.generated_artifacts + EXCLUDED.generated_artifacts,
-          updated_at = NOW();
-      `);
-
-      // 2. Log historical analytics to api_usage_logs
+      // 1. Consume from CreditService
+      const { CreditService } = await import('../billing/CreditService');
+      const requestsToConsume = params.metrics.requests || 1;
+      const idempotencyKey = `api_${params.userId}_${Date.now()}`;
+      
+      const reserveResult = await CreditService.reserve(params.userId, 'developer_api', {
+        requestId: idempotencyKey,
+        multiplier: requestsToConsume,
+        billingMode: 'developer_api'
+      });
+      
+      if (reserveResult.success && reserveResult.usageId) {
+        await CreditService.finalize(reserveResult.usageId, {
+           inputTokens: params.metrics.llm_tokens || 0,
+           embeddingTokens: params.metrics.embedding_tokens || 0
+        });
+      }
       await db.insert(apiUsageLogs).values({
         userId: params.userId,
         apiKeyId: params.apiKeyId,

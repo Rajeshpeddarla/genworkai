@@ -8,7 +8,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 
 const openai = createOpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY || "",
-  baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com/v1",
+  baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
 });
 
 async function executeLLM(task: any, systemPrompt: string) {
@@ -66,8 +66,7 @@ export const runAutomationTask: any = inngest.createFunction(
   { 
     id: "run-automation-task", 
     name: "Run Automation Task",
-    // @ts-ignore
-    triggers: [{ event: "automation.task.run" }] 
+    triggers: [{ event: "automation.task.run" }]
   },
   async ({ event, step }: any) => {
     const { taskId } = event.data;
@@ -80,6 +79,15 @@ export const runAutomationTask: any = inngest.createFunction(
     });
 
     if (!task) return;
+
+    // 1.5 Check AI Credits
+    await step.run("check-ai-credits", async () => {
+      const { EntitlementEngine } = await import('../../lib/billing/entitlements');
+      const creditCheck = await EntitlementEngine.checkLimit({ userId: task.userId, resource: 'ai_credits', incrementAmount: 3 });
+      if (!creditCheck.allowed) {
+        throw new Error(creditCheck.reason || "Insufficient AI Credits to run automation.");
+      }
+    });
 
     // 2. Mark task as running
     const logId = await step.run("create-log", async () => {
@@ -140,7 +148,7 @@ export const runAutomationTask: any = inngest.createFunction(
         const newArtifact = await db.insert(workspaceArtifacts).values({
           name: title,
           fileType: fileExt,
-          category: "Automation Output",
+          category: "automation_artifact",
           status: "published",
         }).returning({ id: workspaceArtifacts.id });
         
@@ -156,8 +164,15 @@ export const runAutomationTask: any = inngest.createFunction(
         return createdArtifactId;
       });
 
-      // 6. Complete Log
+      // 6. Complete Log and Deduct AI Credit
       await step.run("complete-log", async () => {
+        const { UsageService } = await import('../../lib/billing/UsageService');
+        const taskCostKey = task.templateId || ('automation_task_' + task.category);
+        
+        await UsageService.consumeCredits(task.userId, 'automation_base').catch(e => console.error("Failed to deduct base AI credit:", e));
+        await UsageService.consumeCredits(task.userId, taskCostKey).catch(e => console.error("Failed to deduct task AI credit:", e));
+        await UsageService.consumeCredits(task.userId, 'automation_generated_artifact').catch(e => console.error("Failed to deduct artifact AI credit:", e));
+
         await db.update(automationLogs)
           .set({ 
             status: "success", 

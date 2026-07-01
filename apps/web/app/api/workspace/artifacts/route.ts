@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { workspaceArtifacts, workspaceArtifactVersions, workspaceChats } from '../../../../db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, ne, and, or, isNull } from 'drizzle-orm';
 import { requireUser } from '../../../../lib/auth';
 import { safeErrorResponse } from '../../../../lib/errors';
 
@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     })
       .from(workspaceArtifacts)
       .innerJoin(workspaceChats, eq(workspaceArtifacts.chatId, workspaceChats.id))
-      .where(eq(workspaceChats.userId, user.id))
+      .where(and(eq(workspaceChats.userId, user.id), or(isNull(workspaceArtifacts.category), ne(workspaceArtifacts.category, 'automation_artifact'))))
       .orderBy(desc(workspaceArtifacts.updatedAt));
 
     // Fetch the latest version content for each artifact

@@ -50,7 +50,7 @@ export default async function DeveloperPlaygroundPage() {
 
   return (
     <div className="h-full">
-      <PlaygroundClient initialKeys={keys} initialSpec={openapi} resources={resources} />
+      <PlaygroundClient initialKeys={keys} initialSpec={openapi} resources={resources} userId={session.user.id} />
     </div>
   );
 }

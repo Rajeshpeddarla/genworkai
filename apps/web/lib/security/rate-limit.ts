@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
  * Requires UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars.
  */
 
-export type RateLimitTier = 'ai' | 'upload' | 'database' | 'auth' | 'mcp' | 'default' | 'v1';
+export type RateLimitTier = 'ai' | 'upload' | 'database' | 'auth' | 'mcp' | 'default' | 'v1' | 'v1_concurrent';
 
 const RATE_LIMITS: Record<RateLimitTier, { requests: number; window: string }> = {
   ai: { requests: 30, window: '1 m' },
@@ -19,6 +19,7 @@ const RATE_LIMITS: Record<RateLimitTier, { requests: number; window: string }> =
   mcp: { requests: 60, window: '1 m' },
   default: { requests: 60, window: '1 m' },
   v1: { requests: 60, window: '1 m' },
+  v1_concurrent: { requests: 5, window: '1 s' }
 };
 
 let redisInstance: Redis | null = null;
@@ -65,39 +66,59 @@ export class RateLimitService {
   }
 
   /**
-   * Checks rate limit for the given identifier (usually user ID or IP).
-   * Returns null if allowed, or a 429 NextResponse if rate limited.
+   * Checks rate limit for the given identifier.
+   * Returns a NextResponse (429) if rate limited.
+   * Returns null if allowed.
+   * This allows simple: if (rateLimit) return rateLimit;
    */
   async check(identifier: string): Promise<NextResponse | null> {
+    const result = await this.checkWithInfo(identifier);
+    return result.response || null;
+  }
+
+  /**
+   * Checks rate limit for the given identifier (usually user ID or IP).
+   * Returns { response: NextResponse } if rate limited.
+   * Returns { info: RateLimitInfo } if allowed.
+   */
+  async checkWithInfo(identifier: string): Promise<{ response?: NextResponse, info?: any }> {
     const limiter = getRateLimiter(this.tier);
     if (!limiter) {
       // Rate limiting disabled (no Redis configured) — allow request
-      return null;
+      return {};
     }
 
     try {
       const result = await limiter.limit(identifier);
 
       if (!result.success) {
-        return NextResponse.json(
-          { error: 'Too many requests. Please try again later.' },
-          {
-            status: 429,
-            headers: {
-              'X-RateLimit-Limit': result.limit.toString(),
-              'X-RateLimit-Remaining': result.remaining.toString(),
-              'X-RateLimit-Reset': result.reset.toString(),
-              'Retry-After': Math.ceil((result.reset - Date.now()) / 1000).toString(),
-            },
-          }
-        );
+        return {
+          response: NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            {
+              status: 429,
+              headers: {
+                'X-RateLimit-Limit': result.limit.toString(),
+                'X-RateLimit-Remaining': result.remaining.toString(),
+                'X-RateLimit-Reset': result.reset.toString(),
+                'Retry-After': Math.ceil((result.reset - Date.now()) / 1000).toString(),
+              },
+            }
+          )
+        };
       }
 
-      return null;
+      return {
+        info: {
+          limit: result.limit,
+          remaining: result.remaining,
+          reset: result.reset
+        }
+      };
     } catch (error) {
       // If Redis is down, fail open (allow the request) but log
       console.error('[RateLimitService] Redis error, failing open:', error);
-      return null;
+      return {};
     }
   }
 
@@ -107,5 +128,10 @@ export class RateLimitService {
   static async check(identifier: string, tier: RateLimitTier = 'default'): Promise<NextResponse | null> {
     const service = new RateLimitService(tier);
     return service.check(identifier);
+  }
+
+  static async checkWithInfo(identifier: string, tier: RateLimitTier = 'default'): Promise<{ response?: NextResponse, info?: any }> {
+    const service = new RateLimitService(tier);
+    return service.checkWithInfo(identifier);
   }
 }

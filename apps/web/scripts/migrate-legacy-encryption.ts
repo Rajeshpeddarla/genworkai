@@ -7,7 +7,7 @@ dotenv.config({ path: '.env.local' });
 
 async function migrateLegacyEncryption() {
   console.log('Starting migration for legacy plaintext secrets...');
-  
+
   let dbConnsMigrated = 0;
   const conns = await db.select().from(connectedDatabases);
   for (const conn of conns) {

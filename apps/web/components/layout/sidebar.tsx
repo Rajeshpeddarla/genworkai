@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "../../lib/utils";
+import { cn, formatBytes } from "../../lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useBillingStore } from "../../store/billing";
@@ -19,7 +19,8 @@ import {
   PanelLeftOpen,
   ShieldCheck,
   LifeBuoy,
-  Terminal
+  Terminal,
+  HelpCircle
 } from "lucide-react";
 
 const navigation = [
@@ -43,42 +44,101 @@ function SidebarTierWidget() {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/profile')
-      .then(res => res.json())
-      .then(d => setData(d))
-      .catch(console.error);
+    let isMounted = true;
+    const fetchProfile = () => {
+      fetch('/api/profile')
+        .then(res => res.json())
+        .then(d => {
+          if (isMounted) setData(d);
+        })
+        .catch(console.error);
+    };
+    
+    fetchProfile();
+    const interval = setInterval(fetchProfile, 10000); // Poll every 10s for live credit updates
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
-  const isPro = data?.profile?.tier === 'pro';
-  const kbCurrent = data?.limits?.knowledgeBases?.current || 0;
-  const kbLimit = data?.limits?.knowledgeBases?.limit || 1;
-  const percentUsed = Math.min(100, Math.round((kbCurrent / kbLimit) * 100));
+  const aiCredits = data?.limits?.aiCredits;
+  const current = aiCredits?.current || 0;
+  const monthly = aiCredits?.monthly || 0;
+  const purchased = aiCredits?.purchased || 0;
+  const limit = aiCredits?.monthlyLimit || 0;
+  const resetAt = aiCredits?.resetAt ? new Date(aiCredits.resetAt) : null;
+  
+  // Setup next reset date (1st of next month)
+  const nextResetDate = new Date();
+  nextResetDate.setMonth(nextResetDate.getMonth() + 1);
+  nextResetDate.setDate(1);
 
-  if (isPro) {
+  // Calculate percentage based on monthly usage (0 to 100)
+  const percentUsed = limit > 0 ? Math.min(100, Math.max(0, ((limit - monthly) / limit) * 100)) : 0;
+  const monthlyRemainingPercent = limit > 0 ? Math.max(0, (monthly / limit) * 100) : 0;
+
+  const context = data?.limits?.context;
+  const contextLimitFormatted = context?.limit > 0 ? formatBytes(context.limit, 1) : "0 B";
+  const contextCurrentFormatted = context?.current > 0 ? formatBytes(context.current, 1) : "0 B";
+  const contextPercent = context?.limit > 0 ? Math.min(100, Math.max(0, (context.current / context.limit) * 100)) : 0;
+
+  if (!data) {
     return (
-      <div className="p-4 rounded-xl bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-fuchsia-500/20 mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-xs font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-wider">Enterprise Pro</span>
-          <Link href="/settings" className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400">Manage</Link>
-        </div>
-        <div className="w-full bg-zinc-200 dark:bg-black/50 h-1.5 rounded-full overflow-hidden">
-          <div className={`bg-gradient-to-r from-violet-500 to-fuchsia-500 h-full rounded-full transition-all duration-1000`} style={{ width: `${percentUsed}%` }} />
-        </div>
-        <p className="text-[10px] text-zinc-500 dark:text-zinc-500 mt-2">{percentUsed}% KB capacity used</p>
-      </div>
+      <div className="p-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 mb-4 animate-pulse h-28" />
     );
   }
 
   return (
-    <div className="p-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Free Tier</span>
-        <Link href="/billing" className="text-xs text-violet-600 dark:text-violet-400 hover:text-violet-500">Upgrade</Link>
+    <div className="p-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 mb-4 transition-all hover:bg-zinc-200/50 dark:hover:bg-white/10">
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">AI Credits</span>
+        <Link href="/billing" className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-500">Add Funds</Link>
       </div>
-      <div className="w-full bg-zinc-300 dark:bg-black/50 h-1.5 rounded-full overflow-hidden">
-        <div className="bg-violet-500 h-full rounded-full transition-all duration-1000" style={{ width: `${percentUsed}%` }} />
+
+      {/* Monthly Credits Bar */}
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">Monthly Plan</span>
+          <span className="text-[10px] font-medium text-zinc-700 dark:text-zinc-300">{monthly.toLocaleString()} / {limit.toLocaleString()}</span>
+        </div>
+        <div className="w-full bg-zinc-300 dark:bg-black/50 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-violet-500 h-full rounded-full transition-all duration-1000" style={{ width: `${monthlyRemainingPercent}%` }} />
+        </div>
       </div>
-      <p className="text-[10px] text-zinc-500 dark:text-zinc-500 mt-2">{percentUsed}% KB capacity used</p>
+
+      {/* Purchased Credits */}
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">Purchased Packs</span>
+          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">{purchased.toLocaleString()} left</span>
+        </div>
+      </div>
+
+      {/* Context Size Limit */}
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">KB Size</span>
+          <span className="text-[10px] font-medium text-zinc-700 dark:text-zinc-300">{contextCurrentFormatted} / {contextLimitFormatted}</span>
+        </div>
+        <div className="w-full bg-zinc-300 dark:bg-black/50 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-sky-500 h-full rounded-full transition-all duration-1000" style={{ width: `${contextPercent}%` }} />
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center mt-3 pt-3 border-t border-zinc-200 dark:border-white/10">
+        <div className="flex flex-col">
+          <span className="text-[10px] text-zinc-400 uppercase font-semibold">Total</span>
+          <span className="text-xs font-bold text-zinc-900 dark:text-white">{current.toLocaleString()}</span>
+        </div>
+        <div className="flex flex-col items-end">
+          <span className="text-[10px] text-zinc-400 uppercase font-semibold">Resets</span>
+          <span className="text-[10px] text-zinc-600 dark:text-zinc-400">
+            {nextResetDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -203,6 +263,21 @@ export function Sidebar() {
                 >
                   <Zap className="h-5 w-5 shrink-0" aria-hidden="true" />
                   {!isCollapsed && "Extension"}
+                </Link>
+              </li>
+
+              {/* Help & Documentation Link */}
+              <li className="mt-2">
+                <Link
+                  href="/help"
+                  className={cn(
+                    "group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold transition-colors text-zinc-400 dark:text-zinc-500 hover:text-violet-500 dark:hover:text-white",
+                    isCollapsed && "justify-center px-0"
+                  )}
+                  title={isCollapsed ? "Help & Documentation" : undefined}
+                >
+                  <HelpCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
+                  {!isCollapsed && "Help"}
                 </Link>
               </li>
             </ul>

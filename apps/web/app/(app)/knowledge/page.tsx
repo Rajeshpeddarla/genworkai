@@ -173,11 +173,16 @@ export default function KnowledgePage() {
     }
 
     try {
-      await fetch('/api/knowledge/create', {
+      const res = await fetch('/api/knowledge/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newKbName, description: newKbDesc })
       });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Failed to create Knowledge Base");
+        return;
+      }
       setNewKbName("");
       setNewKbDesc("");
       setShowCreate(false);
@@ -205,7 +210,8 @@ export default function KnowledgePage() {
       if (res.ok) {
         fetchKBs();
       } else {
-        alert("Failed to process file.");
+        const errData = await res.json();
+        alert(errData.error || "Failed to process file.");
       }
     } catch (err: any) {
       console.error("Error uploading file:", err.message || err);
@@ -273,7 +279,16 @@ export default function KnowledgePage() {
           body: formData,
           signal: controller.signal
         });
-        if (res.ok) successCount++;
+        if (res.ok) {
+          successCount++;
+        } else {
+          const errData = await res.json();
+          if (errData.error && errData.error.toLowerCase().includes('limit')) {
+            alert(errData.error);
+            break; // Stop trying to upload more files if we hit a limit
+          }
+          console.error(`Failed to upload ${file.name}:`, errData.error);
+        }
       } catch (err: any) {
         if (err.name === 'AbortError') {
           console.warn(`Upload timed out (60s) for ${file.name}`);

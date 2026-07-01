@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { PremiumUpgradeDialog } from "@/components/billing/PremiumUpgradeDialog";
 import { MessageSquare, Download, FileText, File, Send, Database, LayoutDashboard, BrainCircuit, Mail, Presentation, Type, GripVertical, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from "react-resizable-panels";
@@ -11,6 +12,7 @@ export default function WorkspacePage() {
   const [prompt, setPrompt] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<any | null>(null);
   
   const [chats, setChats] = useState<any[]>([]);
@@ -18,6 +20,7 @@ export default function WorkspacePage() {
   const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [isChatHistoryCollapsed, setIsChatHistoryCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState({ chats: true, artifacts: true });
+  const [aiCosts, setAiCosts] = useState<any[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatHistoryPanelRef = useRef<ImperativePanelHandle>(null);
@@ -27,10 +30,11 @@ export default function WorkspacePage() {
   // Load KBs and Chats on mount
   useEffect(() => {
     const fetchInitialData = async () => {
-      const [kbRes, chatsRes, artifactsRes] = await Promise.all([
+      const [kbRes, chatsRes, artifactsRes, costsRes] = await Promise.all([
         fetch('/api/knowledge/list'),
         fetch('/api/workspace/chats'),
-        fetch('/api/workspace/artifacts')
+        fetch('/api/workspace/artifacts'),
+        fetch('/api/billing/costs')
       ]);
 
       if (kbRes.ok) {
@@ -46,6 +50,11 @@ export default function WorkspacePage() {
       if (artifactsRes.ok) {
         const artifactsData = await artifactsRes.json();
         setArtifacts(artifactsData.artifacts || []);
+      }
+
+      if (costsRes.ok) {
+        const costsData = await costsRes.json();
+        setAiCosts(costsData.costs || []);
       }
     };
     fetchInitialData();
@@ -67,6 +76,9 @@ export default function WorkspacePage() {
       skipFetchOnceRef.current = false;
       return;
     }
+
+    // Clear messages so the UI updates immediately to show we're loading a different chat
+    setMessages([]);
 
     const fetchChatDetails = async () => {
       const res = await fetch(`/api/workspace/chats/${activeChatId}`);
@@ -130,6 +142,17 @@ export default function WorkspacePage() {
       });
       
       if (!res.ok) {
+         if (res.status === 403) {
+            const errorData = await res.json().catch(() => ({}));
+            if (errorData.code === 'INSUFFICIENT_AI_CREDITS') {
+               setShowUpgradeModal(true);
+               // Remove the user's message from the UI since it failed
+               setMessages(prev => prev.slice(0, -1));
+               setIsGenerating(false);
+               return;
+            }
+         }
+         
          setMessages(prev => [...prev, { role: "assistant", content: `Error: Request failed with status ${res.status}` }]);
          setIsGenerating(false);
          return;
@@ -155,7 +178,10 @@ export default function WorkspacePage() {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
             if (lastMsg && lastMsg.role === "assistant") {
-              lastMsg.content += chunk;
+              newMessages[newMessages.length - 1] = {
+                ...lastMsg,
+                content: lastMsg.content + chunk
+              };
             }
             return newMessages;
           });
@@ -183,7 +209,13 @@ export default function WorkspacePage() {
       }
 
     } catch (e: any) {
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error querying the workspace." }]);
+      if (e.message && e.message !== 'Failed to fetch' && !e.message.includes('network')) {
+        alert(e.message);
+        // Remove the user message since it failed
+        setMessages(prev => prev.slice(0, -1));
+      } else {
+        setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I encountered an error querying the workspace." }]);
+      }
     }
 
     setIsGenerating(false);
@@ -306,6 +338,62 @@ export default function WorkspacePage() {
     }
   };
 
+  const handleExportChat = async (format: string) => {
+    if (!messages || messages.length === 0) return;
+    try {
+       const activeChat = chats.find(c => c.id === activeChatId);
+       const title = activeChat ? activeChat.title : 'chat_history';
+       
+       let content = '';
+       messages.forEach(msg => {
+         const roleName = msg.role === 'user' ? 'User' : 'Assistant';
+         content += `## ${roleName}\n${msg.content}\n\n`;
+       });
+
+       if (format === 'MD') {
+         const blob = new Blob([content], { type: 'text/plain' });
+         const url = URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `${title}.md`;
+         a.click();
+         URL.revokeObjectURL(url);
+       } 
+       else if (format === 'DOCX') {
+         const { Document, Packer, Paragraph, TextRun } = await import("docx");
+         
+         const paragraphs = content.split('\n').map((line: string) => {
+          if (line.startsWith('## ')) {
+             return new Paragraph({ text: line.replace('## ', ''), heading: "Heading2", spacing: { before: 240, after: 120 } });
+          } else if (line.trim() === '') {
+             return new Paragraph({ text: "", spacing: { before: 120, after: 120 } });
+          } else {
+             const parts = line.split('**');
+             const runs = parts.map((part, i) => new TextRun({ text: part, bold: i % 2 === 1 }));
+             return new Paragraph({ children: runs, spacing: { before: 120, after: 120 } });
+          }
+         });
+         
+         const doc = new Document({
+            sections: [{
+              properties: {},
+              children: paragraphs
+            }]
+         });
+         const blob = await Packer.toBlob(doc);
+         const url = URL.createObjectURL(blob);
+         const a = document.createElement('a');
+         a.href = url;
+         a.download = `${title}.docx`;
+         a.click();
+         URL.revokeObjectURL(url);
+       }
+    } catch(e) {
+      console.error("Export chat failed:", e);
+      alert("Failed to export chat. Check console.");
+    }
+  };
+
   const toggleChatHistory = () => {
     const panel = chatHistoryPanelRef.current;
     if (panel) {
@@ -330,14 +418,39 @@ export default function WorkspacePage() {
   const renderMessageContent = (content: string) => {
     let displayContent = content;
     let extractedArtifacts: any[] = [];
-    const jsonBlockMatch = content.match(/```json\n([\s\S]*?)\n```/);
+    let jsonString: string | null = null;
+    let replacePattern: string | RegExp = "";
+
+    // 1. Try to find a markdown block containing the JSON
+    const blockRegex = /```(?:[a-zA-Z]*)\r?\n([\s\S]*?)\r?\n```/g;
+    let match;
+    while ((match = blockRegex.exec(content)) !== null) {
+      const blockContent = match[1]?.trim() || "";
+      if (blockContent.startsWith('{') && blockContent.includes('"artifacts"')) {
+        jsonString = blockContent;
+        replacePattern = match[0];
+        break;
+      }
+    }
+
+    // 2. If no block found, try raw text search
+    if (!jsonString) {
+      const startIdx = content.search(/\{\s*"artifacts"/);
+      if (startIdx !== -1) {
+        const endIdx = content.lastIndexOf('}');
+        if (endIdx > startIdx) {
+          jsonString = content.substring(startIdx, endIdx + 1);
+          replacePattern = jsonString;
+        }
+      }
+    }
     
-    if (jsonBlockMatch && jsonBlockMatch[1]) {
+    if (jsonString) {
       try {
-        const parsed = JSON.parse(jsonBlockMatch[1]);
+        const parsed = JSON.parse(jsonString);
         if (parsed.artifacts && Array.isArray(parsed.artifacts)) {
           extractedArtifacts = parsed.artifacts;
-          displayContent = content.replace(/```json\n([\s\S]*?)\n```/, '').trim();
+          displayContent = content.replace(replacePattern, '').trim();
         }
       } catch(e) {}
     }
@@ -532,9 +645,40 @@ export default function WorkspacePage() {
               </div>
             </div>
             
-            <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-              DeepSeek V4 Flash - Ready
+            <div className="flex items-center gap-4">
+              {messages.length > 0 && (
+                <div className="flex gap-2 mr-2 border-r border-zinc-800/50 pr-4">
+                  <button onClick={() => handleExportChat('MD')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded">
+                    <Download className="w-3 h-3" />
+                    MD
+                  </button>
+                  <button onClick={() => handleExportChat('DOCX')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded">
+                    <Download className="w-3 h-3" />
+                    DOCX
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400 group relative">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                AI Ready 
+                <span className="flex items-center justify-center w-3 h-3 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 cursor-help">i</span>
+                <div className="absolute right-0 top-full mt-2 w-72 max-h-[60vh] overflow-y-auto custom-scrollbar p-3 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-xs text-zinc-300 z-50">
+                  <div className="font-semibold text-white mb-2 pb-2 border-b border-zinc-800">AI Economy</div>
+                  <div className="space-y-1">
+                    {aiCosts
+                      .filter(c => c.credits > 0 && [
+                        'workspace_chat', 'knowledge_chat', 'summary_generation', 'quiz_generation', 
+                        'document_generation', 'generated_artifact'
+                      ].includes(c.operationKey))
+                      .map(cost => (
+                      <div key={cost.operationKey} className="flex justify-between items-center py-1">
+                        <span className="capitalize truncate pr-4 text-zinc-400">{cost.displayName || cost.operationKey.replace(/_/g, ' ')}:</span>
+                        <span className="font-medium text-violet-400 shrink-0">{cost.credits} Credits</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -564,7 +708,7 @@ export default function WorkspacePage() {
                 </div>
               </div>
             ) : (
-              <div className="max-w-3xl mx-auto space-y-6 pb-4">
+              <div className="w-full max-w-4xl mx-auto space-y-6 pb-4 px-4">
                 {messages.map((msg, idx) => (
                   <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'assistant' && (
@@ -601,7 +745,7 @@ export default function WorkspacePage() {
           {/* Input Box */}
           <div className="p-5 flex flex-col gap-2 relative z-10 bg-[#111113]">
             {previewDoc && (
-              <div className="max-w-3xl mx-auto w-full flex justify-start">
+              <div className="max-w-4xl mx-auto w-full flex justify-start px-4">
                 <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all">
                   <FileText className="w-3 h-3" />
                   Editing: {previewDoc.title} (v{previewDoc.version})
@@ -609,32 +753,34 @@ export default function WorkspacePage() {
                 </div>
               </div>
             )}
-            <div className="max-w-3xl mx-auto w-full relative flex items-center bg-[#1A1A1D] rounded-2xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors shadow-lg">
-              <textarea 
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Ask Workspace AI..."
-                disabled={isGenerating}
-                className="w-full bg-transparent resize-none outline-none py-3 pl-4 pr-12 text-zinc-200 placeholder:text-zinc-500 disabled:opacity-50 min-h-[48px] text-sm"
-                rows={1}
-              />
-              <button 
-                onClick={handleSend}
-                disabled={!prompt.trim() || isGenerating}
-                className="absolute right-2 p-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg disabled:opacity-50 disabled:hover:bg-violet-600 transition-colors"
-              >
-                <Send className="w-4 h-4" />
-              </button>
+            <div className="max-w-4xl mx-auto w-full px-4">
+              <div className="relative flex items-center bg-[#1A1A1D] rounded-2xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors shadow-lg">
+                <textarea 
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Ask Workspace AI..."
+                  disabled={isGenerating}
+                  className="w-full bg-transparent resize-none outline-none py-3 pl-4 pr-12 text-zinc-200 placeholder:text-zinc-500 disabled:opacity-50 min-h-[48px] text-sm"
+                  rows={1}
+                />
+                <button 
+                  onClick={handleSend}
+                  disabled={!prompt.trim() || isGenerating}
+                  className="absolute right-2 p-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg disabled:opacity-50 disabled:hover:bg-violet-600 transition-colors"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="max-w-3xl mx-auto mt-2 text-center flex justify-center items-center gap-2 text-[10px] text-zinc-500">
+            <div className="max-w-4xl mx-auto mt-2 text-center flex justify-center items-center gap-2 text-[10px] text-zinc-500">
               <Type className="w-3 h-3" />
-              <span>Workspace AI uses DeepSeek V4 Flash grounded on your selected Knowledge Base.</span>
+              <span>Workspace AI grounded on your selected Knowledge Base. <br/><span className="text-rose-500 mt-1 inline-block">Consumes AI Credits based on operations</span></span>
             </div>
           </div>
         </Panel>
@@ -713,6 +859,10 @@ export default function WorkspacePage() {
         </Panel>
 
       </PanelGroup>
+      <PremiumUpgradeDialog 
+        isOpen={showUpgradeModal} 
+        onClose={() => setShowUpgradeModal(false)} 
+      />
     </div>
   );
 }

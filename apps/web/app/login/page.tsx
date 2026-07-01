@@ -173,6 +173,7 @@ export default function LoginPage() {
                   <input 
                     type="email" 
                     required
+                    suppressHydrationWarning
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-black/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none transition-all text-white placeholder-zinc-600"
@@ -191,6 +192,7 @@ export default function LoginPage() {
                   <input 
                     type="password" 
                     required
+                    suppressHydrationWarning
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-black/50 border border-white/10 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none transition-all text-white placeholder-zinc-600"
@@ -202,6 +204,7 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 disabled={loading}
+                suppressHydrationWarning
                 className="w-full bg-white hover:bg-zinc-200 text-black py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-2"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4" /></>}

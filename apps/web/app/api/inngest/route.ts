@@ -9,6 +9,7 @@ import { folderIngestion } from "../../../inngest/functions/ingestion/folderInge
 import { apiIngestion } from "../../../inngest/functions/ingestion/apiIngestion";
 import { uploadIngestion } from "../../../inngest/functions/ingestion/uploadIngestion";
 import { embedBatch } from "../../../inngest/functions/ingestion/embedBatch";
+import { cronMonthlyRefill } from "../../../inngest/functions/cronMonthlyRefill";
 
 // Create an API that serves zero-config routing for Inngest
 export const { GET, POST, PUT } = serve({
@@ -22,5 +23,6 @@ export const { GET, POST, PUT } = serve({
     apiIngestion,
     uploadIngestion,
     embedBatch,
+    cronMonthlyRefill,
   ],
 });

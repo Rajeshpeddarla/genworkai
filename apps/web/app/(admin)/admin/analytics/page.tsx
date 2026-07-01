@@ -1,122 +1,151 @@
-"use client";
+import { db } from "@/db";
+import { aiUsageHistory, billingEvents, userAiCreditPurchases, profiles, aiCreditLedger, knowledgeBases, connectedDatabases, automationTasks } from "@/db/schema";
+import AnalyticsClient from "./AnalyticsClient";
+import { sql, eq } from "drizzle-orm";
 
-import { useState, useEffect } from "react";
-import { 
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, Legend, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell 
-} from "recharts";
-import { Globe, Clock, MapPin, Activity } from "lucide-react";
+export default async function AnalyticsPage() {
+  
+  // 1. Total Stats
+  const revenueResult = await db.select({ total: sql<number>`sum(${billingEvents.amount})` })
+    .from(billingEvents)
+    .where(eq(billingEvents.eventType, 'payment_success'));
+    
+  const issuedResult = await db.select({ total: sql<number>`sum(${userAiCreditPurchases.purchasedCredits})` })
+    .from(userAiCreditPurchases);
+    
+  const consumedResult = await db.select({ total: sql<number>`sum(${aiUsageHistory.creditsUsed})` })
+    .from(aiUsageHistory);
 
-export default function AnalyticsPage() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const stats = {
+    totalRevenue: revenueResult[0]?.total || 0,
+    totalCreditsIssued: issuedResult[0]?.total || 0,
+    totalCreditsConsumed: consumedResult[0]?.total || 0
+  };
 
-  useEffect(() => {
-    // Mock analytics data
-    setTimeout(() => {
-      setData({
-        countryData: [
-          { name: 'United States', users: 840 }, { name: 'United Kingdom', users: 320 },
-          { name: 'India', users: 290 }, { name: 'Canada', users: 150 },
-          { name: 'Australia', users: 110 }, { name: 'Germany', users: 95 }
-        ],
-        cityData: [
-          { name: 'New York', users: 180 }, { name: 'London', users: 140 },
-          { name: 'San Francisco', users: 120 }, { name: 'Bangalore', users: 110 },
-          { name: 'Toronto', users: 90 }, { name: 'Sydney', users: 65 }
-        ],
-        usageByHour: [
-          { hour: '12am', active: 120 }, { hour: '3am', active: 80 },
-          { hour: '6am', active: 250 }, { hour: '9am', active: 850 },
-          { hour: '12pm', active: 1100 }, { hour: '3pm', active: 980 },
-          { hour: '6pm', active: 640 }, { hour: '9pm', active: 320 }
-        ],
-        activityTypes: [
-          { name: 'LLM Chat', value: 45 }, { name: 'Database Queries', value: 25 },
-          { name: 'Automations', value: 20 }, { name: 'MCP Calls', value: 10 }
-        ]
-      });
-      setLoading(false);
-    }, 500);
-  }, []);
+  // 2. Revenue Over Time (Daily)
+  const revenueQuery = await db.execute(sql`
+    SELECT date_trunc('day', created_at) as date, sum(amount) as amount
+    FROM ${billingEvents}
+    WHERE event_type = 'payment_success'
+    GROUP BY 1
+    ORDER BY 1 ASC
+    LIMIT 30
+  `);
+  const revenueByDay = revenueQuery.rows.map((row: any) => ({
+    date: new Date(row.date).toLocaleDateString(),
+    amount: Number(row.amount)
+  }));
 
-  if (loading) return <div className="animate-pulse h-96 bg-zinc-900 rounded-xl"></div>;
+  // 3. Credits Issued vs Consumed
+  const issuedQuery = await db.execute(sql`
+    SELECT date_trunc('day', created_at) as date, sum(purchased_credits) as issued
+    FROM ${userAiCreditPurchases}
+    GROUP BY 1
+  `);
+  
+  const consumedQuery = await db.execute(sql`
+    SELECT date_trunc('day', created_at) as date, sum(credits_used) as consumed
+    FROM ${aiUsageHistory}
+    GROUP BY 1
+  `);
+  
+  const datesMap = new Map<string, { issued: number, consumed: number }>();
+  issuedQuery.rows.forEach((row: any) => {
+    const d = new Date(row.date).toLocaleDateString();
+    datesMap.set(d, { issued: Number(row.issued), consumed: 0 });
+  });
+  
+  consumedQuery.rows.forEach((row: any) => {
+    const d = new Date(row.date).toLocaleDateString();
+    const existing = datesMap.get(d) || { issued: 0, consumed: 0 };
+    existing.consumed = Number(row.consumed);
+    datesMap.set(d, existing);
+  });
+  
+  const creditsByDay = Array.from(datesMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // 4. Top Customers
+  const customersQuery = await db.execute(sql`
+    SELECT p.id, p.full_name, p.email, 
+           COALESCE(SUM(u.credits_used), 0) as consumed,
+           COALESCE(SUM(c.purchased_credits), 0) as issued
+    FROM ${profiles} p
+    LEFT JOIN ${aiUsageHistory} u ON p.id = u.user_id
+    LEFT JOIN ${userAiCreditPurchases} c ON p.id = c.user_id
+    GROUP BY p.id, p.full_name, p.email
+    ORDER BY consumed DESC, issued DESC
+    LIMIT 10
+  `);
+  
+  const topCustomers = customersQuery.rows.map((row: any) => ({
+    userId: row.id,
+    fullName: row.full_name,
+    email: row.email,
+    consumed: Number(row.consumed),
+    issued: Number(row.issued)
+  }));
+
+  // 5. Most Popular Packs (by credits size)
+  const popularPacksQuery = await db.execute(sql`
+    SELECT purchased_credits as size, COUNT(*) as count, SUM(purchased_credits) as total_credits
+    FROM ${userAiCreditPurchases}
+    GROUP BY purchased_credits
+    ORDER BY count DESC
+    LIMIT 5
+  `);
+  
+  const popularPacks = popularPacksQuery.rows.map((row: any) => ({
+    name: `${row.size.toLocaleString()} Credits Pack`,
+    totalCredits: Number(row.total_credits)
+  }));
+
+  // 6. Most Expensive Operations
+  const expensiveOpsQuery = await db.execute(sql`
+    SELECT operation_key as operation, SUM(ABS(amount)) as total_cost
+    FROM ${aiCreditLedger}
+    WHERE amount < 0
+    GROUP BY operation_key
+    ORDER BY total_cost DESC
+    LIMIT 5
+  `);
+  
+  const expensiveOperations = expensiveOpsQuery.rows.map((row: any) => ({
+    operation: row.operation,
+    totalCost: Number(row.total_cost)
+  }));
+
+  // 7. Heavy Resource Users
+  const heavyUsersQuery = await db.execute(sql`
+    SELECT p.id, p.full_name as name, p.email,
+           (SELECT COUNT(*) FROM ${knowledgeBases} kb WHERE kb.user_id = p.id) as kb_count,
+           (SELECT COUNT(*) FROM ${connectedDatabases} db WHERE db.user_id = p.id) as db_count,
+           (SELECT COUNT(*) FROM ${automationTasks} a WHERE a.user_id = p.id) as auto_count
+    FROM ${profiles} p
+    ORDER BY (kb_count + db_count + auto_count) DESC
+    LIMIT 10
+  `);
+  
+  const heavyResourceUsers = heavyUsersQuery.rows.map((row: any) => ({
+    userId: row.id,
+    name: row.name || 'Unknown',
+    email: row.email,
+    kbCount: Number(row.kb_count),
+    dbCount: Number(row.db_count),
+    autoCount: Number(row.auto_count),
+    totalResources: Number(row.kb_count) + Number(row.db_count) + Number(row.auto_count)
+  }));
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">Platform Analytics</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Geographic distribution and usage patterns.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Country Distribution */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <Globe className="w-5 h-5 text-emerald-500" />
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Registrations by Country</h3>
-          </div>
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.countryData} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis dataKey="name" type="category" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} width={100} />
-                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff10', borderRadius: '8px' }} itemStyle={{ color: '#fff' }} cursor={{fill: '#ffffff05'}} />
-                <Bar dataKey="users" fill="#10b981" radius={[0, 4, 4, 0]} barSize={24} name="Total Users" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* City Distribution */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
-          <div className="flex items-center gap-2 mb-6">
-            <MapPin className="w-5 h-5 text-blue-500" />
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Top Cities</h3>
-          </div>
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.cityData} layout="vertical" margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                <XAxis type="number" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis dataKey="name" type="category" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} width={100} />
-                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff10', borderRadius: '8px' }} itemStyle={{ color: '#fff' }} cursor={{fill: '#ffffff05'}} />
-                <Bar dataKey="users" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={24} name="Total Users" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Usage by Hour */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col lg:col-span-2">
-          <div className="flex items-center gap-2 mb-6">
-            <Clock className="w-5 h-5 text-rose-500" />
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Active Users by Hour (24h)</h3>
-          </div>
-          <div className="flex-1 min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.usageByHour} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="hour" stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#71717a" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff10', borderRadius: '8px' }} itemStyle={{ color: '#fff' }} />
-                <Area type="monotone" dataKey="active" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorActive)" name="Active Sessions" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-      </div>
-    </div>
+    <AnalyticsClient 
+      stats={stats} 
+      revenueByDay={revenueByDay} 
+      creditsByDay={creditsByDay} 
+      topCustomers={topCustomers} 
+      popularPacks={popularPacks}
+      expensiveOperations={expensiveOperations}
+      heavyResourceUsers={heavyResourceUsers}
+    />
   );
 }

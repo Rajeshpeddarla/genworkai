@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
 import { knowledgeBases, connectedDatabases, knowledgeSources } from '../../../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { requireUser } from '../../../../lib/auth';
 import { safeErrorResponse } from '../../../../lib/errors';
+import { documents } from '../../../../db/schema';
 
 export async function GET() {
   try {
@@ -16,6 +17,17 @@ export async function GET() {
     // We need to fetch databases connected to these KBs
     // and knowledge sources (GitHub, Websites, APIs) connected to these KBs
     
+    // Fetch document counts
+    const docCounts = await db
+      .select({
+        kbId: documents.kbId,
+        count: sql<number>`count(${documents.id})`
+      })
+      .from(documents)
+      .groupBy(documents.kbId);
+      
+    const countMap = Object.fromEntries(docCounts.map(d => [d.kbId, Number(d.count)]));
+
     const kbIds = kbs.map(kb => kb.id);
     
     let dbs: any[] = [];
@@ -33,7 +45,7 @@ export async function GET() {
     }
 
     const availableSources = [
-      ...kbs.map(kb => ({ id: `kb_${kb.id}`, type: 'knowledge_base', name: kb.name, internalId: kb.id })),
+      ...kbs.map(kb => ({ id: `kb_${kb.id}`, type: 'knowledge_base', name: kb.name, internalId: kb.id, documentCount: countMap[kb.id] || 0 })),
       ...dbs.map(d => ({ id: `db_${d.id}`, type: 'database', name: d.name, kbId: d.kbId, internalId: d.id })),
       ...sources.map(s => ({ id: `src_${s.id}`, type: s.type, name: s.name, kbId: s.kbId, internalId: s.id }))
     ];

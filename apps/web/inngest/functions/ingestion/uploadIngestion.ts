@@ -2,6 +2,7 @@ import { inngest } from "../../client";
 import { db } from "../../../db";
 import { documents, documentChunks, knowledgeSources, syncJobs, sourceSnapshots } from "../../../db/schema";
 import { eq, sql } from "drizzle-orm";
+import { CreditService } from "../../../lib/billing/CreditService";
 import fs from "fs/promises";
 import crypto from 'crypto';
 import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChunkMarkdown, extractRelationships, generateChunkHash } from "../../../lib/knowledge-pipeline";
@@ -9,7 +10,7 @@ import { extractTextFromBuffer, cleanExtractedText, enhanceTextWithAI, smartChun
 export const uploadIngestion: any = inngest.createFunction(
   { id: "ingest-upload", name: "Ingest File Upload", triggers: [{ event: "knowledge/process.upload" }] },
   async ({ event, step }: any) => {
-    const { sourceId, syncJobId, filePath, originalName, mimeType } = event.data;
+    const { sourceId, syncJobId, filePath, originalName, mimeType, usageId } = event.data;
 
     const updateProgress = async (stepName: string, updates: any) => {
       await step.run(`progress-${stepName}`, async () => {
@@ -83,6 +84,7 @@ export const uploadIngestion: any = inngest.createFunction(
         await step.run("mark-success-unchanged", async () => {
           await db.update(syncJobs).set({ status: 'completed', finishedAt: new Date() }).where(eq(syncJobs.id, syncJobId));
           await db.update(knowledgeSources).set({ syncStatus: 'success', lastSyncAt: new Date(), lastSuccessfulSyncAt: new Date() }).where(eq(knowledgeSources.id, sourceId));
+          if (usageId) await CreditService.finalize(usageId, { actualCredits: 0 }); // Refund, we didn't do much work
         });
         await fs.unlink(filePath).catch(() => {});
         return { status: "skipped", reason: "Hash unchanged" };
@@ -110,6 +112,7 @@ export const uploadIngestion: any = inngest.createFunction(
 
       await step.run("cleanup", async () => {
         await fs.unlink(filePath).catch(() => {});
+        if (usageId) await CreditService.finalize(usageId);
       });
 
       return { status: "success", dispatchedBatches: batches.length };
@@ -118,6 +121,7 @@ export const uploadIngestion: any = inngest.createFunction(
       await step.run("fail-sync", async () => {
         await db.update(syncJobs).set({ status: 'failed', error: error.message, finishedAt: new Date() }).where(eq(syncJobs.id, syncJobId));
         await db.update(knowledgeSources).set({ syncStatus: 'failed' }).where(eq(knowledgeSources.id, sourceId));
+        if (usageId) await CreditService.finalize(usageId, { actualCredits: 0 }); // Refund on failure
       });
       await fs.unlink(filePath).catch(() => {});
       throw error;

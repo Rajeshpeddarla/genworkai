@@ -1,11 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, User, Mail, Calendar, Shield, Database, BrainCircuit, Terminal, Activity, Zap, Ticket } from "lucide-react";
 
 export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
   const [activeTab, setActiveTab] = useState("profile");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/users/${resolvedParams.id}`)
+      .then(res => res.json())
+      .then(d => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(e => {
+        console.error(e);
+        setLoading(false);
+      });
+  }, [resolvedParams.id]);
+
+  if (loading) {
+    return <div className="p-8 animate-pulse text-zinc-500">Loading user details...</div>;
+  }
+
+  if (!data || data.error) {
+    return <div className="p-8 text-rose-500">Failed to load user details: {data?.error || "Unknown Error"}</div>;
+  }
+
+  const { profile, subscription, resources, metrics } = data;
 
   return (
     <div className="space-y-6">
@@ -21,13 +47,17 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
           </div>
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
-              Alice Smith
-              <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-500 rounded-full">Active</span>
+              {profile.firstName || 'Unknown'} {profile.lastName || ''}
+              {profile.isActive ? (
+                <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-500 rounded-full">Active</span>
+              ) : (
+                <span className="px-3 py-1 text-xs font-bold uppercase tracking-wider bg-rose-500/20 text-rose-500 rounded-full">Suspended</span>
+              )}
             </h1>
             <p className="text-zinc-500 mt-2 flex items-center gap-4">
-              <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> alice@example.com</span>
-              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Joined Jan 15, 2024</span>
-              <span className="flex items-center gap-1 text-rose-500"><Shield className="w-4 h-4" /> Admin</span>
+              <span className="flex items-center gap-1"><Mail className="w-4 h-4" /> {profile.email}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
+              {profile.isAdmin && <span className="flex items-center gap-1 text-rose-500"><Shield className="w-4 h-4" /> Admin</span>}
             </p>
           </div>
           <div>
@@ -70,19 +100,19 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                  <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                    <p className="text-sm text-zinc-500">Current Plan</p>
-                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1">Enterprise</p>
+                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1">{subscription?.planName || 'Free Tier'}</p>
                  </div>
                  <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                    <p className="text-sm text-zinc-500">Billing Cycle</p>
-                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1">Yearly</p>
+                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1 capitalize">{subscription?.billingCycle || 'N/A'}</p>
                  </div>
                  <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                    <p className="text-sm text-zinc-500">Renewal Date</p>
-                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1">Jan 15, 2025</p>
+                   <p className="text-xl font-bold text-zinc-900 dark:text-white mt-1">{subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : 'N/A'}</p>
                  </div>
                  <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
-                   <p className="text-sm text-zinc-500">Total Spent</p>
-                   <p className="text-xl font-bold text-emerald-500 mt-1">$9,990.00</p>
+                   <p className="text-sm text-zinc-500">Status</p>
+                   <p className="text-xl font-bold text-emerald-500 mt-1 capitalize">{subscription?.status || 'Active'}</p>
                  </div>
                </div>
              </div>
@@ -102,16 +132,40 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
          )}
 
          {activeTab === 'usage' && (
-           <div className="flex items-center justify-center h-64 text-zinc-500">Usage Metrics Dashboard Component Here</div>
+           <div className="space-y-6">
+             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">AI Credit Usage</h3>
+             <div className="p-6 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl">
+               <p className="text-sm text-zinc-500 font-medium">Lifetime AI Credits Consumed</p>
+               <p className="text-3xl font-bold text-zinc-900 dark:text-white mt-2">{Number(metrics?.totalAiCreditsConsumed || 0).toLocaleString()}</p>
+             </div>
+           </div>
          )}
          {activeTab === 'kbs' && (
-           <div className="flex items-center justify-center h-64 text-zinc-500">List of 14 Knowledge Bases Here</div>
+           <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+             <BrainCircuit className="w-12 h-12 mb-4 text-zinc-300" />
+             <p className="text-lg font-medium">User has created {resources.knowledgeBases} Knowledge Base(s)</p>
+           </div>
          )}
          {activeTab === 'dbs' && (
-           <div className="flex items-center justify-center h-64 text-zinc-500">List of 3 Database Connections Here</div>
+           <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+             <Database className="w-12 h-12 mb-4 text-zinc-300" />
+             <p className="text-lg font-medium">User has connected {resources.databases} Database(s)</p>
+           </div>
          )}
          {activeTab === 'automations' && (
-           <div className="flex items-center justify-center h-64 text-zinc-500">List of 12 Automations Here</div>
+           <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+             <Zap className="w-12 h-12 mb-4 text-zinc-300" />
+             <p className="text-lg font-medium">User has created {resources.automations} Automation(s)</p>
+           </div>
+         )}
+         {activeTab === 'apikeys' && (
+           <div className="flex flex-col items-center justify-center h-64 text-zinc-500">
+             <Terminal className="w-12 h-12 mb-4 text-zinc-300" />
+             <p className="text-lg font-medium">User has generated {resources.apiKeys} API Key(s)</p>
+           </div>
+         )}
+         {activeTab === 'tickets' && (
+           <div className="flex items-center justify-center h-64 text-zinc-500">Tickets integration pending...</div>
          )}
       </div>
     </div>

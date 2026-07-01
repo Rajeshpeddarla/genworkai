@@ -49,6 +49,9 @@ export default function MCPBuilder() {
         // Automatically select the new server
         const newServerWithKey = { ...data.server, keys: [data.key] };
         setSelectedServer(newServerWithKey);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to create MCP Server');
       }
     } catch(e) {
       console.error(e);
@@ -161,10 +164,10 @@ export default function MCPBuilder() {
             )}
 
             <div className="space-y-8">
-              {/* Option 1: Cursor */}
+              {/* Option 1: SSE Integrations */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-200">Option 1: Cursor (SSE Connection)</h3>
-                <p className="text-gray-400 text-sm">In Cursor, go to Settings &gt; Features &gt; MCP. Click "Add New MCP Server". Set type to SSE.</p>
+                <h3 className="text-lg font-semibold text-gray-200">Option 1: SSE IDEs (Cursor, Windsurf, Antigravity)</h3>
+                <p className="text-gray-400 text-sm">For AI IDEs with native SSE Support, add a new MCP Server and set the connection type to SSE. (e.g. in Cursor: Settings &gt; Features &gt; MCP)</p>
                 
                 <div className="grid grid-cols-1 gap-3">
                   <div>

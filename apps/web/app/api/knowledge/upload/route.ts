@@ -11,6 +11,7 @@ import { validateUpload } from '../../../../lib/security/uploads';
 import { requireUser, requireOwnership } from '../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../lib/errors';
 import { checkContextLimit } from '../../../../lib/limits';
+import { CreditService } from '../../../../lib/billing/CreditService';
 
 export async function POST(req: Request) {
   try {
@@ -45,8 +46,20 @@ export async function POST(req: Request) {
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
 
     const contextLimit = await checkContextLimit(user.id);
-    if (!contextLimit.allowed || contextLimit.current + buffer.length > contextLimit.limit) {
+    if (!contextLimit.allowed || (contextLimit.limit !== -1 && contextLimit.current + buffer.length > contextLimit.limit)) {
       throw new Error(`Context limit reached. You can only upload up to ${(contextLimit.limit / 1000000).toFixed(1)}MB of data on the free plan.`);
+    }
+
+    // AI Credit Consumption (10 Credits per upload)
+    const reserveResult = await CreditService.reserve(user.id, 'knowledge_ingestion', {
+      featureCategory: 'knowledge',
+      endpoint: '/api/knowledge/upload'
+    });
+
+    if (!reserveResult.success) {
+      return NextResponse.json({ 
+        error: { code: 'INSUFFICIENT_AI_CREDITS', message: reserveResult.reason || "You don't have enough AI Credits." } 
+      }, { status: 403 });
     }
 
     // If no sourceId is provided, create a default "Files" source for this KB
@@ -88,7 +101,8 @@ export async function POST(req: Request) {
         syncJobId: syncJob[0]!.id,
         filePath: tempFilePath,
         originalName: file.name,
-        mimeType
+        mimeType,
+        usageId: reserveResult.usageId
       }
     });
 

@@ -184,11 +184,11 @@ export default function ChatPage() {
           
           <div className="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-6 pt-6 pb-3 uppercase tracking-wider">Previous 7 Days</div>
           <div className="px-6 space-y-3">
-            <button className="w-full flex items-center gap-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors text-left">
+            <button onClick={() => alert("This is a demo UI. Chat history for single documents will be available soon. Please use Workspace for full chat history.")} className="w-full flex items-center gap-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors text-left">
               <MessageSquare className="w-4 h-4 shrink-0" />
               <span className="truncate">Extracting Flutter Docs</span>
             </button>
-            <button className="w-full flex items-center gap-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors text-left">
+            <button onClick={() => alert("This is a demo UI. Chat history for single documents will be available soon. Please use Workspace for full chat history.")} className="w-full flex items-center gap-3 py-1.5 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors text-left">
               <MessageSquare className="w-4 h-4 shrink-0" />
               <span className="truncate">React Context Tutorial</span>
             </button>

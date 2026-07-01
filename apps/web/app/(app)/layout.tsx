@@ -1,5 +1,5 @@
 import { Sidebar } from "../../components/layout/sidebar";
-
+import { GlobalQuotaToast } from "../../components/layout/GlobalQuotaToast";
 export default function AppLayout({
   children,
 }: {
@@ -13,6 +13,7 @@ export default function AppLayout({
           {children}
         </main>
       </div>
+      <GlobalQuotaToast />
     </div>
   );
 }

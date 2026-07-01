@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { subscriptionPlans } from "@/db/schema";
+import { subscriptionPlans, aiCreditPackProducts } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -18,6 +18,22 @@ export async function updatePlan(id: number, data: any) {
 
 export async function createPlan(data: any) {
   await db.insert(subscriptionPlans).values(data);
+  revalidatePath('/admin/billing');
+}
+
+export async function updateCreditPack(id: number, data: any) {
+  await db.update(aiCreditPackProducts).set(data).where(eq(aiCreditPackProducts.id, id));
+  revalidatePath('/admin/billing');
+}
+
+export async function updateCreditCost(operationKey: string, creditCost: number) {
+  const { aiCreditCosts } = await import('@/db/schema');
+  await db.update(aiCreditCosts).set({ credits: creditCost }).where(eq(aiCreditCosts.operationKey, operationKey));
+  revalidatePath('/admin/billing');
+}
+
+export async function createCreditPack(data: any) {
+  await db.insert(aiCreditPackProducts).values(data);
   revalidatePath('/admin/billing');
 }
 

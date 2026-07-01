@@ -61,6 +61,7 @@ export default function FileStudioPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStatus, setProcessStatus] = useState("");
   const [processResult, setProcessResult] = useState<string | null>(null);
+  const [aiCosts, setAiCosts] = useState<any[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +80,21 @@ export default function FileStudioPage() {
     setProcessResult(null);
     setProcessStatus("");
   }, [activeTool]);
+
+  useEffect(() => {
+    const fetchCosts = async () => {
+      try {
+        const res = await fetch('/api/billing/costs');
+        if (res.ok) {
+          const data = await res.json();
+          setAiCosts(data.costs || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch AI costs", e);
+      }
+    };
+    fetchCosts();
+  }, []);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -439,6 +455,15 @@ export default function FileStudioPage() {
     if (upscaleTarget === "4K") multiplier = 4;
     if (upscaleTarget === "8K Premium") multiplier = 8;
     return `${imageDetails.width * multiplier} × ${imageDetails.height * multiplier}`;
+  };
+
+  const getToolCost = () => {
+    let opKey = '';
+    if (activeTool === 'ocr') opKey = 'ocr';
+    else if (activeTool === 'remove-bg') opKey = 'file_remove_bg';
+    else opKey = `file_${activeTool}`;
+    const costObj = aiCosts.find(c => c.operationKey === opKey);
+    return costObj ? costObj.credits : 1;
   };
 
   const handleResizeWidthChange = (val: string) => {
@@ -909,8 +934,13 @@ export default function FileStudioPage() {
                 disabled={!selectedFile || isProcessing}
                 className="w-full py-4 bg-emerald-400 hover:bg-emerald-300 disabled:opacity-50 disabled:hover:bg-emerald-400 text-zinc-950 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(52,211,153,0.3)] hover:shadow-[0_0_30px_rgba(52,211,153,0.5)] flex items-center justify-center gap-2 mt-8"
               >
-                <Download className="w-4 h-4" />
-                Process & Download
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2">
+                    <Download className="w-4 h-4" />
+                    Process & Download
+                  </div>
+                  <div className="text-[10px] opacity-80 mt-1 font-normal">Consumes {getToolCost()} AI Credits</div>
+                </div>
               </button>
 
             </div>

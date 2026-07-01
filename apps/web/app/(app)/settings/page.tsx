@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Settings, User, CreditCard, Gift, Palette, Key, LogOut, Loader2, Sparkles, Server
+  Settings, User, CreditCard, Gift, Palette, Key, LogOut, Loader2, Sparkles, Server, History
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { initializePaddle, Paddle } from "@paddle/paddle-js";
+import { formatBytes } from "@/lib/utils";
+import { CreditHistoryTab } from "@/components/billing/CreditHistoryTab";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -83,6 +85,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "profile", name: "Profile", icon: User },
     { id: "subscription", name: "Subscription & Limits", icon: CreditCard },
+    { id: "credit-history", name: "Credit History", icon: History },
     { id: "referrals", name: "Refer & Earn", icon: Gift },
     { id: "appearance", name: "Appearance", icon: Palette },
   ];
@@ -96,7 +99,7 @@ export default function SettingsPage() {
   const isPro = profile?.tier === "pro";
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-12 p-6">
+    <div className="w-full px-6 lg:px-12 pb-12 space-y-8 mt-6">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -170,6 +173,10 @@ export default function SettingsPage() {
             </div>
           )}
 
+          {activeTab === "credit-history" && (
+            <CreditHistoryTab />
+          )}
+
           {activeTab === "subscription" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Current Plan Card */}
@@ -197,7 +204,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Usage Limits */}
-              {!isPro && limits && (
+              {limits && (
                 <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm">
                   <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Current Usage</h3>
                   
@@ -205,42 +212,45 @@ export default function SettingsPage() {
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium">Knowledge Bases</span>
-                        <span className="text-zinc-500">{limits.knowledgeBases.current} / {limits.knowledgeBases.limit}</span>
+                        <span className="text-zinc-500">{limits.knowledgeBases?.current || 0} / {Number(limits.knowledgeBases?.limit) === -1 ? 'Unlimited' : limits.knowledgeBases?.limit || 0}</span>
                       </div>
                       <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                        <div className="bg-violet-500 h-2 rounded-full" style={{ width: `${Math.min(100, (limits.knowledgeBases.current / limits.knowledgeBases.limit) * 100)}%` }}></div>
+                        <div className="bg-violet-500 h-2 rounded-full" style={{ width: `${Number(limits.knowledgeBases?.limit) === -1 ? 100 : limits.knowledgeBases?.limit > 0 ? Math.min(100, ((limits.knowledgeBases?.current || 0) / limits.knowledgeBases.limit) * 100) : 0}%` }}></div>
                       </div>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium">Business Flows</span>
-                        <span className="text-zinc-500">{limits.flows.current} / {limits.flows.limit}</span>
+                        <span className="text-zinc-500">{limits.flows?.current || 0} / {Number(limits.flows?.limit) === -1 ? 'Unlimited' : limits.flows?.limit || 0}</span>
                       </div>
                       <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                        <div className="bg-fuchsia-500 h-2 rounded-full" style={{ width: `${Math.min(100, (limits.flows.current / limits.flows.limit) * 100)}%` }}></div>
+                        <div className="bg-fuchsia-500 h-2 rounded-full" style={{ width: `${Number(limits.flows?.limit) === -1 ? 100 : limits.flows?.limit > 0 ? Math.min(100, ((limits.flows?.current || 0) / limits.flows.limit) * 100) : 0}%` }}></div>
                       </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="font-medium">AI Credits Available</span>
+                        <span className="text-zinc-500">{limits.aiCredits?.current?.toLocaleString() || 0} Credits</span>
+                      </div>
+                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                        <div className="bg-sky-500 h-2 rounded-full" style={{ width: `100%` }}></div>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1">Includes {limits.aiCredits?.monthly?.toLocaleString() || 0} monthly plan credits and {limits.aiCredits?.purchased?.toLocaleString() || 0} purchased credits.</p>
                     </div>
 
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="font-medium">Context Data Uploaded</span>
-                        <span className="text-zinc-500">{(limits.context.current / 1_000_000).toFixed(1)} MB / {(limits.context.limit / 1_000_000).toFixed(1)} MB</span>
+                        <span className="text-zinc-500">{formatBytes(limits.context?.current || 0)} / {Number(limits.context?.limit) === -1 ? 'Unlimited' : formatBytes(limits.context?.limit || 0)}</span>
                       </div>
                       <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                        <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Math.min(100, (limits.context.current / limits.context.limit) * 100)}%` }}></div>
+                        <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Number(limits.context?.limit) === -1 ? 100 : limits.context?.limit > 0 ? Math.min(100, ((limits.context?.current || 0) / limits.context.limit) * 100) : 0}%` }}></div>
                       </div>
                     </div>
 
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="font-medium">Artifacts Generated (This Month)</span>
-                        <span className="text-zinc-500">{limits.artifacts.current} / {limits.artifacts.limit}</span>
-                      </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${Math.min(100, (limits.artifacts.current / limits.artifacts.limit) * 100)}%` }}></div>
-                      </div>
-                    </div>
+
                   </div>
                 </div>
               )}

@@ -7,7 +7,7 @@ import { initializePaddle, Paddle } from "@paddle/paddle-js";
 import { createBrowserClient } from "@supabase/ssr";
 
 export default function PricingClient({ plans: rawPlans, activePromo }: { plans: any[], activePromo: any }) {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const [billingCycle, setBillingCycle] = useState<"monthly">("monthly");
   const [timeLeft, setTimeLeft] = useState<{ d: number, h: number, m: number, s: number } | null>(null);
   const [paddle, setPaddle] = useState<Paddle>();
   const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
@@ -132,18 +132,18 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
     return () => clearInterval(interval);
   }, [activePromo]);
 
-  const formatPrice = (cents: number, cycle: "monthly" | "yearly") => {
+  const formatPrice = (cents: number) => {
     let price = cents / 100;
     if (activePromo?.value?.discountPercent) {
       price = price * (1 - activePromo.value.discountPercent / 100);
     }
-    const finalPrice = cycle === "yearly" ? Math.floor(price / 12) : price;
+    const finalPrice = price;
     return parseFloat(finalPrice.toFixed(2));
   };
 
-  const getOriginalPrice = (cents: number, cycle: "monthly" | "yearly") => {
+  const getOriginalPrice = (cents: number) => {
     const price = cents / 100;
-    const finalPrice = cycle === "yearly" ? Math.floor(price / 12) : price;
+    const finalPrice = price;
     return parseFloat(finalPrice.toFixed(2));
   };
 
@@ -194,16 +194,7 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
           )}
 
           <div className="flex justify-center items-center gap-4 mb-16 relative z-10">
-            <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-zinc-500'}`}>Monthly</span>
-            <button 
-              onClick={() => setBillingCycle(c => c === 'monthly' ? 'yearly' : 'monthly')}
-              className="w-14 h-8 rounded-full bg-white/10 p-1 flex items-center transition-colors hover:bg-white/20"
-            >
-              <div className={`w-6 h-6 rounded-full bg-violet-500 transition-transform ${billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-0'}`} />
-            </button>
-            <span className={`text-sm font-medium flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-white' : 'text-zinc-500'}`}>
-              Yearly <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400">Save 20%</span>
-            </span>
+            <span className="text-sm font-medium text-white">Monthly</span>
           </div>
         </div>
 
@@ -211,8 +202,8 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-32 relative z-10">
           {plans.map(plan => {
             const isEnterprise = plan.slug === 'enterprise';
-            const price = isEnterprise ? "Custom" : formatPrice(billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice, billingCycle);
-            const originalPrice = isEnterprise ? "Custom" : getOriginalPrice(billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice, billingCycle);
+            const price = isEnterprise ? "Custom" : formatPrice(plan.monthlyPrice);
+            const originalPrice = isEnterprise ? "Custom" : getOriginalPrice(plan.monthlyPrice);
             const isDiscounted = !isEnterprise && activePromo && price !== originalPrice;
             const isPro = plan.slug === 'pro';
 
@@ -243,7 +234,7 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
                             return zeroPrice;
                           }
                           if (isLoadingPrices) return <Loader2 className="w-8 h-8 animate-spin text-zinc-500 mb-1" />;
-                          const activePriceId = billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId;
+                          const activePriceId = plan.paddleMonthlyPriceId;
                           const localized = activePriceId ? localizedPrices[activePriceId] : undefined;
                           return localized ? localized.formatted : `$${price}`;
                         })()}
@@ -254,7 +245,7 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
                   {isDiscounted && !isEnterprise && (
                     <div className="text-sm font-medium text-zinc-500 line-through mt-2">${originalPrice}/mo originally</div>
                   )}
-                  {billingCycle === 'yearly' && !isEnterprise && <div className="text-xs font-bold text-emerald-400 mt-2">Billed annually</div>}
+                  <div className="text-sm font-medium text-zinc-500 mt-2">Billed monthly</div>
                 </div>
 
                 {isEnterprise ? (
@@ -266,7 +257,7 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
                   </Link>
                 ) : (
                   <button 
-                    onClick={() => handleCheckout(billingCycle === 'yearly' ? plan.paddleYearlyPriceId : plan.paddleMonthlyPriceId, plan.slug)}
+                    onClick={() => handleCheckout(plan.paddleMonthlyPriceId, plan.slug)}
                     className={`w-full py-3 rounded-xl text-center font-bold mb-8 transition-colors ${
                       isPro 
                       ? 'bg-violet-600 hover:bg-violet-500 text-white' 
@@ -294,10 +285,10 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
                       <div>
                         <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Capabilities</p>
                         <ul className="space-y-3 text-sm text-zinc-300">
-                          <li className="flex items-center gap-3">{plan.knowledgeBaseEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} Knowledge Base</li>
-                          <li className="flex items-center gap-3">{plan.databaseIntelligenceEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} Database Intelligence</li>
-                          <li className="flex items-center gap-3">{plan.automationStudioEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} Automation Studio</li>
-                          <li className="flex items-center gap-3">{plan.mcpEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} MCP Builder</li>
+                          <li className="flex items-center gap-3">{plan.knowledgeBaseEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} {plan.knowledgeBaseLimit === -1 ? 'Unlimited Knowledge Bases' : `${plan.knowledgeBaseLimit} Knowledge Base${plan.knowledgeBaseLimit === 1 ? '' : 's'}`}</li>
+                          <li className="flex items-center gap-3">{plan.databaseIntelligenceEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} {plan.databaseLimit === -1 ? 'Unlimited Databases' : `${plan.databaseLimit} Database Connection${plan.databaseLimit === 1 ? '' : 's'}`}</li>
+                          <li className="flex items-center gap-3">{plan.automationStudioEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} {plan.automationLimit === -1 ? 'Unlimited Automations' : `${plan.automationLimit} Automation${plan.automationLimit === 1 ? '' : 's'}`}</li>
+                          <li className="flex items-center gap-3">{plan.mcpEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} {plan.mcpServerLimit === -1 ? 'Unlimited MCP Endpoints' : `${plan.mcpServerLimit} MCP Endpoint${plan.mcpServerLimit === 1 ? '' : 's'}`}</li>
                           <li className="flex items-center gap-3">{plan.apiAccessEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} Public APIs</li>
                           <li className="flex items-center gap-3">{plan.byokEnabled ? <CheckCircle2 className="w-4 h-4 text-violet-400" /> : <XCircle className="w-4 h-4 text-zinc-700" />} BYOK</li>
                         </ul>
@@ -308,19 +299,27 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
                         <ul className="space-y-3 text-sm text-zinc-400">
                           <li className="flex justify-between items-center">
                             <span>API Requests</span>
-                            <span className="font-mono text-white">{plan.apiRequestLimit.toLocaleString()}</span>
+                            <span className="font-mono text-white">{plan.apiRequestLimit === -1 ? 'Unlimited' : plan.apiRequestLimit.toLocaleString()}</span>
+                          </li>
+                          <li className="flex justify-between items-center">
+                            <span>Monthly AI Credits</span>
+                            <span className="font-mono text-white font-bold text-violet-400">{plan.monthlyAiCredits === -1 ? 'Unlimited' : plan.monthlyAiCredits.toLocaleString()}</span>
                           </li>
                           <li className="flex justify-between items-center">
                             <span>MCP Servers</span>
-                            <span className="font-mono text-white">{plan.mcpServerLimit}</span>
+                            <span className="font-mono text-white">{plan.mcpServerLimit === -1 ? 'Unlimited' : plan.mcpServerLimit}</span>
+                          </li>
+                          <li className="flex justify-between items-center">
+                            <span>Automations</span>
+                            <span className="font-mono text-white">{plan.automationLimit === -1 ? 'Unlimited' : plan.automationLimit}</span>
                           </li>
                           <li className="flex justify-between items-center">
                             <span>MCP Tools</span>
-                            <span className="font-mono text-white">{plan.mcpToolLimit}</span>
+                            <span className="font-mono text-white">{plan.mcpToolLimit === -1 ? 'Unlimited' : plan.mcpToolLimit}</span>
                           </li>
                           <li className="flex justify-between items-center">
                             <span>Context limit</span>
-                            <span className="font-mono text-white">{plan.contextLimit / 1000000}MB</span>
+                            <span className="font-mono text-white">{plan.contextLimit === -1 ? 'Unlimited' : `${plan.contextLimit / 1000000}MB`}</span>
                           </li>
                         </ul>
                       </div>

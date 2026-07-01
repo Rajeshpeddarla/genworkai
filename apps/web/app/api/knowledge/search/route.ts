@@ -45,12 +45,26 @@ export async function POST(req: Request) {
         LIMIT 20
       ),
       keyword_search AS (
-        SELECT c.id, ts_rank(to_tsvector('english', c.content), plainto_tsquery('english', ${query})) as bm25_rank,
-               ROW_NUMBER() OVER (ORDER BY ts_rank(to_tsvector('english', c.content), plainto_tsquery('english', ${query})) DESC) as keyword_rank
+        SELECT c.id, 
+               ts_rank(
+                 setweight(to_tsvector('english', COALESCE(d.title, '')), 'A') || 
+                 setweight(to_tsvector('english', COALESCE(c.content, '')), 'B'), 
+                 to_tsquery('english', NULLIF(array_to_string(regexp_split_to_array(trim(regexp_replace(${query}, '[^a-zA-Z0-9 ]', '', 'g')), '\\s+'), ' | '), ''))
+               ) as bm25_rank,
+               ROW_NUMBER() OVER (
+                 ORDER BY ts_rank(
+                   setweight(to_tsvector('english', COALESCE(d.title, '')), 'A') || 
+                   setweight(to_tsvector('english', COALESCE(c.content, '')), 'B'), 
+                   to_tsquery('english', NULLIF(array_to_string(regexp_split_to_array(trim(regexp_replace(${query}, '[^a-zA-Z0-9 ]', '', 'g')), '\\s+'), ' | '), ''))
+                 ) DESC
+               ) as keyword_rank
         FROM document_chunks c
         JOIN documents d ON d.id = c.document_id
         WHERE d.kb_id = ${kbIdInt}
-          AND to_tsvector('english', c.content) @@ plainto_tsquery('english', ${query})
+          AND (
+            setweight(to_tsvector('english', COALESCE(d.title, '')), 'A') || 
+            setweight(to_tsvector('english', COALESCE(c.content, '')), 'B')
+          ) @@ to_tsquery('english', NULLIF(array_to_string(regexp_split_to_array(trim(regexp_replace(${query}, '[^a-zA-Z0-9 ]', '', 'g')), '\\s+'), ' | '), ''))
         ORDER BY bm25_rank DESC
         LIMIT 20
       ),

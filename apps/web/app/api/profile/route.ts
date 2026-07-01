@@ -31,6 +31,16 @@ export async function GET() {
       profile = await getUserProfile(user.id);
     }
 
+    const { UsageService } = await import('@/lib/billing/UsageService');
+    const balance = await UsageService.getOrCreateBalance(user.id);
+    const aiCredits = {
+      current: (balance?.monthlyRemainingCredits || 0) + (balance?.purchasedRemainingCredits || 0),
+      monthly: balance?.monthlyRemainingCredits || 0,
+      purchased: balance?.purchasedRemainingCredits || 0,
+      resetAt: balance?.monthlyResetAt,
+      monthlyLimit: 0 // Will populate after fetching plan
+    };
+
     const kbLimit = await checkKnowledgeBaseLimit(user.id);
     const flowLimit = await checkFlowLimit(user.id);
     const artifactLimit = await checkArtifactLimit(user.id);
@@ -59,6 +69,11 @@ export async function GET() {
       const { eq: eqLocal } = await import('drizzle-orm');
       
       const activePlans = await dbLocal.select().from(subscriptionPlans).where(eqLocal(subscriptionPlans.isActive, true));
+      
+      const userPlan = activePlans.find(p => p.slug === profile?.tier) || activePlans.find(p => p.slug === 'free');
+      if (userPlan) {
+        aiCredits.monthlyLimit = userPlan.monthlyAiCredits ?? 0;
+      }
 
     return NextResponse.json({
       profile,
@@ -68,10 +83,12 @@ export async function GET() {
         knowledgeBases: kbLimit,
         flows: flowLimit,
         artifacts: artifactLimit,
-        context: contextLimit
+        context: contextLimit,
+        aiCredits: aiCredits
       }
     });
   } catch (error: unknown) {
+    console.error("API Profile Error:", error);
     return safeErrorResponse(error, 'Get Profile Route');
   }
 }

@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     }
 
     const apiKey = process.env.DEEPSEEK_API_KEY;
-    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
+    const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
 
     if (!apiKey) {
       return NextResponse.json({ error: 'DEEPSEEK_API_KEY is missing' }, { status: 500, headers: corsHeaders });

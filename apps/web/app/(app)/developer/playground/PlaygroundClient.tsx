@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Terminal, Send, Code2, Copy, Check, Lock, ChevronRight, Play, Save, History, Database, Server, Bot, FileText } from 'lucide-react';
+import { gkFetch } from '@/lib/api-client';
 
-export default function PlaygroundClient({ initialKeys, initialSpec, resources }: { initialKeys: any[], initialSpec: any, resources: any }) {
+export default function PlaygroundClient({ initialKeys, initialSpec, resources, userId }: { initialKeys: any[], initialSpec: any, resources: any, userId: string }) {
   const [apiKey, setApiKey] = useState('');
   const [selectedPath, setSelectedPath] = useState('/v1/kb/{kbId}/search');
   const [selectedMethod, setSelectedMethod] = useState('post');
@@ -15,7 +16,7 @@ export default function PlaygroundClient({ initialKeys, initialSpec, resources }
   const [status, setStatus] = useState<number | null>(null);
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [activeTab, setActiveTab] = useState<'params' | 'body' | 'headers' | 'auth'>('body');
+  const [activeTab, setActiveTab] = useState<'params' | 'body' | 'headers' | 'auth'>('params');
   const [responseTab, setResponseTab] = useState<'response' | 'code' | 'docs'>('response');
   const [codeLanguage, setCodeLanguage] = useState<'curl' | 'js' | 'python'>('curl');
 
@@ -24,17 +25,20 @@ export default function PlaygroundClient({ initialKeys, initialSpec, resources }
     Object.keys(methods).map(method => ({ path, method, details: methods[method] }))
   ) : [];
 
-  // Local Storage History
+  // Local Storage History and API Key
   const [history, setHistory] = useState<any[]>([]);
   useEffect(() => {
-    const saved = localStorage.getItem('gk_playground_history');
-    if (saved) setHistory(JSON.parse(saved));
-  }, []);
+    const savedHistory = localStorage.getItem(`gk_playground_history_${userId}`);
+    if (savedHistory) setHistory(JSON.parse(savedHistory));
+
+    const savedKey = localStorage.getItem(`gk_playground_apikey_${userId}`);
+    if (savedKey) setApiKey(savedKey);
+  }, [userId]);
 
   const saveToHistory = (req: any) => {
     const newHistory = [req, ...history].slice(0, 50);
     setHistory(newHistory);
-    localStorage.setItem('gk_playground_history', JSON.stringify(newHistory));
+    localStorage.setItem(`gk_playground_history_${userId}`, JSON.stringify(newHistory));
   };
 
   const handleTest = async () => {
@@ -66,8 +70,8 @@ export default function PlaygroundClient({ initialKeys, initialSpec, resources }
         body: selectedMethod.toLowerCase() !== 'get' && requestBody ? requestBody : undefined
       };
 
-      const res = await fetch(`/api${finalUrl}`, reqOpts);
-      setStatus(res.status);
+        const res = await gkFetch(`/api${finalUrl}`, reqOpts);
+        setStatus(res.status);
       const data = await res.json();
       setResponse(JSON.stringify(data, null, 2));
 
@@ -93,6 +97,13 @@ export default function PlaygroundClient({ initialKeys, initialSpec, resources }
       setRequestBody('{\n  "prompt": "Create an executive summary"\n}');
     } else {
       setRequestBody('{}');
+    }
+
+    // Auto-switch to params tab if the endpoint requires path variables
+    if (path.includes('{')) {
+      setActiveTab('params');
+    } else if (method !== 'get') {
+      setActiveTab('body');
     }
   };
 
@@ -141,31 +152,7 @@ print(response.json())`;
   return (
     <div className="flex h-full bg-neutral-50 dark:bg-black text-sm">
       
-      {/* LEFT: Endpoint Explorer */}
-      <div className="w-64 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0a0a0a] flex flex-col hidden md:flex">
-        <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 font-bold">Endpoints</div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {endpoints.map((ep, idx) => {
-            const isSelected = selectedPath === ep.path && selectedMethod === ep.method;
-            return (
-              <button
-                key={idx}
-                onClick={() => handleEndpointSelect(ep.method, ep.path)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-mono flex items-center gap-2 truncate transition-colors ${
-                  isSelected ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400' : 'hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-600 dark:text-neutral-400'
-                }`}
-              >
-                <span className={`w-8 font-bold ${
-                  ep.method === 'get' ? 'text-green-500' : 
-                  ep.method === 'post' ? 'text-blue-500' : 
-                  ep.method === 'delete' ? 'text-red-500' : 'text-yellow-500'
-                }`}>{ep.method.toUpperCase()}</span>
-                <span className="truncate">{ep.path}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+
 
       {/* CENTER: Request Builder */}
       <div className="flex-1 flex flex-col min-w-0 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0a0a0a]">
@@ -176,11 +163,23 @@ print(response.json())`;
             }`}>
               {selectedMethod.toUpperCase()}
             </div>
-            <input 
-              readOnly 
-              value={`https://api.genworkai.in${selectedPath}`}
-              className="flex-1 bg-transparent px-4 py-2 outline-none font-mono text-xs text-neutral-600 dark:text-neutral-300"
-            />
+            <select 
+              value={`${selectedMethod}:${selectedPath}`}
+              onChange={(e) => {
+                const [method = '', ...pathParts] = e.target.value.split(':');
+                handleEndpointSelect(method, pathParts.join(':'));
+              }}
+              className="flex-1 bg-transparent px-4 py-2 outline-none font-mono text-xs text-neutral-800 dark:text-neutral-200 cursor-pointer appearance-none"
+            >
+              {endpoints.map((ep, idx) => (
+                <option key={idx} value={`${ep.method}:${ep.path}`}>
+                  https://api.genworkai.in{ep.path}
+                </option>
+              ))}
+            </select>
+            <div className="px-4 text-neutral-400 pointer-events-none">
+              <ChevronRight className="w-4 h-4 rotate-90" />
+            </div>
           </div>
           <button onClick={handleTest} disabled={loading} className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 disabled:opacity-50 transition-all">
             {loading ? <Terminal className="w-4 h-4 animate-pulse" /> : <Play className="w-4 h-4" />} Send
@@ -222,7 +221,10 @@ print(response.json())`;
                   <input 
                     type="password"
                     value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
+                    onChange={e => {
+                      setApiKey(e.target.value);
+                      localStorage.setItem(`gk_playground_apikey_${userId}`, e.target.value);
+                    }}
                     className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 font-mono text-xs outline-none focus:ring-1 focus:ring-violet-500"
                     placeholder="gk_live_..."
                   />
@@ -236,7 +238,7 @@ print(response.json())`;
               <h3 className="font-bold mb-4">Path Parameters</h3>
               {selectedPath.includes('{') ? (
                 <div className="grid gap-3 border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden">
-                  {selectedPath.match(/\\{([^}]+)\\}/g)?.map((match, i) => {
+                  {selectedPath.match(/{([^}]+)}/g)?.map((match, i) => {
                     const paramName = match.replace(/[{}]/g, '');
                     const resourceList = resources[paramName] || []; // kbId -> resources.kbId
                     

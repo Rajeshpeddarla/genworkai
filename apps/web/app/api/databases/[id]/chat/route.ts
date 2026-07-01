@@ -1,15 +1,36 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { db } from '../../../../../db';
 import { databaseSchemas, connectedDatabases } from '../../../../../db/schema';
 import { eq } from 'drizzle-orm';
 import { generateWithFallbacks, TaskCategory } from '@repo/ai';
 import { requireUser, requireOwnership } from '../../../../../lib/auth';
 import { safeErrorResponse, ValidationError } from '../../../../../lib/errors';
+import { RateLimitService } from '../../../../../lib/security/rate-limit';
+import { EntitlementEngine } from '../../../../../lib/billing/entitlements';
+import { CreditService } from '../../../../../lib/billing/CreditService';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  let usageId: number | undefined;
   try {
     const { user, error } = await requireUser();
     if (error) return error;
+
+    const rateLimitResponse = await RateLimitService.check(user.id, 'ai');
+    if (rateLimitResponse) return rateLimitResponse;
+
+    const idempotencyKey = req.headers.get('x-idempotency-key') || crypto.randomUUID();
+    const reserveResult = await CreditService.reserve(user.id, 'database_chat', {
+      requestId: idempotencyKey,
+      endpoint: '/api/databases/[id]/chat',
+      billingMode: 'platform'
+    });
+    
+    if (!reserveResult.success) {
+      return NextResponse.json({ error: reserveResult.reason || "Insufficient AI Credits." }, { status: 403 });
+    }
+    usageId = reserveResult.usageId;
+
     const { message } = await req.json();
     const resolvedParams = await params;
     const dbId = parseInt(resolvedParams.id, 10);
@@ -75,8 +96,20 @@ CRITICAL RULES:
       return NextResponse.json({ error: 'Failed to generate valid SQL. Try rephrasing.' }, { status: 500 });
     }
 
+
+    if (usageId) {
+      await CreditService.finalize(usageId, {
+        provider: 'deepseek',
+        inputTokens: Math.floor(prompt.length / 4), // rough estimate
+        outputTokens: Math.floor(aiRes.content.length / 4)
+      });
+    }
+
     return NextResponse.json(parsed);
   } catch (error: unknown) {
+    if (usageId) {
+      await CreditService.refund(usageId, error instanceof Error ? error.message : "Unknown Error");
+    }
     return safeErrorResponse(error, 'Chat with Database Route');
   }
 }

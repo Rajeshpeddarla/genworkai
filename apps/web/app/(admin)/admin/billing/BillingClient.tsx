@@ -1,22 +1,35 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Check, Save, Edit2, CreditCard, RefreshCw, Activity, Users, Globe, Play, Pause, XCircle } from "lucide-react";
-import { updatePlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription } from "./actions";
+import { Plus, Check, Save, Edit2, CreditCard, RefreshCw, Activity, Users, Globe, Play, Pause, XCircle, Settings } from "lucide-react";
+import { updatePlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription, createCreditPack, updateCreditPack, updateCreditCost } from "./actions";
+import { CostSimulatorDashboard } from "./CostSimulatorDashboard";
+
+interface Props {
+  initialPlans: any[];
+  subscriptions: any[];
+  events: any[];
+  paddleData: any;
+  initialPacks?: any[];
+  userBalances?: any[];
+  initialCosts?: any[];
+  initialProviderCosts?: any;
+}
 
 export default function BillingClient({ 
   initialPlans, 
   subscriptions, 
   events,
-  paddleData
-}: { 
-  initialPlans: any[], 
-  subscriptions: any[], 
-  events: any[],
-  paddleData: any 
-}) {
+  paddleData,
+  initialPacks,
+  userBalances,
+  initialCosts,
+  initialProviderCosts
+}: Props) {
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'subscriptions' | 'events' | 'paddle' | 'regional'>('overview');
+  const [editingPack, setEditingPack] = useState<any | null>(null);
+  const [editingCost, setEditingCost] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'packs' | 'costs' | 'simulator' | 'balances' | 'subscriptions' | 'events' | 'paddle' | 'regional'>('overview');
   const [isSyncing, startSync] = useTransition();
 
   const handleSync = () => {
@@ -31,20 +44,60 @@ export default function BillingClient({
     const data = {
       name: formData.get("name") as string,
       monthlyPrice: parseInt(formData.get("monthlyPrice") as string),
-      knowledgeBaseLimit: parseInt(formData.get("knowledgeBaseLimit") as string),
-      databaseLimit: parseInt(formData.get("databaseLimit") as string),
+      knowledgeBaseLimit: parseInt(formData.get("knowledgeBaseLimit") as string) || 0,
+      databaseLimit: parseInt(formData.get("databaseLimit") as string) || 0,
+      mcpServerLimit: parseInt(formData.get("mcpServerLimit") as string) || 0,
+      automationLimit: parseInt(formData.get("automationLimit") as string) || 0,
+      contextLimit: parseInt(formData.get("contextLimit") as string) || 0,
+      apiRequestLimit: parseInt(formData.get("apiRequestLimit") as string) || 0,
+      mcpRequestLimit: parseInt(formData.get("mcpRequestLimit") as string) || 0,
+      mcpToolLimit: parseInt(formData.get("mcpToolLimit") as string) || 0,
+      concurrencyLimit: parseInt(formData.get("concurrencyLimit") as string) || 0,
+      rateLimit: parseInt(formData.get("rateLimit") as string) || 0,
       apiAccessEnabled: formData.get("apiAccessEnabled") === "on",
       automationStudioEnabled: formData.get("automationStudioEnabled") === "on",
       mcpEnabled: formData.get("mcpEnabled") === "on",
       paddleProductId: (formData.get("paddleProductId") as string)?.trim() || null,
       paddleMonthlyPriceId: (formData.get("paddleMonthlyPriceId") as string)?.trim() || null,
       paddleYearlyPriceId: (formData.get("paddleYearlyPriceId") as string)?.trim() || null,
+      monthlyAiCredits: parseInt(formData.get("monthlyAiCredits") as string) || 0,
     };
 
     if (editingPlan) {
       await updatePlan(editingPlan.id, data);
       setEditingPlan(null);
     }
+  };
+
+  const handleSavePack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      priceCents: parseInt(formData.get("priceCents") as string),
+      credits: parseInt(formData.get("credits") as string),
+      paddleProductId: (formData.get("paddleProductId") as string)?.trim() || null,
+      paddlePriceId: (formData.get("paddlePriceId") as string)?.trim() || null,
+      isActive: formData.get("isActive") === "on",
+      displayOrder: parseInt(formData.get("displayOrder") as string) || 0,
+    };
+
+    if (editingPack?.id) {
+      await updateCreditPack(editingPack.id, data);
+    } else {
+      await createCreditPack(data);
+    }
+    setEditingPack(null);
+  };
+
+  const handleCostSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const creditCost = parseInt(formData.get("creditCost") as string);
+    if (editingCost?.operationKey) {
+      await updateCreditCost(editingCost.operationKey, creditCost);
+    }
+    setEditingCost(null);
   };
 
   const handleSubAction = async (action: 'cancel' | 'pause' | 'resume', subId: string) => {
@@ -111,6 +164,34 @@ export default function BillingClient({
         >
           <div className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> Local Plans</div>
           {activeTab === 'plans' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('packs')}
+          className={`pb-3 px-4 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === 'packs' ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+        >
+          <div className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> AI Credit Packs</div>
+          {activeTab === 'packs' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('costs')}
+          className={`pb-3 px-4 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === 'costs' ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+        >
+          <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Credit Costs</div>
+          {activeTab === 'costs' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('simulator')}
+          className={`pb-3 px-4 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === 'simulator' ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+        >
+          <div className="flex items-center gap-2"><Activity className="w-4 h-4" /> AI Simulator</div>
+          {activeTab === 'simulator' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('balances')}
+          className={`pb-3 px-4 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === 'balances' ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+        >
+          <div className="flex items-center gap-2"><Users className="w-4 h-4" /> User Balances</div>
+          {activeTab === 'balances' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
         </button>
         <button 
           onClick={() => setActiveTab('subscriptions')}
@@ -190,14 +271,26 @@ export default function BillingClient({
             </div>
 
             <ul className="space-y-3 mb-6 flex-1 text-sm text-zinc-600 dark:text-zinc-300">
-              <li className="flex gap-2 items-center">
-                <Check className="w-4 h-4 text-rose-500" />
-                {plan.knowledgeBaseLimit} Knowledge Bases
-              </li>
-              <li className="flex gap-2 items-center">
-                <Check className="w-4 h-4 text-rose-500" />
-                {plan.databaseLimit} DB Connections
-              </li>
+                <li className="flex gap-2 items-center">
+                  <Check className="w-4 h-4 text-rose-500" />
+                  {plan.knowledgeBaseLimit} Knowledge Bases
+                </li>
+                <li className="flex gap-2 items-center">
+                  <Check className="w-4 h-4 text-rose-500" />
+                  {plan.databaseLimit} DB Connections
+                </li>
+                <li className="flex gap-2 items-center">
+                  <Check className="w-4 h-4 text-rose-500" />
+                  {plan.mcpServerLimit} MCP Servers
+                </li>
+                <li className="flex gap-2 items-center">
+                  <Check className="w-4 h-4 text-rose-500" />
+                  {plan.automationLimit} Automations
+                </li>
+                <li className="flex gap-2 items-center">
+                  <Check className="w-4 h-4 text-emerald-500" />
+                  {plan.monthlyAiCredits} Monthly AI Credits
+                </li>
               <li className="flex gap-2 items-center">
                 <Check className="w-4 h-4 text-rose-500" />
                 API Access: {plan.apiAccessEnabled ? 'Yes' : 'No'}
@@ -216,65 +309,208 @@ export default function BillingClient({
       )}
 
       {activeTab === 'subscriptions' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10 text-sm text-zinc-500">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
               <tr>
-                <th className="p-4 font-medium">Customer</th>
-                <th className="p-4 font-medium">Plan</th>
-                <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Paddle IDs</th>
-                <th className="p-4 font-medium">Renewal</th>
-                <th className="p-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-medium">Customer</th>
+                <th className="px-6 py-4 font-medium">Plan</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Billing Cycle</th>
+                <th className="px-6 py-4 font-medium">Created</th>
+                <th className="px-6 py-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-white/10">
-              {subscriptions.map(sub => {
+              {subscriptions.map((sub) => {
                 const plan = initialPlans.find(p => p.id === sub.planId);
                 return (
-                  <tr key={sub.id} className="text-sm">
-                    <td className="p-4">
-                      <div className="font-medium text-zinc-900 dark:text-white">{sub.user?.fullName}</div>
-                      <div className="text-zinc-500 text-xs">{sub.user?.email}</div>
+                  <tr key={sub.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-zinc-900 dark:text-white">{sub.user?.fullName || 'Unknown User'}</div>
+                      <div className="text-xs text-zinc-500">{sub.user?.email || ''}</div>
                     </td>
-                    <td className="p-4 text-zinc-700 dark:text-zinc-300">{plan?.name || 'Unknown'} <span className="text-xs text-zinc-400 capitalize">({sub.billingCycle})</span></td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${sub.status === 'active' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : sub.status === 'paused' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+                    <td className="px-6 py-4 font-medium capitalize">{plan?.name || 'Unknown Plan'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        sub.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        sub.status === 'trialing' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                        sub.status === 'paused' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                        'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}>
                         {sub.status}
                       </span>
                     </td>
-                    <td className="p-4">
-                      <div className="text-xs text-zinc-500 font-mono" title="Customer ID">{sub.paddleCustomerId || '-'}</div>
-                      <div className="text-xs text-zinc-500 font-mono" title="Subscription ID">{sub.paddleSubscriptionId || '-'}</div>
+                    <td className="px-6 py-4 capitalize">{sub.billingCycle}</td>
+                    <td className="px-6 py-4 text-zinc-500">
+                      {new Date(sub.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-zinc-500">
-                      {sub.renewsAt ? new Date(sub.renewsAt).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="p-4 text-right">
-                      {sub.paddleSubscriptionId && sub.status !== 'canceled' && (
-                        <div className="flex justify-end gap-2">
-                          {sub.status === 'active' && (
-                            <button onClick={() => handleSubAction('pause', sub.paddleSubscriptionId)} className="p-1.5 text-zinc-500 hover:text-amber-500 bg-zinc-100 dark:bg-zinc-800 rounded-md" title="Pause">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {sub.status === 'active' && (
+                          <>
+                            <button 
+                              onClick={() => handleSubAction('pause', sub.id)}
+                              className="p-2 text-zinc-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                              title="Pause Subscription"
+                            >
                               <Pause className="w-4 h-4" />
                             </button>
-                          )}
-                          {sub.status === 'paused' && (
-                            <button onClick={() => handleSubAction('resume', sub.paddleSubscriptionId)} className="p-1.5 text-zinc-500 hover:text-emerald-500 bg-zinc-100 dark:bg-zinc-800 rounded-md" title="Resume">
-                              <Play className="w-4 h-4" />
+                            <button 
+                              onClick={() => handleSubAction('cancel', sub.id)}
+                              className="p-2 text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                              title="Cancel Subscription"
+                            >
+                              <XCircle className="w-4 h-4" />
                             </button>
-                          )}
-                          <button onClick={() => handleSubAction('cancel', sub.paddleSubscriptionId)} className="p-1.5 text-zinc-500 hover:text-rose-500 bg-zinc-100 dark:bg-zinc-800 rounded-md" title="Cancel">
-                            <XCircle className="w-4 h-4" />
+                          </>
+                        )}
+                        {sub.status === 'paused' && (
+                          <button 
+                            onClick={() => handleSubAction('resume', sub.id)}
+                            className="p-2 text-zinc-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors"
+                            title="Resume Subscription"
+                          >
+                            <Play className="w-4 h-4" />
                           </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
               })}
               {subscriptions.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-zinc-500">No subscriptions found</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
+                    No active subscriptions found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === 'packs' && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+          <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-end">
+            <button 
+              onClick={() => setEditingPack({})}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg flex items-center gap-2 font-medium text-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Create Pack
+            </button>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
+              <tr>
+                <th className="px-6 py-4 font-medium">Pack Name</th>
+                <th className="px-6 py-4 font-medium">Price</th>
+                <th className="px-6 py-4 font-medium">API Requests</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 dark:divide-white/10">
+              {(initialPacks || []).map((pack) => (
+                <tr key={pack.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-4 font-medium">{pack.name}</td>
+                  <td className="px-6 py-4">${(pack.priceCents / 100).toFixed(2)}</td>
+                  <td className="px-6 py-4 font-medium text-emerald-600">{pack.credits.toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                      pack.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}>
+                      {pack.isActive ? 'Active' : 'Disabled'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => setEditingPack(pack)} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">Edit</button>
+                  </td>
+                </tr>
+              ))}
+              {(!initialPacks || initialPacks.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                    No AI credit packs configured.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {/* Costs Tab */}
+      {activeTab === 'costs' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
+                <tr>
+                  <th className="px-6 py-3 font-semibold text-zinc-500">Operation Key</th>
+                  <th className="px-6 py-3 font-semibold text-zinc-500">Description</th>
+                  <th className="px-6 py-3 font-semibold text-zinc-500">Cost (Credits)</th>
+                  <th className="px-6 py-3 font-semibold text-zinc-500">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 dark:divide-white/10">
+                {initialCosts?.map((cost) => (
+                  <tr key={cost.operationKey} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 font-medium font-mono text-xs">{cost.operationKey}</td>
+                    <td className="px-6 py-4 text-zinc-600 dark:text-zinc-400">{cost.description}</td>
+                    <td className="px-6 py-4 font-medium text-emerald-600">{cost.creditCost}</td>
+                    <td className="px-6 py-4">
+                      <button onClick={() => setEditingCost(cost)} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'simulator' && (
+        <CostSimulatorDashboard 
+          initialCosts={initialCosts || []} 
+          initialProviderCosts={initialProviderCosts} 
+        />
+      )}
+
+      {activeTab === 'balances' && (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
+              <tr>
+                <th className="px-6 py-4 font-medium">User</th>
+                <th className="px-6 py-4 font-medium text-right">Monthly Remaining</th>
+                <th className="px-6 py-4 font-medium text-right">Purchased Remaining</th>
+                <th className="px-6 py-4 font-medium text-right">Total Available</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 dark:divide-white/10">
+              {userBalances?.map((balance: any) => {
+                const total = (balance.monthlyRemainingCredits || 0) + (balance.purchasedRemainingCredits || 0);
+                return (
+                  <tr key={balance.userId} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-zinc-900 dark:text-white">{balance.user?.fullName || 'Unknown'}</div>
+                      <div className="text-xs text-zinc-500">{balance.user?.email}</div>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium">{balance.monthlyRemainingCredits?.toLocaleString() || 0}</td>
+                    <td className="px-6 py-4 text-right font-medium text-indigo-600 dark:text-indigo-400">{balance.purchasedRemainingCredits?.toLocaleString() || 0}</td>
+                    <td className="px-6 py-4 text-right font-bold text-emerald-600">{total.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+              {(!userBalances || userBalances.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-zinc-500">
+                    No user balances found.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -443,8 +679,7 @@ export default function BillingClient({
                     <input name="paddleMonthlyPriceId" type="text" defaultValue={editingPlan.paddleMonthlyPriceId || ''} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-xs" placeholder="pri_..." />
                   </div>
                   <div>
-                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Yearly Price ID</label>
-                    <input name="paddleYearlyPriceId" type="text" defaultValue={editingPlan.paddleYearlyPriceId || ''} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-xs" placeholder="pri_..." />
+
                   </div>
                 </div>
               </div>
@@ -459,6 +694,42 @@ export default function BillingClient({
                   <div>
                     <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">DB Connection Limit</label>
                     <input name="databaseLimit" type="number" defaultValue={editingPlan.databaseLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">MCP Server Limit</label>
+                    <input name="mcpServerLimit" type="number" defaultValue={editingPlan.mcpServerLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Automation Limit</label>
+                    <input name="automationLimit" type="number" defaultValue={editingPlan.automationLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Monthly AI Credits</label>
+                    <input name="monthlyAiCredits" type="number" defaultValue={editingPlan.monthlyAiCredits} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Context Limit (Bytes)</label>
+                    <input name="contextLimit" type="number" defaultValue={editingPlan.contextLimit?.toString() || "0"} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">API Request Limit</label>
+                    <input name="apiRequestLimit" type="number" defaultValue={editingPlan.apiRequestLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Concurrency Limit (req/sec)</label>
+                    <input name="concurrencyLimit" type="number" defaultValue={editingPlan.concurrencyLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Rate Limit (req/min)</label>
+                    <input name="rateLimit" type="number" defaultValue={editingPlan.rateLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">MCP Request Limit</label>
+                    <input name="mcpRequestLimit" type="number" defaultValue={editingPlan.mcpRequestLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">MCP Tool Limit</label>
+                    <input name="mcpToolLimit" type="number" defaultValue={editingPlan.mcpToolLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                   </div>
                 </div>
               </div>
@@ -488,6 +759,136 @@ export default function BillingClient({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* AI Credit Pack Editor Modal */}
+      {editingPack && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
+                {editingPack.id ? `Edit Pack: ${editingPack.name}` : 'Create AI Credit Pack'}
+              </h2>
+              <button 
+                onClick={() => setEditingPack(null)}
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-500 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <form id="packForm" onSubmit={handleSavePack} className="space-y-8">
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Basic Info</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Name</label>
+                      <input name="name" defaultValue={editingPack.name} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price (Cents)</label>
+                      <input name="priceCents" type="number" defaultValue={editingPack.priceCents || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">AI Credits Provided</label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                          <CreditCard className="w-4 h-4" />
+                        </div>
+                        <input name="credits" type="number" defaultValue={editingPack.credits || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg pl-10 pr-4 py-2 text-zinc-900 dark:text-white" required />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Display Order</label>
+                      <input name="displayOrder" type="number" defaultValue={editingPack.displayOrder || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Paddle Configuration</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Product ID</label>
+                      <input name="paddleProductId" defaultValue={editingPack.paddleProductId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price ID</label>
+                      <input name="paddlePriceId" defaultValue={editingPack.paddlePriceId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Status</h3>
+                  <label className="flex items-center gap-3">
+                    <input type="checkbox" name="isActive" defaultChecked={editingPack.isActive !== false} className="w-4 h-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-600" />
+                    <span className="text-sm text-zinc-700 dark:text-zinc-300">Is Active</span>
+                  </label>
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-6 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-800/50 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingPack(null)}
+                className="px-4 py-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                form="packForm"
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+              >
+                <Save className="w-4 h-4" /> Save Pack
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Cost Editor Modal */}
+      {editingCost && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
+                Edit Cost: {editingCost.operationKey}
+              </h2>
+              <button 
+                onClick={() => setEditingCost(null)}
+                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <form id="cost-form" onSubmit={handleCostSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Description</label>
+                  <p className="text-sm font-medium">{editingCost.description}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Cost (Credits)</label>
+                  <input name="creditCost" type="number" defaultValue={editingCost.creditCost || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                </div>
+              </form>
+            </div>
+
+            <div className="p-6 border-t border-zinc-200 dark:border-white/10 flex justify-end">
+              <button 
+                type="submit"
+                form="cost-form"
+                className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}

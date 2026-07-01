@@ -1,123 +1,137 @@
-"use client";
+import { HelpCircle, Book, Zap, Database, Shield, LayoutDashboard, Terminal } from "lucide-react";
+import { db } from "@/db";
+import { aiCreditCosts } from "@/db/schema";
+import { desc, eq } from "drizzle-orm";
 
-import { 
-  LifeBuoy, 
-  Search, 
-  BookOpen, 
-  MessageCircle, 
-  PlayCircle, 
-  FileCode2, 
-  ArrowRight,
-  ExternalLink
-} from "lucide-react";
+export const dynamic = 'force-dynamic';
 
-export default function HelpPage() {
+export default async function HelpPage() {
+  const costs = await db.select().from(aiCreditCosts).where(eq(aiCreditCosts.isActive, true)).orderBy(desc(aiCreditCosts.credits));
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12">
-      
-      {/* Header Area with Search */}
-      <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/40 border border-blue-500/20 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-        <div className="relative z-10 max-w-3xl mx-auto space-y-6">
-          <div className="w-16 h-16 mx-auto bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 mb-6 shadow-xl shadow-blue-500/20">
-            <LifeBuoy className="w-8 h-8 text-blue-400" />
-          </div>
-          <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">How can we help you today?</h1>
-          <p className="text-blue-200 text-lg">Search our documentation, tutorials, and community forums.</p>
-          
-          <div className="relative max-w-2xl mx-auto mt-8">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-blue-400/50" />
-            <input 
-              type="text" 
-              placeholder="Search for 'How to create an MCP' or 'Billing issue'..." 
-              className="w-full bg-black/40 border border-blue-500/30 rounded-2xl py-4 pl-14 pr-6 text-lg text-white focus:border-blue-400 focus:ring-2 focus:ring-blue-400/50 outline-none transition-all shadow-inner placeholder:text-blue-200/40"
-            />
-          </div>
-        </div>
+    <div className="p-8 lg:p-12 max-w-5xl mx-auto">
+      <div className="mb-10">
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <HelpCircle className="w-8 h-8 text-violet-500" />
+          Documentation & Help
+        </h1>
+        <p className="text-neutral-500 mt-2 text-lg">
+          Learn how the platform works, how AI Credits are consumed, and get the most out of GenWorkAI.
+        </p>
       </div>
 
-      {/* Main Support Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-blue-500/50 transition-all cursor-pointer">
-          <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 mb-4 border border-blue-500/20 group-hover:scale-110 transition-transform">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Documentation</h3>
-          <p className="text-sm text-zinc-400 mb-4 line-clamp-2">Detailed guides on features, settings, and workspace configuration.</p>
-          <div className="text-blue-400 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-            Read Docs <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
+      <div className="space-y-12">
+        {/* Section: AI Credit System */}
+        <section>
+          <h2 className="text-2xl font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6 flex items-center gap-2">
+            <Zap className="w-6 h-6 text-fuchsia-500" />
+            Understanding AI Credits
+          </h2>
+          <div className="prose prose-violet dark:prose-invert max-w-none">
+            <p>
+              Every AI-powered operation across the platform consumes <strong>AI Credits</strong>. 
+              Credits are drawn from a unified balance, providing flexibility whether you're using our UI Studios or API endpoints.
+            </p>
+            <h3>Credit Deduction Hierarchy</h3>
+            <p>Credits are always consumed in this order to maximize value:</p>
+            <ol>
+              <li><strong>Monthly Plan Credits:</strong> Reset on the first of every month based on your subscription tier.</li>
+              <li><strong>Purchased Credit Packs:</strong> One-time purchases that never expire. Consumed only when monthly credits are exhausted.</li>
+            </ol>
 
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-indigo-500/50 transition-all cursor-pointer">
-          <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 mb-4 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-            <PlayCircle className="w-6 h-6" />
+            <h3>Credit Consumption Rates</h3>
+            <p>Different AI operations have different costs based on their computational requirements:</p>
+            <div className="overflow-x-auto not-prose mt-6">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50">
+                    <th className="p-4 font-semibold">Operation</th>
+                    <th className="p-4 font-semibold text-right">Cost (Credits)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {costs.map((cost) => (
+                    <tr key={cost.id}>
+                      <td className="p-4">
+                        <div className="font-medium text-neutral-900 dark:text-neutral-100">{cost.displayName}</div>
+                        <div className="text-xs text-neutral-500">{cost.description}</div>
+                      </td>
+                      <td className="p-4 text-right font-medium">{cost.credits === 0 ? "Free (0)" : cost.credits}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">Video Tutorials</h3>
-          <p className="text-sm text-zinc-400 mb-4 line-clamp-2">Step-by-step video courses from beginner to advanced workflows.</p>
-          <div className="text-indigo-400 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-            Watch Now <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
+        </section>
 
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-violet-500/50 transition-all cursor-pointer">
-          <div className="w-12 h-12 bg-violet-500/10 rounded-xl flex items-center justify-center text-violet-400 mb-4 border border-violet-500/20 group-hover:scale-110 transition-transform">
-            <FileCode2 className="w-6 h-6" />
+        {/* Section: Feature Limits */}
+        <section>
+          <h2 className="text-2xl font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6 flex items-center gap-2">
+            <Shield className="w-6 h-6 text-green-500" />
+            Resource Limits
+          </h2>
+          <div className="prose prose-violet dark:prose-invert max-w-none">
+            <p>
+              In addition to AI Credits, your subscription plan determines the maximum number of structural resources you can create.
+            </p>
+            <ul>
+              <li><strong>Workspaces:</strong> Number of distinct collaborative environments you can spin up.</li>
+              <li><strong>Knowledge Bases:</strong> Number of distinct vector stores you can maintain.</li>
+              <li><strong>Context Size:</strong> Total MBs of raw data you can upload into Knowledge Bases.</li>
+              <li><strong>Database Connections:</strong> Total distinct SQL/NoSQL databases you can securely connect.</li>
+            </ul>
+            <p>
+              Resource limits are absolute maximums. Deleting a resource frees up that slot. 
+              You can check your exact resource utilization at any time from your <strong>Settings &gt; Subscription</strong> page.
+            </p>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">API & Developers</h3>
-          <p className="text-sm text-zinc-400 mb-4 line-clamp-2">API references, SDKs, and guides for building custom integrations.</p>
-          <div className="text-violet-400 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-            Developer Hub <ArrowRight className="w-4 h-4" />
-          </div>
-        </div>
+        </section>
 
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-emerald-500/50 transition-all cursor-pointer">
-          <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 mb-4 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-            <MessageCircle className="w-6 h-6" />
+        {/* Section: Studios */}
+        <section>
+          <h2 className="text-2xl font-bold border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6 flex items-center gap-2">
+            <LayoutDashboard className="w-6 h-6 text-blue-500" />
+            Platform Capabilities
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="p-6 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                <Terminal className="w-5 h-5 text-neutral-500" />
+                Developer APIs
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Generate API keys to integrate our unified AI generation capabilities directly into your custom applications. API keys enforce rate limits and draw directly from your AI Credit balance.
+              </p>
+            </div>
+            <div className="p-6 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                <Database className="w-5 h-5 text-neutral-500" />
+                Database Intelligence
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Securely connect a Postgres database to instantly query, analyze, and chart your proprietary data without writing complex SQL scripts. 
+              </p>
+            </div>
+            <div className="p-6 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                <Book className="w-5 h-5 text-neutral-500" />
+                Knowledge Bases
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Upload PDFs, TXTs, or connect Confluence integrations to build specialized contexts. Attach KBs to any workspace chat to ground AI responses in your organizational data.
+              </p>
+            </div>
+            <div className="p-6 border border-neutral-200 dark:border-neutral-800 rounded-xl">
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-neutral-500" />
+                Automation Studio
+              </h3>
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                Run background tasks that churn through massive contexts to generate complex reports, code reviews, and presentations asynchronously.
+              </p>
+            </div>
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">Community</h3>
-          <p className="text-sm text-zinc-400 mb-4 line-clamp-2">Join our Discord, ask questions, and share your GenWorkAI templates.</p>
-          <div className="text-emerald-400 text-sm font-medium flex items-center gap-1 group-hover:gap-2 transition-all">
-            Join Discord <ExternalLink className="w-4 h-4" />
-          </div>
-        </div>
-
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6">
-        
-        {/* Popular Articles */}
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
-          <h2 className="text-xl font-bold text-white mb-6">Popular Articles</h2>
-          <div className="space-y-4">
-            {[
-              "Getting Started: First 10 Minutes with GenWorkAI",
-              "How to build a Custom MCP Server",
-              "Understanding Knowledge Base Semantic Search",
-              "Best Practices for Video Intelligence Extraction",
-              "Managing Team Roles and Workspace Access"
-            ].map((article, i) => (
-              <a key={i} href="#" className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5 transition-colors group">
-                <BookOpen className="w-5 h-5 text-zinc-500 group-hover:text-blue-400" />
-                <span className="text-zinc-300 group-hover:text-white font-medium text-sm">{article}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Contact Support */}
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 backdrop-blur-sm flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6">
-            <LifeBuoy className="w-8 h-8 text-zinc-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Still need help?</h2>
-          <p className="text-zinc-400 mb-8 max-w-sm">Our support team is available 24/7. Pro plan users receive priority routing.</p>
-          <button className="px-8 py-3 rounded-xl bg-white text-black font-bold hover:bg-zinc-200 transition-colors shadow-lg">
-            Contact Support
-          </button>
-        </div>
-
+        </section>
       </div>
     </div>
   );

@@ -4,14 +4,15 @@ import { systemConfig, profiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAdmin } from '@/lib/auth';
 import { safeErrorResponse } from '@/lib/errors';
-import { getSystemLimits, getReferralRewards } from '@/lib/limits';
+import { getReferralRewards } from '@/lib/limits';
 
 export async function GET(req: Request) {
   try {
     const { user, error } = await requireAdmin();
     if (error) return error;
 
-    const limits = await getSystemLimits();
+    const limitConfig = await db.select().from(systemConfig).where(eq(systemConfig.key, 'SYSTEM_LIMITS')).limit(1);
+    const limits = limitConfig[0]?.value || {};
     const referralRewards = await getReferralRewards();
 
     return NextResponse.json({ limits, referralRewards });
