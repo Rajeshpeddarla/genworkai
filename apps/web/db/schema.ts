@@ -692,6 +692,12 @@ export const quizzes = pgTable('quizzes', {
   rules: jsonb('rules'), // { timePerQuestion, totalTime, randomizeQuestions, randomizeOptions, passingPercentage, attemptsAllowed, showAnswersAfter, showScoreImmediately, antiCheating: { fullscreen, tabSwitch } }
   scope: jsonb('scope'), // { type: 'entire_kb'|'folder'|'files'|'topic', value: string|string[] }
   
+  // Shareable Exam
+  shareableLink: varchar('shareable_link', { length: 255 }).unique(),
+  timingMode: varchar('timing_mode', { length: 50 }).default('self_paced'), // 'global', 'self_paced'
+  startTime: timestamp('start_time'),
+  endTime: timestamp('end_time'),
+  
   status: varchar('status', { length: 50 }).default('draft'), // 'draft', 'published', 'archived'
   estimatedCredits: integer('estimated_credits').default(0),
   
@@ -722,7 +728,11 @@ export const quizQuestions = pgTable('quiz_questions', {
 export const quizAttempts = pgTable('quiz_attempts', {
   id: serial('id').primaryKey(),
   quizId: integer('quiz_id').references(() => quizzes.id, { onDelete: 'cascade' }).notNull(),
-  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  
+  // User can be authenticated or a guest
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+  guestName: varchar('guest_name', { length: 255 }),
+  guestRollNumber: varchar('guest_roll_number', { length: 255 }),
   
   status: varchar('status', { length: 50 }).default('in_progress'), // 'in_progress', 'submitted', 'graded'
   score: numeric('score', { precision: 5, scale: 2 }).default('0'),
@@ -803,4 +813,53 @@ export const automationOutputVersions = pgTable('automation_output_versions', {
   format: varchar('format', { length: 50 }).notNull().default('markdown'), // 'markdown', 'json', 'pdf', 'csv'
   
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const dashboards = pgTable('dashboards', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  dataSourceId: integer('data_source_id').references(() => connectedDatabases.id, { onDelete: 'cascade' }), // Generic abstraction
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  icon: varchar('icon', { length: 50 }),
+  coverColor: varchar('cover_color', { length: 50 }),
+  isAiGenerated: boolean('is_ai_generated').default(false),
+  isTemplate: boolean('is_template').default(false),
+  globalFiltersConfig: jsonb('global_filters_config'), // e.g. { dateRange: 'last_30_days', region: 'NA' }
+  isFavorite: boolean('is_favorite').default(false),
+  isArchived: boolean('is_archived').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const dashboardVersions = pgTable('dashboard_versions', {
+  id: serial('id').primaryKey(),
+  dashboardId: integer('dashboard_id').references(() => dashboards.id, { onDelete: 'cascade' }).notNull(),
+  versionNumber: integer('version_number').notNull(),
+  layoutSnapshot: jsonb('layout_snapshot').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+  createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
+});
+
+export const dashboardWidgets = pgTable('dashboard_widgets', {
+  id: serial('id').primaryKey(),
+  dashboardId: integer('dashboard_id').references(() => dashboards.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  widgetType: varchar('widget_type', { length: 50 }).notNull(), // 'line', 'bar', 'table', 'kpi', etc.
+  sqlQuery: text('sql_query'),
+  refreshInterval: varchar('refresh_interval', { length: 50 }).default('manual'), // '1m', '1h', etc.
+  visualizationConfig: jsonb('visualization_config'),
+  layoutConfig: jsonb('layout_config'), // x, y, w, h for react-grid-layout
+  lastRefreshedAt: timestamp('last_refreshed_at'),
+  lastExecutionTime: integer('last_execution_time'), // in ms
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const dashboardWidgetCache = pgTable('dashboard_widget_cache', {
+  widgetId: integer('widget_id').primaryKey().references(() => dashboardWidgets.id, { onDelete: 'cascade' }),
+  data: jsonb('data'), // The actual result set
+  hash: varchar('hash', { length: 255 }), // Hash of query + filters
+  updatedAt: timestamp('updated_at').defaultNow(),
 });

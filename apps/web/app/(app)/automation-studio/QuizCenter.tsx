@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, FileQuestion, ListChecks, History, BarChart, Settings, PlusCircle, PlayCircle, Clock, CheckCircle, Search, X, Activity, BrainCircuit } from 'lucide-react';
 import { QuizGenerationWizard } from './QuizGenerationWizard';
 import { QuizPlayer } from '../../../components/automation/QuizPlayer';
+import { ShareExamModal } from './ShareExamModal';
+import { Share2 } from 'lucide-react';
 
 export function QuizCenter() {
   const [activeSubTab, setActiveSubTab] = useState('dashboard');
@@ -12,6 +14,7 @@ export function QuizCenter() {
   const [loading, setLoading] = useState(true);
   
   const [activeQuiz, setActiveQuiz] = useState<any | null>(null);
+  const [shareQuizId, setShareQuizId] = useState<number | null>(null);
 
   const fetchQuizzes = () => {
     setLoading(true);
@@ -178,6 +181,15 @@ export function QuizCenter() {
                               <h4 className="font-bold text-white">{att.quiz.title}</h4>
                               <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                                 <Clock className="w-3 h-3" /> {new Date(att.attempt.startedAt).toLocaleString()}
+                                {att.attempt.guestName ? (
+                                  <span className="ml-2 px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-bold">
+                                    {att.attempt.guestName}
+                                  </span>
+                                ) : (
+                                  <span className="ml-2 px-2 py-0.5 rounded bg-gray-800 text-gray-400 font-bold">
+                                    You
+                                  </span>
+                                )}
                               </p>
                             </div>
                           </div>
@@ -246,6 +258,13 @@ export function QuizCenter() {
                           >
                             <PlayCircle className="w-4 h-4"/> Take Quiz
                           </button>
+                          <button
+                            onClick={() => setShareQuizId(quiz.id)}
+                            className="bg-[#222] hover:bg-[#333] border border-gray-700 text-white p-2.5 rounded-xl transition-colors"
+                            title="Share Exam"
+                          >
+                            <Share2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -287,7 +306,13 @@ export function QuizCenter() {
                         <div className="text-2xl font-bold text-indigo-400">
                           {att.attempt.score} <span className="text-sm font-medium text-gray-500">/ {att.attempt.totalMarks}</span>
                         </div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mt-1 font-bold">{att.attempt.status}</div>
+                        <div className="text-xs text-gray-500 tracking-wider mt-1 font-bold">
+                          {att.attempt.guestName ? (
+                            <span className="text-indigo-400">{att.attempt.guestName} ({att.attempt.guestRollNumber})</span>
+                          ) : (
+                            <span className="uppercase">{att.attempt.status}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -317,6 +342,13 @@ export function QuizCenter() {
             </div>
           </div>
         </div>
+      )}
+      
+      {shareQuizId && (
+        <ShareExamModal 
+          quizId={shareQuizId} 
+          onClose={() => setShareQuizId(null)} 
+        />
       )}
 
     </div>

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 const navigation = [
+  { name: "Dashboards & BI", href: "/dashboards", icon: LayoutDashboard },
   { name: "Automation Studio", href: "/automation-studio", icon: Zap },
   { name: "File Studio", href: "/file-studio", icon: FolderOpen },
   { name: "Database Intelligence", href: "/databases", icon: Database },

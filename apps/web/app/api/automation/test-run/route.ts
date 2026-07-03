@@ -2,13 +2,12 @@ import { NextResponse } from 'next/server';
 import { requireUser } from '../../../../lib/auth';
 import { db } from '../../../../db';
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { EntitlementEngine } from '../../../../lib/billing/entitlements';
 import { DatabaseService } from '../../../../lib/database/DatabaseService';
 
-const openai = createOpenAI({
+const deepseek = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY || "",
-  baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
 });
 
 export async function POST(req: Request) {
@@ -75,7 +74,7 @@ ${dataContext}`;
     }
 
     const result = await generateText({
-      model: openai(process.env.DEEPSEEK_MODEL || "deepseek-chat"),
+      model: deepseek(process.env.DEEPSEEK_MODEL || "deepseek-v4-flash"),
       system: systemPrompt,
       prompt: promptText,
     });

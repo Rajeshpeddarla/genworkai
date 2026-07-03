@@ -83,7 +83,7 @@ Generate the final output now.
         });
 
         const { object, usage } = await generateObject({
-          model: deepseek('deepseek-chat'),
+          model: deepseek('deepseek-v4-flash'),
           system: systemPrompt,
           prompt: userPrompt,
           schema: schema,
@@ -105,7 +105,7 @@ Generate the final output now.
         });
 
         const { object, usage } = await generateObject({
-          model: deepseek('deepseek-chat'),
+          model: deepseek('deepseek-v4-flash'),
           system: systemPrompt,
           prompt: userPrompt,
           schema: schema,
@@ -116,7 +116,7 @@ Generate the final output now.
         usageResult = usage;
       } else {
         const { text, usage } = await generateText({
-          model: deepseek('deepseek-chat'),
+          model: deepseek('deepseek-v4-flash'),
           system: systemPrompt,
           prompt: userPrompt,
         });

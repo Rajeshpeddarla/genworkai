@@ -12,18 +12,24 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const persona = searchParams.get('persona');
 
-    // Fetch attempts for the user
+    // Fetch attempts for the user or attempts on quizzes created by the user
     const attempts = await db.select({
       attempt: quizAttempts,
       quiz: {
         title: quizzes.title,
         description: quizzes.description,
-        rules: quizzes.rules
+        rules: quizzes.rules,
+        userId: quizzes.userId
       }
     })
     .from(quizAttempts)
     .innerJoin(quizzes, eq(quizAttempts.quizId, quizzes.id))
-    .where(eq(quizAttempts.userId, user.id))
+    .where(
+      require('drizzle-orm').or(
+        eq(quizAttempts.userId, user.id),
+        eq(quizzes.userId, user.id)
+      )
+    )
     .orderBy(desc(quizAttempts.createdAt));
 
     const filteredAttempts = persona 

@@ -73,10 +73,10 @@ export function BaseGenerationCenter({
   };
 
   return (
-    <div className="flex flex-row flex-1 h-full min-h-0 border border-gray-800 rounded-2xl overflow-hidden bg-[#0a0a0a] shadow-xl relative">
+    <div className="flex flex-row flex-1 h-full min-h-0 border border-gray-800 rounded-2xl overflow-hidden bg-[#0a0a0a] shadow-xl relative print:border-none print:shadow-none print:bg-transparent print:rounded-none print:block print:overflow-visible">
       
       {/* Sidebar Navigation */}
-      <div className="w-[280px] lg:w-[320px] border-r border-gray-800 bg-[#0a0a0a] flex flex-col shrink-0 overflow-y-auto">
+      <div className="w-[280px] lg:w-[320px] border-r border-gray-800 bg-[#0a0a0a] flex flex-col shrink-0 overflow-y-auto print:hidden">
         <div className="p-6">
           <div className="flex items-center gap-4 mb-8">
             <div className="bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20">
@@ -126,7 +126,7 @@ export function BaseGenerationCenter({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 min-h-0 bg-[#111] overflow-y-auto relative no-scrollbar">
+      <div className="flex-1 min-h-0 bg-[#111] overflow-y-auto relative no-scrollbar print:hidden">
         <div className="p-8 w-full">
           
           {(activeTab === 'dashboard' || activeTab === 'history') && (
@@ -230,11 +230,11 @@ export function BaseGenerationCenter({
 
       {/* Modal Popup Overlay for Viewer */}
       {activeOutputId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200">
-          <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl w-full max-w-6xl h-full shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200 print:relative print:inset-auto print:bg-transparent print:p-0 print:block">
+          <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl w-full max-w-6xl h-full shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 relative print:border-none print:shadow-none print:rounded-none print:bg-transparent print:block print:h-auto">
             <button 
               onClick={() => setActiveOutputId(null)}
-              className="absolute top-4 right-4 z-50 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-md transition-colors"
+              className="absolute top-4 right-4 z-50 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full backdrop-blur-md transition-colors print:hidden"
             >
               <X className="w-5 h-5" />
             </button>

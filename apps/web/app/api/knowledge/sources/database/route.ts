@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     const rateLimitResponse = await RateLimitService.check(user.id, 'database');
     if (rateLimitResponse) return rateLimitResponse;
 
-    const { EntitlementEngine } = require('../../../../../lib/billing/entitlements');
+    const { EntitlementEngine } = await import('../../../../../lib/billing/entitlements');
 
     const featureCheck = await EntitlementEngine.hasFeature(user.id, 'database_access');
     if (!featureCheck.allowed) {
@@ -64,23 +64,6 @@ export async function POST(req: Request) {
       const ssrfResult = await isSafeHost(targetHost);
       if (!ssrfResult.safe) {
         return NextResponse.json({ error: `Security Policy Violation: ${ssrfResult.error}` }, { status: 400 });
-      }
-      
-      // Override the host in the connection config with the resolved IP
-      // to prevent DNS Rebinding attacks
-      if (ssrfResult.ip) {
-        config.host = ssrfResult.ip;
-        
-        // If a connection string is used, replace the hostname with the IP
-        if (config.connectionString) {
-          try {
-            const url = new URL(config.connectionString.replace(/^(?!.*\:\/\/)(.*)$/, 'ignored://$1'));
-            url.hostname = ssrfResult.ip;
-            config.connectionString = url.toString().replace(/^ignored:\/\//, '');
-          } catch (e) {
-            // Failed to parse, ignore
-          }
-        }
       }
     }
 

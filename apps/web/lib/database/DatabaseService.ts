@@ -133,9 +133,9 @@ export class DatabaseService {
       const res = await client.query(safeQuery);
       await client.end();
       if (Array.isArray(res)) {
-        result = res.map(r => r.rows);
+        result = res[res.length - 1].rows || [];
       } else {
-        result = [res.rows];
+        result = res.rows || [];
       }
     } else if (this.config.engine === 'mysql') {
       const connection = await mysql.createConnection(this.getMysqlConfig());
@@ -144,9 +144,9 @@ export class DatabaseService {
       await connection.end();
       // mysql2 with multipleStatements returns array of arrays
       if (Array.isArray(rows) && rows.length > 0 && Array.isArray((rows as any)[0])) {
-        result = rows;
+        result = (rows as any)[rows.length - 1] || [];
       } else {
-        result = [rows];
+        result = rows || [];
       }
     } else if (this.config.engine === 'mssql') {
       const pool = await sql.connect(this.getMssqlConfig());
@@ -155,9 +155,9 @@ export class DatabaseService {
       const res = await req.query(safeQuery);
       await pool.close();
       if (res.recordsets && Array.isArray(res.recordsets) && res.recordsets.length > 0) {
-        result = res.recordsets;
+        result = res.recordsets[res.recordsets.length - 1] || [];
       } else {
-        result = [res.recordset];
+        result = res.recordset || [];
       }
     } else {
       throw new Error('Unsupported engine');

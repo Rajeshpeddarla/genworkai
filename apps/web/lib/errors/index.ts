@@ -62,14 +62,18 @@ export class RateLimitError extends AppError {
  * NEVER leaks stack traces, internal paths, or library error messages to the client.
  */
 export function safeErrorResponse(error: unknown, context?: string): NextResponse {
-  // Known application errors
-  if (error instanceof AppError) {
-    if (!error.isOperational) {
+  // Known application errors (duck typing to handle Next.js module duplication)
+  const isAppError = error instanceof AppError || 
+    (error && typeof error === 'object' && 'statusCode' in error && 'userMessage' in error);
+
+  if (isAppError) {
+    const appErr = error as AppError;
+    if (!appErr.isOperational) {
       console.error(`[CRITICAL] Non-operational error${context ? ` in ${context}` : ''}:`, error);
     }
     return NextResponse.json(
-      { error: error.userMessage },
-      { status: error.statusCode }
+      { error: appErr.userMessage },
+      { status: appErr.statusCode }
     );
   }
 

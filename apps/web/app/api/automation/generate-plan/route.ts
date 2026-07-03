@@ -121,7 +121,7 @@ You must respond with ONLY a valid JSON object matching this schema:
 Do not include markdown blocks, just the JSON string.`;
 
     const deepseekReq = {
-      model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+      model: process.env.DEEPSEEK_MODEL || "deepseek-v4-flash",
       messages: [
         { role: "system", content: systemPrompt + schemaPrompt },
         ...messages

@@ -59,3 +59,21 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+@media print {
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .print-only {
+    display: block;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background-color: white !important;
+  }
+  body, .prose * {
+    color: #000000 !important;
+  }
+}

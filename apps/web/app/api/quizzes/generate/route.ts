@@ -72,7 +72,7 @@ Ensure every question is highly accurate, challenging but fair, and traceable to
         "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        model: "deepseek-v4-flash",
         messages: [
           { role: "system", content: "You MUST return ONLY valid JSON matching the exact schema. DO NOT wrap it in markdown." },
           { role: "user", content: promptText + `\n\nReturn EXACTLY this JSON schema structure:\n{ "questions": [ { "type": "multiple_choice|true_false|short_answer|theory", "difficulty": "Beginner|Medium|Hard|Expert", "bloomLevel": "Remembering|Understanding|Applying|Analyzing|Evaluating|Creating", "questionText": "string", "options": ["string"], "correctAnswer": "string", "explanation": "string", "referenceFile": "string" } ] }` }
