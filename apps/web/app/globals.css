@@ -20,12 +20,12 @@
   }
 
   .dark {
-    --background: 270 50% 5%; /* Very dark purple */
-    --foreground: 270 20% 90%;
-    --color-background: #0a0514;
-    --color-foreground: #e9d5ff;
-    --color-card: #1c0b2b;
-    --color-card-border: #3b1c5a;
+    --background: 0 0% 0%; /* Very dark purple */
+    --foreground: 0 0% 98%;
+    --color-background: #000000;
+    --color-foreground: #ffffff;
+    --color-card: #09090b;
+    --color-card-border: #27272a;
   }
 
   body {

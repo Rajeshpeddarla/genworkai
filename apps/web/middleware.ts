@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
   const protectedPrefixes = [
-    "/dashboard", "/workspace", "/knowledge-base", "/databases",
+    "/workspace", "/knowledge-base", "/databases",
     "/automation-studio", "/developer", "/admin"
   ];
   const isProtectedRoute = protectedPrefixes.some(prefix => 
@@ -53,7 +53,7 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthenticated && isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/workspace";
     return NextResponse.redirect(url);
   }
 

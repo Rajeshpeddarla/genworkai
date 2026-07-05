@@ -47,7 +47,7 @@ export default function SavedReportsPage() {
         
         {/* Sidebar Filters */}
         <div className="w-full md:w-64 shrink-0 space-y-6">
-          <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-4 backdrop-blur-sm space-y-2">
+          <div className="bg-card/50 border border-white/10 rounded-2xl p-4 backdrop-blur-sm space-y-2">
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4 px-2">Filters</h3>
             {filters.map((filter) => (
               <button
@@ -64,7 +64,7 @@ export default function SavedReportsPage() {
             ))}
           </div>
 
-          <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-4 backdrop-blur-sm space-y-4">
+          <div className="bg-card/50 border border-white/10 rounded-2xl p-4 backdrop-blur-sm space-y-4">
             <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-wider px-2">Export Options</h3>
             <div className="grid grid-cols-3 gap-2 px-2">
               <button className="flex flex-col items-center justify-center gap-2 p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors text-zinc-400 hover:text-white group">
@@ -91,11 +91,11 @@ export default function SavedReportsPage() {
             <input 
               type="text" 
               placeholder="Search reports..." 
-              className="w-full bg-zinc-900/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none transition-all shadow-inner"
+              className="w-full bg-card/50 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-pink-500 focus:ring-1 focus:ring-pink-500 outline-none transition-all shadow-inner"
             />
           </div>
 
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
             
             {/* Report Row */}
             <div className="flex items-center justify-between p-6 hover:bg-white/5 transition-colors border-b border-white/10 group cursor-pointer">

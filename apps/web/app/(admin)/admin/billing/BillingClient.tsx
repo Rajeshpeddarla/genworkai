@@ -64,7 +64,11 @@ export default function BillingClient({
     };
 
     if (editingPlan) {
-      await updatePlan(editingPlan.id, data);
+      if (editingPlan.id) {
+        await updatePlan(editingPlan.id, data);
+      } else {
+        await import('./actions').then(m => m.createPlan(data));
+      }
       setEditingPlan(null);
     }
   };
@@ -144,7 +148,10 @@ export default function BillingClient({
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} /> 
             {isSyncing ? 'Syncing...' : 'Sync with Paddle'}
           </button>
-          <button className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg flex items-center gap-2 font-medium">
+          <button 
+            onClick={() => setEditingPlan({})}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg flex items-center gap-2 font-medium"
+          >
             <Plus className="w-4 h-4" /> Create Plan
           </button>
         </div>
@@ -225,19 +232,19 @@ export default function BillingClient({
 
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
+          <div className="bg-white dark:bg-card p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
             <h3 className="text-sm font-medium text-zinc-500">Total Revenue</h3>
             <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-white">${(totalRevenue / 100).toFixed(2)}</p>
           </div>
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
+          <div className="bg-white dark:bg-card p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
             <h3 className="text-sm font-medium text-zinc-500">Active Subscriptions</h3>
             <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-white">{activeSubsCount}</p>
           </div>
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
+          <div className="bg-white dark:bg-card p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
             <h3 className="text-sm font-medium text-zinc-500">Paddle Products</h3>
             <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-white">{paddleData?.products?.length || 0}</p>
           </div>
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
+          <div className="bg-white dark:bg-card p-6 rounded-2xl border border-zinc-200 dark:border-white/10">
             <h3 className="text-sm font-medium text-zinc-500">Webhooks Configured</h3>
             <p className="text-3xl font-bold mt-2 text-zinc-900 dark:text-white">{paddleData?.webhooks?.length || 0}</p>
           </div>
@@ -249,7 +256,7 @@ export default function BillingClient({
         {initialPlans.map(plan => {
           const isTeams = plan.slug.toLowerCase().includes('team');
           return (
-          <div key={plan.id} className={`bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6 flex flex-col relative overflow-hidden ${isTeams ? 'opacity-80' : ''}`}>
+          <div key={plan.id} className={`bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6 flex flex-col relative overflow-hidden ${isTeams ? 'opacity-80' : ''}`}>
             {isTeams && (
               <div className="absolute top-4 right-4 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">
                 Internal Testing
@@ -309,7 +316,7 @@ export default function BillingClient({
       )}
 
       {activeTab === 'subscriptions' && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
           <table className="w-full text-sm text-left">
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
               <tr>
@@ -392,7 +399,7 @@ export default function BillingClient({
       )}
 
       {activeTab === 'packs' && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
           <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-end">
             <button 
               onClick={() => setEditingPack({})}
@@ -444,7 +451,7 @@ export default function BillingClient({
       {/* Costs Tab */}
       {activeTab === 'costs' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden">
+          <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead className="bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
                 <tr>
@@ -481,7 +488,7 @@ export default function BillingClient({
       )}
 
       {activeTab === 'balances' && (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+        <div className="bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
           <table className="w-full text-sm text-left">
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
               <tr>
@@ -519,7 +526,7 @@ export default function BillingClient({
       )}
 
       {activeTab === 'events' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10 text-sm text-zinc-500">
               <tr>
@@ -556,13 +563,13 @@ export default function BillingClient({
       {activeTab === 'paddle' && (
         <div className="space-y-6">
           {!paddleData && (
-            <div className="p-6 text-center border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-900">
+            <div className="p-6 text-center border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-card">
               <p className="text-zinc-500">Paddle data is not available. Please ensure your API key is correctly configured.</p>
             </div>
           )}
 
           {paddleData?.webhooks && paddleData.webhooks.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden p-6">
+            <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden p-6">
               <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Webhooks</h2>
               <div className="space-y-4">
                 {paddleData.webhooks.map((wh: any) => (
@@ -581,7 +588,7 @@ export default function BillingClient({
           )}
 
           {paddleData?.products && paddleData.products.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden p-6">
+            <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden p-6">
               <h2 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">Products ({paddleData.products.length})</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {paddleData.products.map((prod: any) => (
@@ -604,8 +611,8 @@ export default function BillingClient({
       )}
 
       {activeTab === 'regional' && (
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
-          <div className="p-6 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+          <div className="p-6 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-card">
             <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Regional Pricing Overview</h2>
             <p className="text-sm text-zinc-500 mt-1">READ ONLY. All price overrides are managed in the Paddle Dashboard.</p>
           </div>
@@ -652,7 +659,7 @@ export default function BillingClient({
 
       {editingPlan && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Edit {editingPlan.name} Plan</h2>
             
             <form onSubmit={handleSave} className="space-y-6">
@@ -765,7 +772,7 @@ export default function BillingClient({
       {/* AI Credit Pack Editor Modal */}
       {editingPack && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
                 {editingPack.id ? `Edit Pack: ${editingPack.name}` : 'Create AI Credit Pack'}
@@ -853,7 +860,7 @@ export default function BillingClient({
       {/* Credit Cost Editor Modal */}
       {editingCost && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-card rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
                 Edit Cost: {editingCost.operationKey}
@@ -883,7 +890,7 @@ export default function BillingClient({
               <button 
                 type="submit"
                 form="cost-form"
-                className="bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                className="bg-card hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-200 text-white dark:text-zinc-900 px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 <Save className="w-4 h-4" />
                 Save Changes

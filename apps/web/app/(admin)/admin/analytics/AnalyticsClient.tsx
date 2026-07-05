@@ -31,7 +31,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-3 text-emerald-600 mb-2">
             <TrendingUp className="w-5 h-5" />
             <h3 className="font-semibold text-sm uppercase tracking-wider">Total Revenue</h3>
@@ -40,7 +40,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
             ${(stats.totalRevenue / 100).toFixed(2)}
           </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-3 text-blue-600 mb-2">
             <CreditCard className="w-5 h-5" />
             <h3 className="font-semibold text-sm uppercase tracking-wider">Credits Issued</h3>
@@ -49,7 +49,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
             {stats.totalCreditsIssued.toLocaleString()}
           </div>
         </div>
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-3 text-rose-600 mb-2">
             <Activity className="w-5 h-5" />
             <h3 className="font-semibold text-sm uppercase tracking-wider">Credits Consumed</h3>
@@ -62,7 +62,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Over Time */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <TrendingUp className="w-5 h-5 text-emerald-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Revenue (Last 30 Days)</h3>
@@ -87,7 +87,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
         </div>
 
         {/* Credits Flow */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <Activity className="w-5 h-5 text-blue-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Credits Issued vs Consumed</h3>
@@ -108,7 +108,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
         </div>
 
         {/* Top Customers */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <Users className="w-5 h-5 text-rose-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Top Customers by Credit Usage</h3>
@@ -144,7 +144,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
         </div>
 
         {/* Popular Packs */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col">
           <div className="flex items-center gap-2 mb-6">
             <Globe className="w-5 h-5 text-fuchsia-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Most Popular Credit Packs</h3>
@@ -179,7 +179,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
         </div>
 
         {/* Most Expensive Operations */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col md:col-span-2">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col md:col-span-2">
           <div className="flex items-center gap-2 mb-6">
             <Activity className="w-5 h-5 text-rose-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Most Expensive AI Operations</h3>
@@ -214,7 +214,7 @@ export default function AnalyticsClient({ stats, revenueByDay, creditsByDay, top
         </div>
 
         {/* Heavy Resource Users */}
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col md:col-span-2">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl flex flex-col md:col-span-2">
           <div className="flex items-center gap-2 mb-6">
             <Globe className="w-5 h-5 text-blue-500" />
             <h3 className="text-lg font-medium text-zinc-900 dark:text-white">Heavy Resource Users (Platform Resources)</h3>

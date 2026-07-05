@@ -6,7 +6,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell, Label, LabelList
 } from "recharts";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Activity, TrendingUp } from "lucide-react";
 
 interface WidgetComponentProps {
   widget: any;
@@ -59,12 +59,20 @@ export default function WidgetComponent({ widget, data, isLoading, error }: Widg
     if (type === 'stat') {
       const statValue = data[0][yAxisKeys[0]] || data[0][keys[0]];
       return (
-        <div className="flex flex-col h-full w-full items-center justify-center">
-          <span className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">
-            {typeof statValue === 'number' ? statValue.toLocaleString() : statValue}
-          </span>
+        <div className="flex flex-col h-full w-full justify-between py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-5xl font-bold text-foreground tracking-tight">
+              {typeof statValue === 'number' ? statValue.toLocaleString() : statValue}
+            </span>
+            <div className="p-2.5 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 rounded-xl">
+              <Activity className="w-5 h-5" />
+            </div>
+          </div>
           {config.statLabel && (
-            <span className="text-sm text-zinc-500 mt-2 font-medium uppercase tracking-wider">{config.statLabel}</span>
+            <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 w-fit px-2 py-1 rounded-md mt-4">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>{config.statLabel}</span>
+            </div>
           )}
         </div>
       );
@@ -85,7 +93,7 @@ export default function WidgetComponent({ widget, data, isLoading, error }: Widg
               {data.map((row, i) => (
                 <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
                   {keys.map((key) => (
-                    <td key={key} className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
+                    <td key={key} className="px-4 py-3 text-zinc-500 dark:text-zinc-400">
                       {String(row[key])}
                     </td>
                   ))}
@@ -95,6 +103,19 @@ export default function WidgetComponent({ widget, data, isLoading, error }: Widg
           </table>
         </div>
       );
+    }
+
+    if (['bar', 'line', 'area'].includes(type) && data.length > 0) {
+       const firstYVal = data[0][yAxisKeys[0]];
+       if (isNaN(Number(firstYVal))) {
+         return (
+           <div className="flex flex-col h-full w-full items-center justify-center text-zinc-500 p-4 text-center bg-background/50 rounded-lg border border-dashed border-zinc-200 dark:border-white/10">
+             <AlertCircle className="h-6 w-6 mb-2 text-zinc-400" />
+             <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Invalid Chart Metric</span>
+             <span className="text-xs mt-1 max-w-[200px]">The Y-axis column "{yAxisKeys[0]}" contains text. Charts require numerical metrics (like a count).</span>
+           </div>
+         );
+       }
     }
 
     // Charting components
@@ -199,37 +220,59 @@ export default function WidgetComponent({ widget, data, isLoading, error }: Widg
         }, 0);
 
         return (
-          <ChartWrapper>
-            <PieChart>
-              <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(24, 24, 27, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', backdropFilter: 'blur(4px)' }} itemStyle={{ color: '#fff', fontWeight: 500 }} />
-              <Legend wrapperStyle={{ fontSize: '12px' }} iconType="circle" />
-              <Pie
-                data={data.map(d => {
-                  const val = Number(d[dataKey]);
-                  return { ...d, [dataKey]: isNaN(val) ? 1 : val };
-                })}
-                dataKey={dataKey}
-                nameKey={nameKey}
-                cx="50%"
-                cy="50%"
-                innerRadius="60%"
-                outerRadius="80%"
-                paddingAngle={3}
-                animationDuration={1200}
-                stroke="none"
-              >
-                <Label 
-                  value={total.toLocaleString()} 
-                  position="center" 
-                  fill="#3f3f46"
-                  style={{ fontSize: '32px', fontWeight: 'bold' }}
-                />
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ChartWrapper>
+          <div className="w-full h-full relative flex flex-col items-center">
+            <div className="absolute inset-0 pb-8">
+              <ChartWrapper>
+                <PieChart>
+                  <RechartsTooltip contentStyle={{ backgroundColor: 'rgba(24, 24, 27, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', backdropFilter: 'blur(4px)' }} itemStyle={{ color: '#fff', fontWeight: 500 }} />
+                  {/* Background Track Ring */}
+                  <Pie
+                    data={[{ value: 1 }]}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="72%"
+                    outerRadius="88%"
+                    fill="rgba(161, 161, 170, 0.15)"
+                    stroke="none"
+                    isAnimationActive={false}
+                  />
+                  {/* Foreground Data Ring */}
+                  <Pie
+                    data={data.map(d => {
+                      const val = Number(d[dataKey]);
+                      return { ...d, [dataKey]: isNaN(val) ? 1 : val };
+                    })}
+                    dataKey={dataKey}
+                    nameKey={nameKey}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius="72%"
+                    outerRadius="88%"
+                    paddingAngle={3}
+                    animationDuration={1200}
+                    stroke="none"
+                    cornerRadius={4}
+                  >
+                    <Label 
+                      value={total.toLocaleString()} 
+                      position="center" 
+                      className="fill-zinc-900 dark:fill-white text-3xl font-bold tracking-tight"
+                    />
+                    {data.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ChartWrapper>
+            </div>
+            
+            {/* Pill Badge at bottom */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700/50 shadow-sm z-10">
+               <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+               <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Live Tracker</span>
+            </div>
+          </div>
         );
         return (
           <div className="flex h-full w-full items-center justify-center text-zinc-400">

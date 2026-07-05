@@ -39,7 +39,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         <ArrowLeft className="w-4 h-4" /> Back to Users
       </Link>
 
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 relative overflow-hidden">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-3xl p-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 blur-[100px] rounded-full"></div>
         <div className="flex items-start gap-6 relative z-10">
           <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-rose-500 to-orange-500 text-white flex items-center justify-center text-4xl font-bold shadow-xl">
@@ -68,7 +68,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <div className="flex space-x-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl w-fit overflow-x-auto">
+      <div className="flex space-x-1 p-1 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl w-fit overflow-x-auto">
         {[
           { id: "profile", label: "Profile & Plan", icon: User },
           { id: "usage", label: "Usage Metrics", icon: Activity },
@@ -92,7 +92,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
         ))}
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-6 min-h-[400px]">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6 min-h-[400px]">
          {activeTab === 'profile' && (
            <div className="space-y-8">
              <div>
@@ -134,7 +134,7 @@ export default function UserDetailPage({ params }: { params: Promise<{ id: strin
          {activeTab === 'usage' && (
            <div className="space-y-6">
              <h3 className="text-lg font-bold text-zinc-900 dark:text-white">AI Credit Usage</h3>
-             <div className="p-6 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl">
+             <div className="p-6 bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl">
                <p className="text-sm text-zinc-500 font-medium">Lifetime AI Credits Consumed</p>
                <p className="text-3xl font-bold text-zinc-900 dark:text-white mt-2">{Number(metrics?.totalAiCreditsConsumed || 0).toLocaleString()}</p>
              </div>

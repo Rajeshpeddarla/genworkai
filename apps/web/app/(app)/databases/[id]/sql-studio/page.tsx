@@ -19,17 +19,17 @@ function TableNode({ db, table, cols, open, onToggle, onInsert }: any) {
   return (
     <div>
       <div className="flex items-center group">
-        <button onClick={onToggle} className="px-1 text-gray-500">{open?'▾':'▸'}</button>
+        <button onClick={onToggle} className="px-1 text-zinc-500 dark:text-zinc-400">{open?'▾':'▸'}</button>
         <button onClick={onInsert}
-          className="flex-1 text-left py-1 rounded hover:bg-gray-800 text-gray-300 truncate">
+          className="flex-1 text-left py-1 rounded hover:bg-accent hover:text-accent-foreground text-zinc-500 dark:text-zinc-400 truncate">
           {table}
         </button>
       </div>
       {open && Array.isArray(cols) && (
-        <div className="ml-6 border-l border-gray-800">
+        <div className="ml-6 border-l border-zinc-200 dark:border-white/10">
           {cols.map((c:any) => (
-            <div key={c.column} className="px-2 py-0.5 text-xs text-gray-500 flex justify-between">
-              <span>{c.column}</span><span className="text-gray-600">{c.type}</span>
+            <div key={c.column} className="px-2 py-0.5 text-xs text-zinc-500 dark:text-zinc-400 flex justify-between">
+              <span>{c.column}</span><span className="text-zinc-500 dark:text-zinc-400">{c.type}</span>
             </div>
           ))}
         </div>
@@ -38,9 +38,14 @@ function TableNode({ db, table, cols, open, onToggle, onInsert }: any) {
   );
 }
 
-export default function SQLStudio({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params);
-  const [dbId, setDbId] = useState<string | null>(resolvedParams.id);
+import { useParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
+
+export default function SQLStudio() {
+  const params = useParams();
+  const { theme, systemTheme } = useTheme();
+  const isDark = theme === 'dark' || (theme === 'system' && systemTheme === 'dark');
+  const [dbId, setDbId] = useState<string | null>(params?.id as string | null);
   const [query, setQuery] = useState('SELECT * FROM information_schema.tables;');
   const [resultSets, setResultSets] = useState<any[][] | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -258,28 +263,28 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
   };
 
   return (
-    <div className="flex h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
       <PanelGroup direction="horizontal">
         
         {/* Schema Explorer Panel */}
         <Panel ref={schemaPanelRef} collapsible={true} defaultSize={20} minSize={15} maxSize={35}>
-          <div className="h-full bg-[#111] border-r border-gray-800 flex flex-col">
-            <div className="h-14 border-b border-gray-800 flex items-center px-4 gap-2">
+          <div className="h-full bg-card border-r border-zinc-200 dark:border-white/10 flex flex-col">
+            <div className="h-14 border-b border-zinc-200 dark:border-white/10 flex items-center px-4 gap-2">
               <Database className="w-4 h-4 text-indigo-400" />
-              <span className="font-semibold text-gray-200 text-sm">Schema Explorer</span>
+              <span className="font-semibold text-foreground text-sm">Schema Explorer</span>
             </div>
             <div className="flex-1 overflow-y-auto p-2 text-sm custom-scrollbar">
               {schema?.__multiDb ? (
                 Object.entries(schema.databases).map(([dbName, tables]: any) => (
                   <div key={dbName}>
                     <button onClick={() => setOpenDb(openDb===dbName?null:dbName)}
-                      className="w-full text-left px-2 py-1.5 rounded hover:bg-gray-800 flex items-center gap-1 text-gray-200">
-                      <span className="text-gray-500">{openDb===dbName?'▾':'▸'}</span>
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-accent hover:text-accent-foreground flex items-center gap-1 text-foreground">
+                      <span className="text-zinc-500 dark:text-zinc-400">{openDb===dbName?'▾':'▸'}</span>
                       <Database className="w-3.5 h-3.5 text-indigo-400" /> {dbName}
-                      <span className="ml-auto text-xs text-gray-600">{Object.keys(tables).length}</span>
+                      <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">{Object.keys(tables).length}</span>
                     </button>
                     {openDb===dbName && (
-                      <div className="ml-4 border-l border-gray-800">
+                      <div className="ml-4 border-l border-zinc-200 dark:border-white/10">
                         {Object.entries(tables).map(([t, cols]: any) => (
                           <TableNode key={t} db={dbName} table={t} cols={cols}
                             open={openTable===`${dbName}.${t}`}
@@ -300,16 +305,16 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
             </div>
           </div>
         </Panel>
-        <PanelResizeHandle className="w-1.5 bg-gray-800 hover:bg-indigo-500 transition-colors" />
+        <PanelResizeHandle className="w-1.5 bg-border hover:bg-indigo-500 transition-colors" />
 
         {/* Middle Content: Editor & Terminal Split */}
         <Panel defaultSize={55} minSize={30}>
           <div className="flex h-full flex-col min-w-0">
             
             {/* Header Bar */}
-            <div className="h-14 border-b border-gray-800 bg-[#111] flex items-center justify-between px-4 shrink-0">
+            <div className="h-14 border-b border-zinc-200 dark:border-white/10 bg-card flex items-center justify-between px-4 shrink-0">
               <div className="flex items-center gap-3">
-                <Link href="/databases" className="text-gray-400 hover:text-white transition-colors" title="Back to Databases">
+                <Link href="/databases" className="text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors" title="Back to Databases">
                   <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <button 
@@ -320,17 +325,17 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                       else panel.collapse();
                     }
                   }}
-                  className="text-gray-400 hover:text-indigo-400 transition-colors p-1"
+                  className="text-zinc-500 dark:text-zinc-400 hover:text-indigo-400 transition-colors p-1"
                   title="Toggle Schema Explorer"
                 >
                   <Database className="w-5 h-5 text-indigo-500" />
                 </button>
-                <span className="font-semibold text-gray-200">AI SQL Studio</span>
+                <span className="font-semibold text-foreground">AI SQL Studio</span>
               </div>
               <button 
                 onClick={executeQuery}
                 disabled={isExecuting}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium disabled:opacity-50 transition-colors"
+                className="bg-green-600 hover:bg-green-700 text-foreground px-4 py-1.5 rounded-md flex items-center gap-2 text-sm font-medium disabled:opacity-50 transition-colors"
               >
                 {isExecuting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 Run Query
@@ -341,14 +346,14 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
               <PanelGroup direction="vertical">
                 {/* Top Pane: Monaco Editor */}
                 <Panel defaultSize={50} minSize={20}>
-                  <div className="h-full flex flex-col relative bg-[#1e1e1e]">
-                    <div className="absolute top-2 right-4 z-10 px-2 py-1 bg-gray-800 rounded text-xs text-gray-400 select-none pointer-events-none opacity-50">
+                  <div className="h-full flex flex-col relative bg-black/5 dark:bg-white/5">
+                    <div className="absolute top-2 right-4 z-10 px-2 py-1 bg-border rounded text-xs text-zinc-500 dark:text-zinc-400 select-none pointer-events-none opacity-50">
                       SQL Editor
                     </div>
                     <Editor
                       height="100%"
                       defaultLanguage="sql"
-                      theme="vs-dark"
+                      theme={isDark ? "vs-dark" : "vs-light"}
                       value={query}
                       onChange={(val) => setQuery(val || '')}
                       onMount={(editor) => setEditorInstance(editor)}
@@ -364,16 +369,16 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                   </div>
                 </Panel>
 
-                <PanelResizeHandle className="h-1.5 bg-gray-800 hover:bg-indigo-500 transition-colors flex items-center justify-center group cursor-row-resize">
+                <PanelResizeHandle className="h-1.5 bg-border hover:bg-indigo-500 transition-colors flex items-center justify-center group cursor-row-resize">
                   <div className="w-8 h-1 rounded-full bg-gray-600 group-hover:bg-white transition-colors" />
                 </PanelResizeHandle>
 
                 {/* Bottom Pane: Results Terminal */}
                 <Panel defaultSize={50} minSize={20}>
-                  <div className="h-full flex flex-col bg-[#0d0d0d]">
-                    <div className="h-10 bg-[#111] border-b border-gray-800 flex items-center px-4 gap-2 shrink-0">
-                      <Terminal className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-300">Results</span>
+                  <div className="h-full flex flex-col bg-background">
+                    <div className="h-10 bg-card border-b border-zinc-200 dark:border-white/10 flex items-center px-4 gap-2 shrink-0">
+                      <Terminal className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Results</span>
                     </div>
                     
                     <div className="flex-1 overflow-auto p-4 custom-scrollbar flex flex-col gap-8">
@@ -384,43 +389,43 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                       )}
                       
                       {resultSets && resultSets.length === 0 && (
-                        <div className="text-gray-500 italic text-sm">Query executed successfully. 0 results returned.</div>
+                        <div className="text-zinc-500 dark:text-zinc-400 italic text-sm">Query executed successfully. 0 results returned.</div>
                       )}
                       
                       {resultSets && resultSets.map((rows, setIndex) => {
                         const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
                         return (
                           <div key={setIndex} className="flex flex-col gap-2">
-                            <div className="flex items-center gap-3 bg-[#111] p-2 rounded border border-gray-800">
+                            <div className="flex items-center gap-3 bg-card p-2 rounded border border-zinc-200 dark:border-white/10">
                                <span className="text-xs font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Result Set {setIndex + 1}</span>
-                               <span className="text-xs text-gray-500">{rows.length} rows</span>
+                               <span className="text-xs text-zinc-500 dark:text-zinc-400">{rows.length} rows</span>
                                <div className="ml-auto flex items-center gap-1">
-                                  <button onClick={() => copyAsJSON(rows)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as JSON">JSON</button>
-                                  <button onClick={() => copyAsMarkdown(rows, cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as Markdown table">MD</button>
-                                  <button onClick={() => copyAsText(rows, cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy as Tab-Separated Text">TXT</button>
-                                  <button onClick={() => copyHeaders(cols)} className="px-2 py-1 hover:bg-gray-800 rounded text-xs text-gray-400 hover:text-white transition-colors" title="Copy Headers only">Headers</button>
+                                  <button onClick={() => copyAsJSON(rows)} className="px-2 py-1 hover:bg-accent hover:text-accent-foreground rounded text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors" title="Copy as JSON">JSON</button>
+                                  <button onClick={() => copyAsMarkdown(rows, cols)} className="px-2 py-1 hover:bg-accent hover:text-accent-foreground rounded text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors" title="Copy as Markdown table">MD</button>
+                                  <button onClick={() => copyAsText(rows, cols)} className="px-2 py-1 hover:bg-accent hover:text-accent-foreground rounded text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors" title="Copy as Tab-Separated Text">TXT</button>
+                                  <button onClick={() => copyHeaders(cols)} className="px-2 py-1 hover:bg-accent hover:text-accent-foreground rounded text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors" title="Copy Headers only">Headers</button>
                                </div>
                             </div>
                             
                             {rows.length === 0 ? (
-                               <div className="text-gray-500 italic text-sm p-2">0 rows returned.</div>
+                               <div className="text-zinc-500 dark:text-zinc-400 italic text-sm p-2">0 rows returned.</div>
                             ) : (
-                              <div className="inline-block min-w-full overflow-hidden border border-gray-800 rounded bg-[#0a0a0a]">
+                              <div className="inline-block min-w-full overflow-hidden border border-zinc-200 dark:border-white/10 rounded bg-background">
                                 <div className="overflow-x-auto custom-scrollbar">
                                   <table className="min-w-full text-left text-sm whitespace-nowrap">
-                                    <thead className="border-b border-gray-800 bg-[#111]">
+                                    <thead className="border-b border-zinc-200 dark:border-white/10 bg-card">
                                       <tr>
                                         {cols.map(col => (
-                                          <th key={col} className="px-4 py-2 font-semibold text-gray-300">{col}</th>
+                                          <th key={col} className="px-4 py-2 font-semibold text-zinc-500 dark:text-zinc-400">{col}</th>
                                         ))}
                                       </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-800/50 font-mono text-gray-400">
+                                    <tbody className="divide-y divide-gray-800/50 font-mono text-zinc-500 dark:text-zinc-400">
                                       {rows.map((row: any, i: number) => (
-                                        <tr key={i} className="hover:bg-gray-800/20">
+                                        <tr key={i} className="hover:bg-accent hover:text-accent-foreground/20">
                                           {cols.map(col => (
                                             <td key={`${i}-${col}`} className="px-4 py-2">
-                                              {row[col] !== null ? String(row[col]) : <span className="text-gray-600 italic">NULL</span>}
+                                              {row[col] !== null ? String(row[col]) : <span className="text-zinc-500 dark:text-zinc-400 italic">NULL</span>}
                                             </td>
                                           ))}
                                         </tr>
@@ -435,7 +440,7 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                       })}
                       
                       {!resultSets && !error && !isExecuting && (
-                        <div className="text-gray-600 italic text-sm flex items-center justify-center h-full">
+                        <div className="text-zinc-500 dark:text-zinc-400 italic text-sm flex items-center justify-center h-full">
                           Execute a query to see results here.
                         </div>
                       )}
@@ -454,14 +459,14 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
           </div>
         </Panel>
 
-        <PanelResizeHandle className="w-1.5 bg-gray-800 hover:bg-indigo-500 transition-colors flex items-center justify-center group cursor-col-resize">
+        <PanelResizeHandle className="w-1.5 bg-border hover:bg-indigo-500 transition-colors flex items-center justify-center group cursor-col-resize">
           <div className="h-8 w-1 rounded-full bg-gray-600 group-hover:bg-white transition-colors" />
         </PanelResizeHandle>
 
         {/* Right Sidebar: AI Chat Panel */}
         <Panel defaultSize={25} minSize={15} maxSize={40}>
-          <div className="h-full bg-[#111] flex flex-col shrink-0">
-            <div className="h-14 border-b border-gray-800 flex items-center px-4 gap-2 bg-indigo-600/5 shrink-0">
+          <div className="h-full bg-card flex flex-col shrink-0">
+            <div className="h-14 border-b border-zinc-200 dark:border-white/10 flex items-center px-4 gap-2 bg-indigo-600/5 shrink-0">
               <Sparkles className="w-5 h-5 text-indigo-400" />
               <span className="font-semibold text-indigo-400">AI SQL Assistant</span>
             </div>
@@ -471,8 +476,8 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                 <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
                     m.role === 'user' 
-                      ? 'bg-indigo-600 text-white rounded-br-none' 
-                      : 'bg-[#1e1e1e] border border-gray-800 text-gray-300 rounded-bl-none'
+                      ? 'bg-indigo-600 text-foreground rounded-br-none' 
+                      : 'bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 rounded-bl-none'
                   }`}>
                     {m.content}
                   </div>
@@ -480,7 +485,7 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
               ))}
               {isThinking && (
                 <div className="flex justify-start">
-                  <div className="bg-[#1e1e1e] border border-gray-800 rounded-2xl rounded-bl-none px-4 py-2.5 text-sm text-gray-400 flex items-center gap-2">
+                  <div className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl rounded-bl-none px-4 py-2.5 text-sm text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Thinking & Writing SQL...
                   </div>
@@ -489,14 +494,14 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
               <div ref={chatEndRef} />
             </div>
             
-            <form onSubmit={handleChat} className="p-4 border-t border-gray-800 bg-[#0a0a0a] shrink-0">
+            <form onSubmit={handleChat} className="p-4 border-t border-zinc-200 dark:border-white/10 bg-background shrink-0">
               <div className="relative flex items-center">
                 <input 
                   type="text" 
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   placeholder="Ask a question..."
-                  className="w-full bg-[#111] border border-gray-800 rounded-full pl-4 pr-10 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full bg-card border border-zinc-200 dark:border-white/10 rounded-full pl-4 pr-10 py-2.5 text-sm text-foreground focus:outline-none focus:border-indigo-500 transition-colors"
                 />
                 <button 
                   type="submit" 
@@ -507,7 +512,7 @@ export default function SQLStudio({ params }: { params: Promise<{ id: string }> 
                 </button>
               </div>
               <div className="text-center mt-2">
-                <span className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold">SQL will auto-populate in the editor</span>
+                <span className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-semibold">SQL will auto-populate in the editor</span>
               </div>
             </form>
           </div>

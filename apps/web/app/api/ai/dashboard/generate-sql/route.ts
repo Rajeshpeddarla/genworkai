@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const { user, error } = await requireUser();
     if (error) return error;
 
-    const { dashboardId, prompt } = await req.json();
+    const { dashboardId, prompt, widgetType } = await req.json();
 
     if (!dashboardId || !prompt) {
       return NextResponse.json({ error: 'Dashboard ID and prompt are required' }, { status: 400 });
@@ -68,6 +68,15 @@ export async function POST(req: Request) {
       }
     }
 
+    let widgetInstructions = '';
+    if (widgetType === 'stat') {
+       widgetInstructions = '5. WIDGET TYPE IS "STAT": You MUST return a query that produces exactly ONE row and ONE column containing a single numerical metric (like a total COUNT or SUM).';
+    } else if (['bar', 'line', 'area', 'pie'].includes(widgetType)) {
+       widgetInstructions = `5. WIDGET TYPE IS "${widgetType.toUpperCase()} CHART": You MUST return an aggregated query grouped by a category. It MUST have at least one string/date column for the X-axis, and at least one numerical column (like COUNT or SUM) for the Y-axis. NEVER return un-aggregated raw rows. IF the user asks for a raw list (e.g., "show me all users"), YOU MUST FORCEFULLY group them by a logical column (like DATE(created_at), status, or role) to create a chartable output.`;
+    } else {
+       widgetInstructions = '5. WIDGET TYPE IS "TABLE": You can return un-aggregated raw rows, or grouped data. Pick 4-6 most useful columns.';
+    }
+
     const systemPrompt = `You are an expert SQL Data Analyst. Your goal is to generate ONLY a raw SQL SELECT query based on the user's prompt. 
 Do not wrap it in markdown blockquotes, do not add explanations. Just return the raw SQL.
 
@@ -76,12 +85,13 @@ CRITICAL INSTRUCTIONS FOR DASHBOARD WIDGETS:
 2. Use AS to provide clean, human-readable aliases for all columns. **CRITICAL: You MUST use double quotes (" ") for aliases with spaces, NEVER single quotes.** (e.g., AS "Total Revenue" instead of AS 'Total Revenue'). PostgreSQL will crash if you use single quotes for aliases.
 3. Do not do SELECT * unless explicitly asked. Pick 2-3 meaningful columns (usually a category/date and a metric).
 4. If the prompt is empty or vague, pick the most important table from the schema and generate a meaningful summary (e.g., top 5 records by a metric, or count of records by status).
+${widgetInstructions}
 
 ${schemaContext}
 `;
 
     const result = await generateText({
-      model: deepseek('deepseek-chat'),
+      model: deepseek('deepseek-v4-flash'),
       system: systemPrompt,
       prompt: `Write a READ-ONLY SQL query for: ${prompt}`,
     });

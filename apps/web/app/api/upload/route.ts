@@ -137,8 +137,7 @@ Return only valid JSON. Do not include markdown formatting like \`\`\`json.`;
       },
       body: JSON.stringify({
         model: "deepseek-v4-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
+        system: systemPrompt, messages: [
           { role: "user", content: `Filename: ${file.name}\n\nContent:\n${pageText}` }
         ],
         response_format: { type: "json_object" }

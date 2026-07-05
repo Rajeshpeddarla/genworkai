@@ -86,7 +86,7 @@ const getFileIcon = (type: string) => {
   if (['xlsx', 'xls', 'csv'].includes(t)) return <FileJson className="w-3.5 h-3.5 text-emerald-400" />;
   if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(t)) return <ImageIcon className="w-3.5 h-3.5 text-fuchsia-400" />;
   if (['mp4', 'mov', 'webm'].includes(t)) return <MonitorPlay className="w-3.5 h-3.5 text-purple-400" />;
-  if (['zip', 'rar', 'tar'].includes(t)) return <FileArchive className="w-3.5 h-3.5 text-zinc-400" />;
+  if (['zip', 'rar', 'tar'].includes(t)) return <FileArchive className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" />;
   return <FileText className="w-3.5 h-3.5 text-violet-400" />;
 };
 
@@ -517,7 +517,7 @@ export default function KnowledgePage() {
   const totalFiles = kbs.reduce((acc, kb) => acc + (kb.documentCount || 0), 0);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0c] text-white">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background text-foreground">
       
       {view === 'grid' && (
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -525,12 +525,12 @@ export default function KnowledgePage() {
           {/* Header */}
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight mb-1">Knowledge Bases</h1>
-              <p className="text-zinc-400 text-sm">{kbs.length} bases · {totalFiles} files indexed</p>
+              <h1 className="text-3xl font-bold text-foreground tracking-tight mb-1">Knowledge Bases</h1>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">{kbs.length} bases · {totalFiles} files indexed</p>
             </div>
             <button 
               onClick={() => setShowCreate(true)}
-              className="bg-[#c026d3] hover:bg-[#a21caf] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-[0_0_20px_rgba(192,38,211,0.3)]"
+              className="bg-[#c026d3] hover:bg-[#a21caf] text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-[0_0_20px_rgba(192,38,211,0.3)]"
             >
               <Plus className="w-4 h-4" /> New Knowledge Base
             </button>
@@ -544,7 +544,7 @@ export default function KnowledgePage() {
               placeholder="Search knowledge bases..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-zinc-900/50 border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-zinc-700 transition-colors"
+              className="w-full bg-background border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-zinc-700 transition-colors"
             />
           </div>
 
@@ -552,17 +552,17 @@ export default function KnowledgePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
                Array.from({ length: 3 }).map((_, i) => (
-                  <div key={`skeleton-${i}`} className="bg-[#121217] border border-white/5 rounded-2xl p-6 h-[220px] animate-pulse flex flex-col">
+                  <div key={`skeleton-${i}`} className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6 h-[220px] animate-pulse flex flex-col">
                      <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 bg-white/5 rounded-xl"></div>
-                        <div className="w-12 h-6 bg-white/5 rounded-full"></div>
+                        <div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-xl"></div>
+                        <div className="w-12 h-6 bg-black/5 dark:bg-white/5 rounded-full"></div>
                      </div>
-                     <div className="w-3/4 h-6 bg-white/10 rounded mb-3"></div>
-                     <div className="w-full h-4 bg-white/5 rounded mb-2"></div>
-                     <div className="w-2/3 h-4 bg-white/5 rounded mb-auto"></div>
-                     <div className="flex gap-2 pt-4 border-t border-white/5 mt-4">
-                        <div className="w-7 h-7 rounded-md bg-white/5"></div>
-                        <div className="w-7 h-7 rounded-md bg-white/5"></div>
+                     <div className="w-3/4 h-6 bg-background/5 dark:bg-white/10 rounded mb-3"></div>
+                     <div className="w-full h-4 bg-black/5 dark:bg-white/5 rounded mb-2"></div>
+                     <div className="w-2/3 h-4 bg-black/5 dark:bg-white/5 rounded mb-auto"></div>
+                     <div className="flex gap-2 pt-4 border-t border-zinc-200 dark:border-white/10 mt-4">
+                        <div className="w-7 h-7 rounded-md bg-black/5 dark:bg-white/5"></div>
+                        <div className="w-7 h-7 rounded-md bg-black/5 dark:bg-white/5"></div>
                      </div>
                   </div>
                ))
@@ -571,12 +571,12 @@ export default function KnowledgePage() {
                  {/* Add New Card */}
                  <div 
                    onClick={() => setShowCreate(true)}
-                   className="border border-dashed border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer flex flex-col items-center justify-center min-h-[220px] transition-colors group bg-black/20"
+                   className="border border-dashed border-black/10 dark:border-white/10 hover:border-white/20 rounded-2xl p-6 cursor-pointer flex flex-col items-center justify-center min-h-[220px] transition-colors group bg-background/5 dark:bg-background/20"
                  >
-                   <div className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center mb-4 group-hover:bg-white/5 transition-colors">
-                     <Plus className="w-5 h-5 text-zinc-400 group-hover:text-white" />
+                   <div className="w-10 h-10 rounded-full border border-black/10 dark:border-white/10 flex items-center justify-center mb-4 group-hover:bg-white/5 transition-colors">
+                     <Plus className="w-5 h-5 text-zinc-500 dark:text-zinc-400 group-hover:text-foreground" />
                    </div>
-                   <h3 className="font-medium text-zinc-300 group-hover:text-white mb-1">Add Knowledge Base</h3>
+                   <h3 className="font-medium text-zinc-600 dark:text-zinc-300 group-hover:text-foreground mb-1">Add Knowledge Base</h3>
                    <p className="text-xs text-zinc-500 text-center">Upload docs, PDFs, sheets & more</p>
                  </div>
 
@@ -589,7 +589,7 @@ export default function KnowledgePage() {
                      <div 
                        key={kb.id} 
                        onClick={() => openDetail(kb)}
-                       className="bg-[#121217] border border-white/5 hover:border-white/10 rounded-2xl p-6 cursor-pointer group transition-all hover:bg-[#16161c]"
+                       className="bg-card border border-zinc-200 dark:border-white/10 hover:border-white/10 rounded-2xl p-6 cursor-pointer group transition-all hover:bg-[#16161c]"
                      >
                        <div className="flex justify-between items-start mb-4">
                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${getKbColors(kb.color || 'fuchsia')}`}>
@@ -598,7 +598,7 @@ export default function KnowledgePage() {
                          <div className="flex flex-col items-end gap-2">
                            <button 
                              onClick={(e) => { e.stopPropagation(); setKbToDelete(kb); }}
-                             className="text-zinc-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-white/5"
+                             className="text-zinc-500 hover:text-red-400 p-1 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-background/5 dark:hover:bg-white/5"
                              title="Delete Knowledge Base"
                            >
                              <Trash2 className="w-4 h-4" />
@@ -609,17 +609,17 @@ export default function KnowledgePage() {
                                Processing {kb.activeJobsCount}
                              </span>
                            ) : (
-                             <span className="bg-white/5 border border-white/10 text-zinc-300 text-[10px] font-medium px-2.5 py-1 rounded-full">
+                             <span className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-300 text-[10px] font-medium px-2.5 py-1 rounded-full">
                                {kb.documentCount || 0} files
                              </span>
                            )}
                          </div>
                        </div>
                        
-                       <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-fuchsia-400 transition-colors">{kb.name}</h3>
-                       <p className="text-sm text-zinc-400 mb-6 line-clamp-2 h-10">{kb.description || 'No description provided.'}</p>
+                       <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-fuchsia-400 transition-colors">{kb.name}</h3>
+                       <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6 line-clamp-2 h-10">{kb.description || 'No description provided.'}</p>
                        
-                       <div className="flex items-center gap-2 pt-4 border-t border-white/5">
+                       <div className="flex items-center gap-2 pt-4 border-t border-zinc-200 dark:border-white/10">
                          {displayTypes.length > 0 ? displayTypes.map((type: any, idx) => (
                            <div key={idx} className={`w-7 h-7 rounded-md flex items-center justify-center border ${getSmallFileIconBg(type)}`}>
                              {getFileIcon(type)}
@@ -644,33 +644,33 @@ export default function KnowledgePage() {
       {view === 'detail' && activeKb && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Detail Header */}
-          <div className="border-b border-white/5 bg-[#0a0a0c] p-6 z-10 flex-shrink-0">
+          <div className="border-b border-zinc-200 dark:border-white/10 bg-background p-6 z-10 flex-shrink-0">
             <div className="max-w-[1400px] mx-auto flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setView('grid')}
-                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-white/5"
+                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors border border-zinc-200 dark:border-white/10"
                 >
-                  <ArrowLeft className="w-4 h-4 text-zinc-400" />
+                  <ArrowLeft className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 </button>
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${getKbColors(activeKb.color || 'fuchsia')}`}>
                   <Database className="w-5 h-5" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-white">{activeKb.name}</h1>
-                  <p className="text-xs text-zinc-400">{activeKb.description || 'No description provided.'}</p>
+                  <h1 className="text-xl font-bold text-foreground">{activeKb.name}</h1>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{activeKb.description || 'No description provided.'}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 {isUploading && (
-                   <span className="text-xs text-zinc-400 flex items-center gap-2">
+                   <span className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
                      <RefreshCw className="w-3 h-3 animate-spin" /> Processing Source...
                    </span>
                 )}
                 <Link 
                   href={`/knowledge-base/${activeKb.id}/architecture`}
-                  className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-opacity shadow-[0_0_15px_rgba(139,92,246,0.3)]"
+                  className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:opacity-90 text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-opacity shadow-[0_0_15px_rgba(139,92,246,0.3)]"
                 >
                   <Network className="w-4 h-4" />
                   View Node Tree
@@ -678,7 +678,7 @@ export default function KnowledgePage() {
                 <button 
                   onClick={() => { setShowAddSource(true); if(githubRepos.length === 0) fetchGithubRepos(); }}
                   disabled={isUploading}
-                  className={`flex items-center gap-2 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isUploading ? 'opacity-50' : ''}`}
+                  className={`flex items-center gap-2 bg-zinc-100 dark:bg-card border border-black/10 dark:border-white/10 hover:bg-zinc-800 text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isUploading ? 'opacity-50' : ''}`}
                 >
                   <Plus className="w-4 h-4" />
                   Add Source
@@ -691,8 +691,8 @@ export default function KnowledgePage() {
             <Panel defaultSize={activeDoc ? 60 : 100} minSize={30} className="flex flex-col overflow-hidden h-full">
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 <div className="max-w-[1400px] mx-auto w-full">
-                  <div className="bg-[#121217] border border-white/5 rounded-2xl overflow-hidden">
-                  <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-white/5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider bg-[#0f0f13]">
+                  <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+                  <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-zinc-200 dark:border-white/10 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider bg-zinc-100 dark:bg-[#0f0f13]">
                     <div className="col-span-6">Name</div>
                     <div className="col-span-2">Type</div>
                     <div className="col-span-3">Updated</div>
@@ -722,7 +722,7 @@ export default function KnowledgePage() {
                                 {getFileIcon(doc.sourceType)}
                               </div>
                               <div>
-                                <p className={`text-sm font-medium truncate ${isActive ? 'text-fuchsia-300' : 'text-zinc-200'}`}>{doc.title}</p>
+                                <p className={`text-sm font-medium truncate ${isActive ? 'text-fuchsia-300' : 'text-foreground'}`}>{doc.title}</p>
                                 <p className="text-[11px] text-zinc-500 mt-0.5">{formatBytes(doc.sizeBytes || 0)}</p>
                               </div>
                             </div>
@@ -731,13 +731,13 @@ export default function KnowledgePage() {
                                 {doc.sourceType}
                               </span>
                             </div>
-                            <div className="col-span-3 text-xs text-zinc-400">
+                            <div className="col-span-3 text-xs text-zinc-500 dark:text-zinc-400">
                               {formatTimeAgo(doc.updatedAt || doc.createdAt)}
                             </div>
                             <div className="col-span-1 text-right">
                               <button 
                                 onClick={(e) => { e.stopPropagation(); setDocToDelete(doc); }}
-                                className="text-zinc-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-white/5"
+                                className="text-zinc-500 hover:text-red-400 transition-colors p-1 rounded hover:bg-background/5 dark:hover:bg-white/5"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -748,7 +748,7 @@ export default function KnowledgePage() {
                     ) : (
                       <div className="p-12 text-center flex flex-col items-center justify-center">
                         <Database className="w-8 h-8 text-zinc-600 mb-4" />
-                        <p className="text-sm text-zinc-400 mb-1">No files in this Knowledge Base yet.</p>
+                        <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">No files in this Knowledge Base yet.</p>
                         <p className="text-xs text-zinc-600">Upload a document to get started.</p>
                       </div>
                     )}
@@ -760,10 +760,10 @@ export default function KnowledgePage() {
 
             {activeDoc && (
               <>
-                <PanelResizeHandle className="w-1 bg-white/5 hover:bg-fuchsia-500/50 transition-colors cursor-col-resize active:bg-fuchsia-500" />
-                <Panel defaultSize={40} minSize={20} className="bg-[#0f0f13] border-l border-white/5 flex flex-col overflow-hidden h-full">
-                  <div className="p-4 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#0f0f13] z-10 shadow-sm flex-shrink-0">
-                    <h3 className="font-bold text-white flex items-center gap-3 truncate pr-4">
+                <PanelResizeHandle className="w-1 bg-black/5 dark:bg-white/5 hover:bg-fuchsia-500/50 transition-colors cursor-col-resize active:bg-fuchsia-500" />
+                <Panel defaultSize={40} minSize={20} className="bg-zinc-100 dark:bg-[#0f0f13] border-l border-zinc-200 dark:border-white/10 flex flex-col overflow-hidden h-full">
+                  <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center sticky top-0 bg-zinc-100 dark:bg-[#0f0f13] z-10 shadow-sm flex-shrink-0">
+                    <h3 className="font-bold text-foreground flex items-center gap-3 truncate pr-4">
                       <div className={`p-1.5 rounded-md ${getSmallFileIconBg(activeDoc.sourceType)}`}>
                         {getFileIcon(activeDoc.sourceType)}
                       </div>
@@ -771,13 +771,13 @@ export default function KnowledgePage() {
                     </h3>
                     <button 
                       onClick={() => setActiveDoc(null)} 
-                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-zinc-400 hover:text-white flex-shrink-0"
+                      className="p-1.5 hover:bg-white/10 rounded-md transition-colors text-zinc-500 dark:text-zinc-400 hover:text-foreground flex-shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   <div className="p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
-                    <div className="prose prose-invert prose-sm max-w-none text-zinc-300">
+                    <div className="prose prose-invert prose-sm max-w-none text-zinc-600 dark:text-zinc-300">
                       <ReactMarkdown>
                         {activeDoc.enhancedContent || activeDoc.content || 'No text content available for this document.'}
                       </ReactMarkdown>
@@ -792,44 +792,44 @@ export default function KnowledgePage() {
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#121217] p-6 rounded-2xl shadow-2xl max-w-md w-full border border-white/10">
-            <h3 className="text-lg font-bold text-white mb-1">Create Knowledge Base</h3>
-            <p className="text-xs text-zinc-400 mb-5">Organize your files for AI generation.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="bg-card p-6 rounded-2xl shadow-2xl max-w-md w-full border border-black/10 dark:border-white/10">
+            <h3 className="text-lg font-bold text-foreground mb-1">Create Knowledge Base</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-5">Organize your files for AI generation.</p>
             
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">Name</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">Name</label>
                 <input 
                   type="text"
                   placeholder="e.g. Q3 Marketing Reports"
                   value={newKbName}
                   onChange={(e) => setNewKbName(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                  className="w-full bg-background/5 dark:bg-background/40 border border-black/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-fuchsia-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-zinc-400 mb-1.5 uppercase tracking-wide">Description</label>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 uppercase tracking-wide">Description</label>
                 <textarea 
                   placeholder="What is this knowledge base for?"
                   value={newKbDesc}
                   onChange={(e) => setNewKbDesc(e.target.value)}
-                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:ring-1 focus:ring-fuchsia-500 outline-none resize-none h-20"
+                  className="w-full bg-background/5 dark:bg-background/40 border border-black/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-foreground focus:ring-1 focus:ring-fuchsia-500 outline-none resize-none h-20"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
+            <div className="flex justify-end gap-3 border-t border-zinc-200 dark:border-white/10 pt-4">
               <button 
                 onClick={() => setShowCreate(false)}
-                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleCreate}
                 disabled={!newKbName}
-                className="bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                className="bg-fuchsia-600 hover:bg-fuchsia-500 text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
               >
                 Create
               </button>
@@ -840,17 +840,17 @@ export default function KnowledgePage() {
 
       {/* Delete Confirmation Modal */}
       {docToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#121217] p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
-            <h3 className="text-lg font-bold text-white mb-2">Delete Document?</h3>
-            <p className="text-sm text-zinc-400 mb-6">
-              Are you sure you want to delete <span className="text-white font-medium">"{docToDelete.title}"</span>? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="bg-card p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-black/10 dark:border-white/10">
+            <h3 className="text-lg font-bold text-foreground mb-2">Delete Document?</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              Are you sure you want to delete <span className="text-foreground font-medium">"{docToDelete.title}"</span>? This action cannot be undone.
             </p>
             
-            <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
+            <div className="flex justify-end gap-3 border-t border-zinc-200 dark:border-white/10 pt-4">
               <button 
                 onClick={() => setDocToDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -867,17 +867,17 @@ export default function KnowledgePage() {
 
       {/* Delete KB Confirmation Modal */}
       {kbToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#121217] p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-white/10">
-            <h3 className="text-lg font-bold text-white mb-2">Delete Knowledge Base?</h3>
-            <p className="text-sm text-zinc-400 mb-6">
-              Are you sure you want to delete <span className="text-white font-medium">"{kbToDelete.name}"</span>? This will permanently delete all associated documents, chats, and sources. This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="bg-card p-6 rounded-2xl shadow-2xl max-w-sm w-full border border-black/10 dark:border-white/10">
+            <h3 className="text-lg font-bold text-foreground mb-2">Delete Knowledge Base?</h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              Are you sure you want to delete <span className="text-foreground font-medium">"{kbToDelete.name}"</span>? This will permanently delete all associated documents, chats, and sources. This action cannot be undone.
             </p>
             
-            <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
+            <div className="flex justify-end gap-3 border-t border-zinc-200 dark:border-white/10 pt-4">
               <button 
                 onClick={() => setKbToDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -894,31 +894,31 @@ export default function KnowledgePage() {
 
       {/* Add Source Modal */}
       {showAddSource && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#121217] p-6 rounded-2xl shadow-2xl max-w-lg w-full border border-white/10 flex flex-col h-[500px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="bg-card p-6 rounded-2xl shadow-2xl max-w-lg w-full border border-black/10 dark:border-white/10 flex flex-col h-[500px]">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold text-white">Add Knowledge Source</h3>
-              <button onClick={() => setShowAddSource(false)} className="text-zinc-500 hover:text-white transition-colors">
+              <h3 className="text-lg font-bold text-foreground">Add Knowledge Source</h3>
+              <button onClick={() => setShowAddSource(false)} className="text-zinc-500 hover:text-foreground transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="flex gap-2 mb-6 bg-black/40 p-1 rounded-lg shrink-0">
+            <div className="flex gap-2 mb-6 bg-background/5 dark:bg-background/40 p-1 rounded-lg shrink-0">
               <button 
                 onClick={() => setSourceTab('files')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'files' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'}`}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'files' ? 'bg-zinc-800 text-foreground' : 'text-zinc-500 dark:text-zinc-400 hover:text-foreground'}`}
               >
                 <FileText className="w-3.5 h-3.5" /> Files
               </button>
               <button 
                 onClick={() => setSourceTab('folder')}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'folder' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'}`}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'folder' ? 'bg-zinc-800 text-foreground' : 'text-zinc-500 dark:text-zinc-400 hover:text-foreground'}`}
               >
                 <FolderUp className="w-3.5 h-3.5" /> Folder
               </button>
               <button 
                 onClick={() => { setSourceTab('github'); fetchGithubRepos(); }}
-                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'github' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'}`}
+                className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center justify-center gap-2 ${sourceTab === 'github' ? 'bg-zinc-800 text-foreground' : 'text-zinc-500 dark:text-zinc-400 hover:text-foreground'}`}
               >
                 <GitBranch className="w-3.5 h-3.5" /> GitHub App
               </button>
@@ -930,30 +930,30 @@ export default function KnowledgePage() {
                   <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mb-6">
                     <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
+                  <h3 className="text-xl font-bold text-foreground mb-2">
                     {uploadStats.total > 0 ? 'Syncing Knowledge' : 'Scanning Files...'}
                   </h3>
                   
                   {uploadStats.total > 0 ? (
                     <>
-                      <p className="text-sm text-zinc-400 mb-8 text-center w-full truncate px-4" title={uploadStats.filename}>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 text-center w-full truncate px-4" title={uploadStats.filename}>
                         {uploadStats.filename || 'Preparing files...'}
                       </p>
                       
-                      <div className="w-full bg-zinc-800 rounded-full h-2.5 mb-3 overflow-hidden border border-white/5">
+                      <div className="w-full bg-zinc-800 rounded-full h-2.5 mb-3 overflow-hidden border border-zinc-200 dark:border-white/10">
                         <div 
                           className="bg-blue-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
                           style={{ width: `${Math.max(5, (uploadStats.current / uploadStats.total) * 100)}%` }}
                         ></div>
                       </div>
                       
-                      <div className="flex justify-between w-full text-xs text-zinc-400 font-medium">
+                      <div className="flex justify-between w-full text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                         <span>{Math.round((uploadStats.current / uploadStats.total) * 100)}%</span>
                         <span>{uploadStats.current} / {uploadStats.total} files</span>
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm text-zinc-400 mb-8 text-center w-full px-4">
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-8 text-center w-full px-4">
                       Parsing directory structure and filtering ignored files...
                     </p>
                   )}
@@ -961,7 +961,7 @@ export default function KnowledgePage() {
               ) : (
                 <>
                   {sourceTab === 'files' && (
-                    <div className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-8 flex flex-col items-center justify-center h-full transition-colors relative">
+                    <div className="border-2 border-dashed border-black/10 dark:border-white/10 hover:border-white/20 rounded-xl p-8 flex flex-col items-center justify-center h-full transition-colors relative">
                       <input 
                         type="file" 
                         multiple
@@ -969,24 +969,24 @@ export default function KnowledgePage() {
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
                       <UploadCloud className="w-10 h-10 text-zinc-500 mb-3" />
-                      <p className="text-sm text-white font-medium mb-1">Click or drag files here</p>
+                      <p className="text-sm text-foreground font-medium mb-1">Click or drag files here</p>
                       <p className="text-xs text-zinc-500 text-center">Upload multiple PDFs, documents, or media files.</p>
                     </div>
                   )}
 
                   {sourceTab === 'folder' && (
-                    <div className="border-2 border-dashed border-white/10 hover:border-white/20 rounded-xl p-8 flex flex-col items-center justify-center h-full transition-colors relative">
+                    <div className="border-2 border-dashed border-black/10 dark:border-white/10 hover:border-white/20 rounded-xl p-8 flex flex-col items-center justify-center h-full transition-colors relative">
                       <button 
                         onClick={handleNativeFolderUpload}
                         className="absolute inset-0 w-full h-full cursor-pointer z-10"
                         aria-label="Select Folder"
                       />
                       <FolderUp className="w-10 h-10 text-zinc-500 mb-3" />
-                      <p className="text-sm text-white font-medium mb-1">Select a Local Folder</p>
+                      <p className="text-sm text-foreground font-medium mb-1">Select a Local Folder</p>
                       <p className="text-xs text-zinc-500 text-center px-4 max-w-[300px]">
-                        Powered by your OS. Automatically skips <code className="bg-zinc-800 px-1 rounded text-zinc-300">node_modules</code>, <code className="bg-zinc-800 px-1 rounded text-zinc-300">build</code>, and completely respects your <code className="bg-zinc-800 px-1 rounded text-zinc-300">.gitignore</code> file for maximum performance!
+                        Powered by your OS. Automatically skips <code className="bg-zinc-800 px-1 rounded text-zinc-600 dark:text-zinc-300">node_modules</code>, <code className="bg-zinc-800 px-1 rounded text-zinc-600 dark:text-zinc-300">build</code>, and completely respects your <code className="bg-zinc-800 px-1 rounded text-zinc-600 dark:text-zinc-300">.gitignore</code> file for maximum performance!
                       </p>
-                      <div className="mt-4 bg-zinc-800 text-xs px-4 py-1.5 rounded-full text-zinc-300 font-medium z-0">
+                      <div className="mt-4 bg-zinc-800 text-xs px-4 py-1.5 rounded-full text-zinc-600 dark:text-zinc-300 font-medium z-0">
                         Browse Files
                       </div>
                     </div>
@@ -997,16 +997,16 @@ export default function KnowledgePage() {
                       {isLoadingRepos ? (
                         <div className="flex flex-col items-center justify-center h-full">
                           <RefreshCw className="w-6 h-6 text-zinc-500 animate-spin mb-3" />
-                          <p className="text-sm text-zinc-400">Loading your GitHub App installations...</p>
+                          <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading your GitHub App installations...</p>
                         </div>
                       ) : githubRepos.length > 0 ? (
                         <div className="space-y-2 pb-4">
                           {githubRepos.map(repo => (
-                            <div key={repo.id} className="flex items-center justify-between p-3 rounded-lg border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
+                            <div key={repo.id} className="flex items-center justify-between p-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
                               <div className="flex items-center gap-3 overflow-hidden">
-                                <img src={repo.ownerAvatarUrl} alt={repo.ownerLogin} className="w-8 h-8 rounded-full border border-white/10 shrink-0" />
+                                <img src={repo.ownerAvatarUrl} alt={repo.ownerLogin} className="w-8 h-8 rounded-full border border-black/10 dark:border-white/10 shrink-0" />
                                 <div className="truncate">
-                                  <p className="text-sm font-medium text-white truncate">{repo.fullName}</p>
+                                  <p className="text-sm font-medium text-foreground truncate">{repo.fullName}</p>
                                   <div className="flex items-center gap-2 mt-0.5">
                                     <span className="text-[10px] text-zinc-500 border border-zinc-800 rounded px-1">{repo.private ? 'Private' : 'Public'}</span>
                                     <span className="text-[10px] text-zinc-500">Branch: {repo.defaultBranch}</span>
@@ -1015,7 +1015,7 @@ export default function KnowledgePage() {
                               </div>
                               <button 
                                 onClick={() => handleConnectGithub(repo)}
-                                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-md transition-colors whitespace-nowrap shrink-0 ml-3"
+                                className="text-xs bg-zinc-800 hover:bg-zinc-700 text-foreground px-3 py-1.5 rounded-md transition-colors whitespace-nowrap shrink-0 ml-3"
                               >
                                 Connect
                               </button>
@@ -1025,7 +1025,7 @@ export default function KnowledgePage() {
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <GitBranch className="w-10 h-10 text-zinc-600 mb-3" />
-                          <p className="text-sm text-zinc-300 mb-2">No repositories found.</p>
+                          <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-2">No repositories found.</p>
                           <p className="text-xs text-zinc-500 mb-4 px-4">Install your GenWorkAI GitHub App on your repositories to see them here.</p>
                           <a href={`https://github.com/apps/genworkai/installations/new`} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
                             Manage GitHub App Installations ↗

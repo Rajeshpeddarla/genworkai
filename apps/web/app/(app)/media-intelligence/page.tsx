@@ -61,7 +61,7 @@ export default function MediaIntelligencePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6">
           <div className="lg:col-span-2 space-y-8">
             {/* Main Input Card */}
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-8 lg:p-12 relative overflow-hidden backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-8 lg:p-12 relative overflow-hidden backdrop-blur-sm">
               <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
               
               <div className="text-center mb-8 relative z-10">
@@ -116,7 +116,7 @@ export default function MediaIntelligencePage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <History className="w-4 h-4 text-orange-400" /> Recent Analyses
               </h3>
@@ -146,7 +146,7 @@ export default function MediaIntelligencePage() {
           
           <div className="lg:col-span-2 space-y-6">
             {/* Top Overview Card */}
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
               <div className="flex items-start gap-4 mb-6 pb-6 border-b border-white/10">
                 <div className="w-32 h-20 rounded-lg bg-zinc-800 shrink-0 relative overflow-hidden border border-white/10 flex items-center justify-center">
                   <Play className="w-8 h-8 text-white/50" />
@@ -207,7 +207,7 @@ export default function MediaIntelligencePage() {
             </div>
             
             {/* Timestamps & Transcripts snippet */}
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-400" /> Key Moments
                 </h3>
@@ -233,7 +233,7 @@ export default function MediaIntelligencePage() {
           <div className="space-y-6">
             
             {/* Extracted Entities */}
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-5">Detected Entities</h3>
               
               <div className="space-y-5">
@@ -279,7 +279,7 @@ export default function MediaIntelligencePage() {
             </div>
 
             {/* Related Context */}
-            <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-orange-400" /> Trend Signals
               </h3>

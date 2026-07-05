@@ -10,7 +10,7 @@ async function testDeepSeek() {
   const endpoint = apiUrl.endsWith('/chat/completions') ? apiUrl : `${apiUrl.replace(/\/$/, '')}/chat/completions`;
 
   const requestBody = {
-    model: 'deepseek-chat', // The official model name for DeepSeek-V3
+    model: 'deepseek-v4-flash', // The official model name for DeepSeek-V3
     messages: [
       { role: 'system', content: 'You are a helpful assistant.' },
       { role: 'user', content: 'Hello! Please reply with exactly: "DeepSeek API is working perfectly!"' }

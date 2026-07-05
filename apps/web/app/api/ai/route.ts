@@ -48,8 +48,7 @@ export async function POST(req: Request) {
     }
 
     const result = await generateWithFallbacks({
-      messages: [
-        { role: "system", content: systemPrompt },
+      system: systemPrompt, messages: [
         { role: "user", content: type === "summary" ? markdown : prompt }
       ],
       taskCategory: type === "summary" ? TaskCategory.STRUCTURED : TaskCategory.REASONING,

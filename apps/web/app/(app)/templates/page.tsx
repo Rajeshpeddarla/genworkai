@@ -129,7 +129,7 @@ export default function TemplatesPage() {
           <input 
             type="text" 
             placeholder="Search templates..." 
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all"
+            className="w-full bg-card/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-rose-500 focus:ring-1 focus:ring-rose-500 outline-none transition-all"
           />
         </div>
         <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-colors text-zinc-300">
@@ -139,7 +139,7 @@ export default function TemplatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {templates.map((template) => (
-          <div key={template.id} className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-rose-500/50 transition-all flex flex-col relative">
+          <div key={template.id} className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-rose-500/50 transition-all flex flex-col relative">
             <div className="flex items-start justify-between mb-4">
               <div className={`w-12 h-12 rounded-xl ${template.bg} border border-white/5 flex items-center justify-center`}>
                 <template.icon className={`w-6 h-6 ${template.color}`} />

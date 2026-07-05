@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
 import { workspaceChats, workspaceMessages, workspaceArtifacts, workspaceArtifactVersions, knowledgeBases } from '../../../../../../db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { streamText } from 'ai';
 import { requireUser, requireOwnership } from '../../../../../../lib/auth';
 import { RateLimitService } from '../../../../../../lib/security/rate-limit';
@@ -163,14 +163,12 @@ CRITICAL RULES FOR FACTUAL ACCURACY AND CODE GENERATION:
       return new Response(stream, { headers: { "Content-Type": "text/plain" } });
     }
 
-    const deepseek = createOpenAI({
+    const deepseek = createDeepSeek({
       apiKey,
       baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
     });
 
-    const llmMessages: {role: "system"|"user"|"assistant", content: string}[] = [
-      { role: "system", content: systemPrompt }
-    ];
+    const llmMessages: {role: "user"|"assistant", content: string}[] = [];
     
     // Add history (excluding the current user message because we already inserted it)
     for (const msg of previousMessages) {
@@ -183,6 +181,7 @@ CRITICAL RULES FOR FACTUAL ACCURACY AND CODE GENERATION:
 
     const result = streamText({
       model: deepseek.chat('deepseek-v4-flash'),
+      system: systemPrompt,
       messages: llmMessages,
       async onFinish({ text, usage }) {
         try {

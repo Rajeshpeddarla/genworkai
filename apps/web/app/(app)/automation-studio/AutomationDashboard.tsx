@@ -138,18 +138,18 @@ export function AutomationDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Automation Dashboard</h1>
-          <p className="text-gray-400 mt-1">Monitor, manage, and create database automations</p>
+          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 mt-1">Monitor, manage, and create database automations</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={fetchData} 
-            className="p-2.5 bg-[#111] hover:bg-gray-800 border border-gray-800 rounded-xl transition-colors"
+            className="p-2.5 bg-card hover:bg-black/5 dark:bg-white/5 hover:text-accent-foreground border border-zinc-200 dark:border-white/10 rounded-xl transition-colors"
           >
-            <RefreshCcw className={`w-5 h-5 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCcw className={`w-5 h-5 text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button 
             onClick={openCreate}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-foreground font-bold rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
           >
             <Plus className="w-5 h-5" /> Create Automation
           </button>
@@ -169,20 +169,20 @@ export function AutomationDashboard() {
       {/* Search & Filters */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
           <input 
             type="text" 
             placeholder="Search automations..." 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-[#111] border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-white focus:border-indigo-500 focus:outline-none"
+            className="w-full bg-card border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-foreground focus:border-indigo-500 focus:outline-none"
           />
         </div>
         <div className="flex gap-2">
           <select 
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="bg-[#111] border border-gray-800 rounded-xl px-4 py-2.5 text-white focus:border-indigo-500 focus:outline-none"
+            className="bg-card border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-foreground focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -194,7 +194,7 @@ export function AutomationDashboard() {
           <select 
             value={filterEngine}
             onChange={e => setFilterEngine(e.target.value)}
-            className="bg-[#111] border border-gray-800 rounded-xl px-4 py-2.5 text-white focus:border-indigo-500 focus:outline-none"
+            className="bg-card border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-foreground focus:border-indigo-500 focus:outline-none"
           >
             <option value="all">All Databases</option>
             <option value="pg">PostgreSQL</option>
@@ -205,15 +205,15 @@ export function AutomationDashboard() {
 
       {/* Grid */}
       {filteredAutomations.length === 0 ? (
-        <div className="bg-[#111] border border-gray-800 rounded-2xl p-12 flex flex-col items-center justify-center text-center mt-4">
+        <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-12 flex flex-col items-center justify-center text-center mt-4">
           <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
             <Database className="w-10 h-10 text-indigo-400" />
           </div>
           <h2 className="text-2xl font-bold mb-2">No automations found</h2>
-          <p className="text-gray-400 max-w-md mb-8">Create your first database automation to schedule queries, generate AI reports, and monitor your data automatically.</p>
+          <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 max-w-md mb-8">Create your first database automation to schedule queries, generate AI reports, and monitor your data automatically.</p>
           <button 
             onClick={openCreate}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-foreground font-bold rounded-xl transition-colors shadow-lg shadow-indigo-900/20"
           >
             <Plus className="w-5 h-5" /> Create Your First Automation
           </button>
@@ -233,32 +233,32 @@ export function AutomationDashboard() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   key={a.id}
                   onClick={() => openDetails(a.id)}
-                  className="bg-[#111] border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 hover:shadow-xl hover:shadow-black/50 transition-all cursor-pointer group flex flex-col"
+                  className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden hover:border-zinc-200 dark:border-white/10 hover:shadow-xl hover:shadow-black/50 transition-all cursor-pointer group flex flex-col"
                 >
-                  <div className="p-5 border-b border-gray-800/50">
+                  <div className="p-5 border-b border-zinc-200 dark:border-white/5">
                     <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-bold text-lg text-white truncate pr-2">{a.name}</h3>
+                      <h3 className="font-bold text-lg text-foreground truncate pr-2">{a.name}</h3>
                       <StatusBadge status={a.status} />
                     </div>
-                    <p className="text-gray-400 text-sm line-clamp-2 min-h-[40px]">{a.description || 'No description provided.'}</p>
+                    <p className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 text-sm line-clamp-2 min-h-[40px]">{a.description || 'No description provided.'}</p>
                   </div>
                   
-                  <div className="p-5 bg-[#151515] flex-1 flex flex-col gap-3 text-sm">
-                    <div className="flex justify-between items-center text-gray-400">
+                  <div className="p-5 bg-black/5 dark:bg-white/5 flex-1 flex flex-col gap-3 text-sm">
+                    <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">
                       <span className="flex items-center gap-1.5"><Database className="w-3.5 h-3.5" /> Database</span>
-                      <span className="text-white font-medium truncate max-w-[120px]">{db?.name || 'Unknown'}</span>
+                      <span className="text-foreground font-medium truncate max-w-[120px]">{db?.name || 'Unknown'}</span>
                     </div>
-                    <div className="flex justify-between items-center text-gray-400">
+                    <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">
                       <span className="flex items-center gap-1.5"><Clock4 className="w-3.5 h-3.5" /> Schedule</span>
-                      <span className="text-white font-medium capitalize">{a.schedule || 'Manual'}</span>
+                      <span className="text-foreground font-medium capitalize">{a.schedule || 'Manual'}</span>
                     </div>
-                    <div className="flex justify-between items-center text-gray-400">
+                    <div className="flex justify-between items-center text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">
                       <span className="flex items-center gap-1.5"><Activity className="w-3.5 h-3.5" /> Total Runs</span>
-                      <span className="text-white font-medium">{a.totalRuns || 0}</span>
+                      <span className="text-foreground font-medium">{a.totalRuns || 0}</span>
                     </div>
                   </div>
                   
-                  <div className="p-4 border-t border-gray-800/50 flex items-center justify-between bg-[#111]">
+                  <div className="p-4 border-t border-zinc-200 dark:border-white/5 flex items-center justify-between bg-card">
                     <div className="flex gap-2">
                       <button 
                         onClick={(e) => handleRunNow(e, a.id)}
@@ -270,7 +270,7 @@ export function AutomationDashboard() {
                       </button>
                       <button 
                         onClick={(e) => handleTogglePause(e, a.id, a.status)}
-                        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+                        className="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-black/5 dark:bg-white/5 hover:text-accent-foreground text-zinc-600 dark:text-zinc-600 dark:text-zinc-300 transition-colors"
                         title={a.status === 'paused' ? 'Resume' : 'Pause'}
                       >
                         {a.status === 'paused' ? <PlayCircle className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
@@ -280,13 +280,13 @@ export function AutomationDashboard() {
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
                         onClick={(e) => openEdit(e, a.id)}
-                        className="p-2 rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors text-xs font-medium"
+                        className="p-2 rounded-lg hover:bg-black/5 dark:bg-white/5 hover:text-accent-foreground text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 hover:text-foreground transition-colors text-xs font-medium"
                       >
                         Edit
                       </button>
                       <button 
                         onClick={(e) => handleDelete(e, a.id)}
-                        className="p-2 rounded-lg hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors text-xs font-medium"
+                        className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 dark:text-zinc-400 hover:text-red-400 transition-colors text-xs font-medium"
                       >
                         Delete
                       </button>
@@ -325,18 +325,18 @@ export function AutomationDashboard() {
 
 function StatCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
-    <div className="bg-[#111] border border-gray-800 rounded-xl p-4 flex flex-col justify-between hover:border-gray-700 transition-colors">
+    <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col justify-between hover:border-zinc-200 dark:border-white/10 transition-colors">
       <div className="flex justify-between items-start mb-2">
-        <span className="text-gray-400 text-sm font-medium">{title}</span>
+        <span className="text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 text-sm font-medium">{title}</span>
         {icon}
       </div>
-      <span className="text-2xl font-bold text-white">{value}</span>
+      <span className="text-2xl font-bold text-foreground">{value}</span>
     </div>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  let color = 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+  let color = 'bg-gray-500/10 text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 border-gray-500/20';
   if (status === 'active') color = 'bg-green-500/10 text-green-400 border-green-500/20';
   if (status === 'paused') color = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
   if (status === 'running') color = 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse';

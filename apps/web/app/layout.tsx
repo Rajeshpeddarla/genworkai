@@ -41,7 +41,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors`} suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen overflow-x-hidden bg-zinc-50 dark:bg-card text-zinc-900 dark:text-zinc-50 transition-colors`} suppressHydrationWarning>
         <ThemeProvider>
           {children}
         </ThemeProvider>

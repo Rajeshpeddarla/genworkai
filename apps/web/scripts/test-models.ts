@@ -2,7 +2,7 @@ async function testDeepSeek() {
   const apiKey = process.env.DEEPSEEK_API_KEY || 'sk-a94cc61c538d4143968e29fb8e5089c0';
   const apiUrl = 'https://api.deepseek.com/chat/completions';
 
-  const modelsToTest = ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-chat', 'deepseek-reasoner'];
+  const modelsToTest = ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-v4-flash', 'deepseek-reasoner'];
 
   for (const model of modelsToTest) {
     console.log(`\nTesting model: ${model}...`);

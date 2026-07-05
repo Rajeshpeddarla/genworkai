@@ -28,7 +28,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: any[] }) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 p-4 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
           <input 
@@ -36,13 +36,13 @@ export default function UsersClient({ initialUsers }: { initialUsers: any[] }) {
             placeholder="Search by name or email..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none"
+            className="w-full bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2 text-zinc-900 dark:text-white focus:ring-2 focus:ring-rose-500 outline-none"
           />
         </div>
         <select 
           value={tierFilter}
           onChange={(e) => setTierFilter(e.target.value)}
-          className="px-4 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-700 dark:text-zinc-300 outline-none"
+          className="px-4 py-2 bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-700 dark:text-zinc-300 outline-none"
         >
           <option value="all">All Tiers</option>
           <option value="free">Free</option>
@@ -53,7 +53,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: any[] }) {
         <select 
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-700 dark:text-zinc-300 outline-none"
+          className="px-4 py-2 bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl text-zinc-700 dark:text-zinc-300 outline-none"
         >
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
@@ -61,7 +61,7 @@ export default function UsersClient({ initialUsers }: { initialUsers: any[] }) {
         </select>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
         <table className="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
           <thead className="text-xs text-zinc-700 dark:text-zinc-300 uppercase bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
             <tr>

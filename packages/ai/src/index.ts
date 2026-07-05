@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { AIRouter, TaskCategory, RouterOptions, RouterResult } from './router';
@@ -12,7 +12,7 @@ export interface ChatMessage {
 }
 
 export interface ProviderConfig {
-  provider: string; // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', 'deepseek', 'custom'
+  provider: string; // 'openai', 'anthropic', 'gemini', 'openrouter', 'ollama', 'createDeepSeek', 'custom'
   apiKey: string;
   baseUrl?: string;
   defaultModel?: string;
@@ -66,16 +66,16 @@ function getModelInstance(
   switch (providerType) {
     case 'openai':
     case 'custom':
-    case 'deepseek': {
+    case 'createDeepSeek': {
       // All these are OpenAI-compatible endpoints
-      const openai = createOpenAI({
+      const openai = createDeepSeek({
         apiKey: apiKey,
         baseURL: baseUrl,
       });
       return openai.chat(modelName);
     }
     case 'openrouter': {
-      const openai = createOpenAI({
+      const openai = createDeepSeek({
         apiKey: apiKey,
         baseURL: baseUrl || 'https://openrouter.ai/api/v1',
       });
@@ -108,7 +108,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateWithFallbacks(
   options: ChatCompletionOptions,
   fallbackApiKey: string,
-  fallbackUrl: string = "https://api.deepseek.com", // Default DeepSeek API
+  fallbackUrl: string = "https://api.createDeepSeek.com", // Default DeepSeek API
   maxRetries = 3
 ): Promise<ChatCompletionResult> {
   let attempt = 0;
@@ -126,7 +126,7 @@ export async function generateWithFallbacks(
   while (attempt < maxRetries) {
     try {
       const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl);
-      const providerName = options.providerConfig?.provider || 'platform_deepseek';
+      const providerName = options.providerConfig?.provider || 'platform_createDeepSeek';
       
       options.onLog?.(`AI: Routing to ${providerName} using model ${currentRoute.model}`);
 

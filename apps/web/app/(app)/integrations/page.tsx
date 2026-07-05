@@ -48,7 +48,7 @@ export default function IntegrationsPage() {
           <input 
             type="text" 
             placeholder="Search integrations..." 
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+            className="w-full bg-card/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
           />
         </div>
       </div>
@@ -56,7 +56,7 @@ export default function IntegrationsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         
         {integrations.map((app) => (
-          <div key={app.name} className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-indigo-500/50 transition-all flex flex-col relative overflow-hidden">
+          <div key={app.name} className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-indigo-500/50 transition-all flex flex-col relative overflow-hidden">
             {app.connected && (
               <div className="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-3 py-1 rounded-bl-lg flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" /> Connected
@@ -83,7 +83,7 @@ export default function IntegrationsPage() {
         ))}
 
         {/* Custom Webhook / API */}
-        <div className="bg-zinc-900/30 border-2 border-dashed border-white/10 hover:border-indigo-500/50 rounded-3xl p-6 backdrop-blur-sm flex flex-col items-center justify-center text-center cursor-pointer group transition-all">
+        <div className="bg-card/30 border-2 border-dashed border-white/10 hover:border-indigo-500/50 rounded-3xl p-6 backdrop-blur-sm flex flex-col items-center justify-center text-center cursor-pointer group transition-all">
           <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-indigo-500/10 transition-all">
             <Blocks className="w-6 h-6 text-zinc-500 group-hover:text-indigo-400" />
           </div>

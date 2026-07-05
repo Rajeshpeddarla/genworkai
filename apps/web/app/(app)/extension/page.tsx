@@ -46,7 +46,7 @@ export default function ExtensionDashboardPage() {
         <div className="space-y-6">
           
           {/* Extension Status */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5">
               <AppWindow className="w-32 h-32" />
             </div>
@@ -68,7 +68,7 @@ export default function ExtensionDashboardPage() {
           </div>
 
           {/* Analytics */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
             <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-6 flex items-center gap-2">
               <BarChart3 className="w-4 h-4" /> Extension Analytics
             </h3>
@@ -111,7 +111,7 @@ export default function ExtensionDashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           
           {/* Capabilities Grid */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
              <h2 className="text-xl font-bold text-white mb-6">Extension Capabilities</h2>
              
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -132,7 +132,7 @@ export default function ExtensionDashboardPage() {
           </div>
 
           {/* Recent Extractions */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
              <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white">Recently Extracted</h2>
                 <button className="text-sm text-blue-400 hover:text-blue-300">View All</button>

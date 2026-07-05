@@ -25,7 +25,7 @@ import {
 export default function AiWorkspacePage() {
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] bg-zinc-950/50 rounded-3xl border border-white/10 overflow-hidden backdrop-blur-md shadow-2xl">
+    <div className="flex h-[calc(100vh-8rem)] bg-card/50 rounded-3xl border border-white/10 overflow-hidden backdrop-blur-md shadow-2xl">
       
       {/* Left Sidebar - Chat History & Tabs */}
       <div className="w-72 border-r border-white/10 bg-black/20 flex flex-col hidden md:flex">
@@ -116,7 +116,7 @@ export default function AiWorkspacePage() {
             <div className="space-y-4 w-full">
               <div className="font-medium text-sm text-violet-300">GenWorkAI</div>
               
-              <div className="prose prose-invert max-w-none text-zinc-300 prose-p:leading-relaxed prose-pre:bg-zinc-900/50 prose-pre:border prose-pre:border-white/10 prose-headings:text-zinc-100">
+              <div className="prose prose-invert max-w-none text-zinc-300 prose-p:leading-relaxed prose-pre:bg-card/50 prose-pre:border prose-pre:border-white/10 prose-headings:text-zinc-100">
                 <p>Based on the attached documents, here are the key findings regarding European market expansion for Q3:</p>
                 <ul>
                   <li><strong>Market Growth:</strong> The EU sector has seen a <span className="text-emerald-400">14% YoY growth</span>, particularly strong in the DACH region.</li>
@@ -141,7 +141,7 @@ export default function AiWorkspacePage() {
         <div className="p-4 bg-black/20 border-t border-white/10">
           <div className="max-w-3xl mx-auto relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-violet-500/30 to-fuchsia-500/30 rounded-2xl blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
-            <div className="relative bg-zinc-900 rounded-2xl border border-white/10 p-2 shadow-inner flex flex-col">
+            <div className="relative bg-card rounded-2xl border border-white/10 p-2 shadow-inner flex flex-col">
               
               <textarea 
                 className="w-full bg-transparent border-0 resize-none text-zinc-100 placeholder:text-zinc-500 px-3 py-2 focus:ring-0 sm:text-sm min-h-[60px] max-h-48"

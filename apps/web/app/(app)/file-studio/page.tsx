@@ -483,7 +483,7 @@ export default function FileStudioPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0E] text-zinc-300 font-sans p-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground font-sans p-6 overflow-x-hidden">
 
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-8">
 
@@ -491,44 +491,44 @@ export default function FileStudioPage() {
         <div className="xl:col-span-7 2xl:col-span-8 space-y-8">
 
           {/* File Card */}
-          <div className="bg-[#15151A] border border-white/5 rounded-2xl p-6 relative group">
+          <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6 relative group">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.05),transparent_50%)] pointer-events-none rounded-2xl" />
 
             {selectedFile && previewUrl ? (
               <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
                 {/* Image Preview Container */}
-                <div className="w-full md:w-[350px] aspect-video md:aspect-[4/3] rounded-xl overflow-hidden bg-black/50 border border-white/10 relative shrink-0">
+                <div className="w-full md:w-[350px] aspect-video md:aspect-[4/3] rounded-xl overflow-hidden bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 relative shrink-0">
                   <img src={previewUrl} alt="Preview" className="w-full h-full object-contain" />
                 </div>
 
                 {/* File Details */}
                 <div className="flex-1 min-w-0 w-full relative">
-                  <button onClick={clearFile} className="absolute -top-2 -right-2 p-2 text-zinc-500 hover:text-white bg-white/5 rounded-full hover:bg-red-500/20 transition-all">
+                  <button onClick={clearFile} className="absolute -top-2 -right-2 p-2 text-zinc-500 hover:text-zinc-900 hover:text-foreground bg-black/5 dark:bg-white/5 rounded-full hover:bg-red-500/20 transition-all">
                     <X className="w-4 h-4" />
                   </button>
 
                   <h2 className="text-xl font-bold text-emerald-400 mb-1 truncate pr-8">{selectedFile.name}</h2>
-                  <p className="text-xs text-zinc-500 mb-6 font-mono">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-6 font-mono">
                     {imageDetails.type} • {formatBytes(imageDetails.size)} • {imageDetails.width}×{imageDetails.height}px
                   </p>
 
                   <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-black/30 border border-white/5 rounded-xl p-3">
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Size</div>
-                      <div className="text-sm text-white font-medium">{formatBytes(imageDetails.size)}</div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl p-3">
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Size</div>
+                      <div className="text-sm text-foreground font-medium">{formatBytes(imageDetails.size)}</div>
                     </div>
-                    <div className="bg-black/30 border border-white/5 rounded-xl p-3">
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Type</div>
-                      <div className="text-sm text-white font-medium uppercase">{selectedFile.name.split('.').pop()}</div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl p-3">
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Type</div>
+                      <div className="text-sm text-foreground font-medium uppercase">{selectedFile.name.split('.').pop()}</div>
                     </div>
-                    <div className="bg-black/30 border border-white/5 rounded-xl p-3 col-span-2">
-                      <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Dimensions</div>
-                      <div className="text-sm text-white font-medium">{imageDetails.width} × {imageDetails.height}</div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl p-3 col-span-2">
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1">Dimensions</div>
+                      <div className="text-sm text-foreground font-medium">{imageDetails.width} × {imageDetails.height}</div>
                     </div>
                   </div>
 
                   <div className="flex gap-3">
-                    <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-white transition-all">
+                    <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg text-xs font-medium text-foreground transition-all">
                       Change file
                     </button>
                   </div>
@@ -537,11 +537,11 @@ export default function FileStudioPage() {
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer relative z-10"
+                className="py-20 flex flex-col items-center justify-center border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-xl hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all cursor-pointer relative z-10"
               >
                 <UploadCloud className="w-12 h-12 text-zinc-600 mb-4" />
-                <h3 className="text-lg font-medium text-white mb-1">Upload an Image</h3>
-                <p className="text-sm text-zinc-500">Supports JPG, PNG, WebP, AVIF</p>
+                <h3 className="text-lg font-medium text-foreground mb-1">Upload an Image</h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">Supports JPG, PNG, WebP, AVIF</p>
               </div>
             )}
 
@@ -557,8 +557,8 @@ export default function FileStudioPage() {
           {/* Tools Grid */}
           <div className={!selectedFile ? "opacity-50 pointer-events-none" : ""}>
             <div className="mb-4">
-              <h3 className="text-lg font-bold text-white mb-1">Image Tools</h3>
-              <p className="text-xs text-zinc-500">Pick a tool — fine-tune options on the right.</p>
+              <h3 className="text-lg font-bold text-foreground mb-1">Image Tools</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Pick a tool — fine-tune options on the right.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -569,17 +569,17 @@ export default function FileStudioPage() {
                     key={tool.id}
                     onClick={() => setActiveTool(tool.id)}
                     className={`p-4 rounded-xl border flex items-center gap-4 cursor-pointer transition-all ${isActive
-                        ? "bg-emerald-500/5 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                        : "bg-[#15151A] border-white/5 hover:border-white/20 hover:bg-white/5"
+                        ? "bg-emerald-50 dark:bg-emerald-500/5 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                        : "bg-card border-zinc-200 dark:border-white/10 hover:border-zinc-200 dark:border-white/10 hover:bg-black/5 dark:bg-white/5"
                       }`}
                   >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-emerald-500/20 text-emerald-400" : "bg-black/50 text-white"
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400" : "bg-black/5 dark:bg-white/5 text-foreground"
                       }`}>
                       <tool.icon className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-semibold text-white">{tool.name}</h4>
-                      <p className="text-xs text-zinc-500">{tool.desc}</p>
+                      <h4 className="text-sm font-semibold text-foreground">{tool.name}</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{tool.desc}</p>
                     </div>
                   </div>
                 )
@@ -590,11 +590,11 @@ export default function FileStudioPage() {
 
         {/* RIGHT COLUMN: Configuration */}
         <div className="xl:col-span-5 2xl:col-span-4">
-          <div className="bg-[#15151A] border border-white/5 rounded-2xl p-6 sticky top-6">
+          <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6 sticky top-6">
 
             <div className="mb-8">
-              <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold mb-1">Enterprise Settings</div>
-              <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-semibold mb-1">Enterprise Settings</div>
+              <h2 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
                 {tools.find(t => t.id === activeTool)?.name || "Options"}
               </h2>
             </div>
@@ -605,13 +605,13 @@ export default function FileStudioPage() {
               {activeTool === "upscale" && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Quality</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Quality</label>
                     <div className="grid grid-cols-2 gap-2">
                       {["Fast", "Ultra Quality"].map(m => (
                         <button
                           key={m}
                           onClick={() => setUpscaleQualityMode(m)}
-                          className={`py-2 rounded-lg text-xs font-medium border transition-all ${upscaleQualityMode === m ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/30 text-zinc-400 border-white/10 hover:border-white/30 hover:bg-white/5"}`}
+                          className={`py-2 rounded-lg text-xs font-medium border transition-all ${upscaleQualityMode === m ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/5 dark:bg-white/5 text-zinc-400 border-zinc-200 dark:border-white/10 hover:border-white/30 hover:bg-background/5 dark:hover:bg-white/5"}`}
                         >
                           {m}
                         </button>
@@ -620,13 +620,13 @@ export default function FileStudioPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Output Target</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Output Target</label>
                     <div className="grid grid-cols-3 gap-2">
                       {["Original", "FHD", "2K"].map(t => (
                         <button
                           key={t}
                           onClick={() => setUpscaleTarget(t)}
-                          className={`py-2 rounded-lg text-xs font-medium border transition-all truncate px-1 ${upscaleTarget === t ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/30 text-zinc-400 border-white/10 hover:border-white/30 hover:bg-white/5"}`}
+                          className={`py-2 rounded-lg text-xs font-medium border transition-all truncate px-1 ${upscaleTarget === t ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/5 dark:bg-white/5 text-zinc-400 border-zinc-200 dark:border-white/10 hover:border-white/30 hover:bg-background/5 dark:hover:bg-white/5"}`}
                         >
                           {t}
                         </button>
@@ -635,32 +635,32 @@ export default function FileStudioPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Enhancements</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Enhancements</label>
                     <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 bg-black/30 border border-white/5 rounded-lg cursor-pointer hover:border-white/20 transition-all">
+                      <label className="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg cursor-pointer hover:border-white/20 transition-all">
                         <input type="checkbox" checked={upscaleEnhanceDetails} onChange={e => setUpscaleEnhanceDetails(e.target.checked)} className="accent-emerald-500 w-4 h-4 rounded" />
                         <div>
-                          <div className="text-sm text-zinc-200 font-medium">Enhance Details</div>
-                          <div className="text-[10px] text-zinc-500">Recover textures, edges and fine details.</div>
+                          <div className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">Enhance Details</div>
+                          <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Recover textures, edges and fine details.</div>
                         </div>
                       </label>
-                      <label className="flex items-center gap-3 p-3 bg-black/30 border border-white/5 rounded-lg cursor-pointer hover:border-white/20 transition-all">
+                      <label className="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg cursor-pointer hover:border-white/20 transition-all">
                         <input type="checkbox" checked={upscaleRestoreFaces} onChange={e => setUpscaleRestoreFaces(e.target.checked)} className="accent-emerald-500 w-4 h-4 rounded" />
                         <div>
-                          <div className="text-sm text-zinc-200 font-medium">Restore Faces</div>
-                          <div className="text-[10px] text-zinc-500">Improve eyes, skin and facial details.</div>
+                          <div className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">Restore Faces</div>
+                          <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Improve eyes, skin and facial details.</div>
                         </div>
                       </label>
-                      <label className="flex items-center gap-3 p-3 bg-black/30 border border-white/5 rounded-lg cursor-pointer hover:border-white/20 transition-all">
+                      <label className="flex items-center gap-3 p-3 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg cursor-pointer hover:border-white/20 transition-all">
                         <input type="checkbox" checked={upscaleSharpenText} onChange={e => setUpscaleSharpenText(e.target.checked)} className="accent-emerald-500 w-4 h-4 rounded" />
                         <div>
-                          <div className="text-sm text-zinc-200 font-medium">Sharpen Text</div>
-                          <div className="text-[10px] text-zinc-500">Crisp up fonts and geometric lines.</div>
+                          <div className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">Sharpen Text</div>
+                          <div className="text-[10px] text-zinc-500 dark:text-zinc-400">Crisp up fonts and geometric lines.</div>
                         </div>
                       </label>
-                      <div className="flex items-center justify-between p-3 bg-black/30 border border-white/5 rounded-lg">
-                        <div className="text-sm text-zinc-200 font-medium">Reduce Noise</div>
-                        <select value={upscaleReduceNoise} onChange={e => setUpscaleReduceNoise(e.target.value)} className="bg-[#15151A] border border-white/10 rounded-lg text-xs text-zinc-300 p-2 outline-none">
+                      <div className="flex items-center justify-between p-3 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg">
+                        <div className="text-sm text-zinc-800 dark:text-zinc-200 font-medium">Reduce Noise</div>
+                        <select value={upscaleReduceNoise} onChange={e => setUpscaleReduceNoise(e.target.value)} className="bg-card border border-zinc-200 dark:border-white/10 rounded-lg text-xs text-foreground p-2 outline-none">
                           <option>Off</option>
                           <option>Low</option>
                           <option>Medium</option>
@@ -671,13 +671,13 @@ export default function FileStudioPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Smart Presets</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Smart Presets</label>
                     <div className="flex flex-wrap gap-2">
                       {["Auto", "Portrait", "Product", "Screenshot", "Anime", "Old Photo"].map(p => (
                         <button
                           key={p}
                           onClick={() => applyUpscalePreset(p)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${upscalePreset === p ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/30 text-zinc-400 border-white/10 hover:border-white/30"}`}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${upscalePreset === p ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-black/5 dark:bg-white/5 text-zinc-400 border-zinc-200 dark:border-white/10 hover:border-white/30"}`}
                         >
                           {p}
                         </button>
@@ -686,20 +686,20 @@ export default function FileStudioPage() {
                   </div>
 
                   {/* Output Preview */}
-                  <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-4 mt-6">
+                  <div className="bg-black/5 dark:bg-white/5 border border-emerald-500/20 rounded-xl p-4 mt-6">
                     <div className="text-xs text-emerald-500/70 uppercase tracking-wider mb-3 font-semibold">Output Preview</div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <div className="text-[10px] text-zinc-500 mb-1">Input Size</div>
-                        <div className="text-sm font-mono text-zinc-300">{imageDetails.width || 0} × {imageDetails.height || 0}</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1">Input Size</div>
+                        <div className="text-sm font-mono text-foreground">{imageDetails.width || 0} × {imageDetails.height || 0}</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-zinc-500 mb-1">Output Size</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1">Output Size</div>
                         <div className="text-sm font-mono text-emerald-400 font-bold">{getOutputDimensions()}</div>
                       </div>
                       <div className="col-span-2">
-                        <div className="text-[10px] text-zinc-500 mb-1">Estimated Time</div>
-                        <div className="text-sm font-mono text-zinc-300">{upscaleTarget === '2K' ? '5-10s' : upscaleTarget === 'FHD' ? '2-4s' : '1-2s'}</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1">Estimated Time</div>
+                        <div className="text-sm font-mono text-foreground">{upscaleTarget === '2K' ? '5-10s' : upscaleTarget === 'FHD' ? '2-4s' : '1-2s'}</div>
                       </div>
                     </div>
                   </div>
@@ -710,7 +710,7 @@ export default function FileStudioPage() {
               {activeTool === "convert" && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Target Output Format</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Target Output Format</label>
                     <div className="grid grid-cols-3 gap-2">
                       {formats.map(fmt => (
                         <button
@@ -718,7 +718,7 @@ export default function FileStudioPage() {
                           onClick={() => setOutputFormat(fmt)}
                           className={`py-3 rounded-xl border cursor-pointer transition-all flex items-center justify-center ${outputFormat === fmt
                               ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 font-bold"
-                              : "bg-black/30 border-white/5 hover:bg-white/5 hover:border-white/20 text-zinc-400 font-medium"
+                              : "bg-black/5 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:bg-background/5 dark:hover:bg-white/5 hover:border-white/20 text-zinc-500 dark:text-zinc-400 font-medium"
                             }`}
                         >
                           {fmt}
@@ -730,12 +730,12 @@ export default function FileStudioPage() {
                   {["JPG", "WEBP", "AVIF"].includes(outputFormat) && (
                     <div>
                       <div className="flex justify-between items-end mb-3">
-                        <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Quality</label>
-                        <span className="text-xs font-mono text-zinc-500">{quality}%</span>
+                        <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Quality</label>
+                        <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{quality}%</span>
                       </div>
                       <input
                         type="range" min="1" max="100" value={quality} onChange={(e) => setQuality(parseInt(e.target.value))}
-                        className="w-full h-2 bg-black/50 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                        className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                       />
                     </div>
                   )}
@@ -748,30 +748,30 @@ export default function FileStudioPage() {
               {activeTool === "resize" && (
                 <>
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Dimensions</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Dimensions</label>
                     <div className="flex items-center gap-4">
                       <div className="flex-1">
-                        <div className="text-[10px] text-zinc-500 mb-1">Width (px)</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1">Width (px)</div>
                         <input
                           type="number"
                           value={resizeWidth}
                           onChange={(e) => handleResizeWidthChange(e.target.value)}
-                          className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white font-mono outline-none focus:border-emerald-500/50"
+                          className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-foreground font-mono outline-none focus:border-emerald-500/50"
                         />
                       </div>
                       <button
                         onClick={() => setResizeLockRatio(!resizeLockRatio)}
-                        className={`mt-4 p-2 rounded-lg transition-colors ${resizeLockRatio ? "bg-emerald-500/20 text-emerald-400" : "bg-black/30 text-zinc-500 hover:text-white"}`}
+                        className={`mt-4 p-2 rounded-lg transition-colors ${resizeLockRatio ? "bg-emerald-500/20 text-emerald-400" : "bg-black/5 dark:bg-white/5 text-zinc-500 hover:text-zinc-900 hover:text-foreground"}`}
                       >
                         <Link2 className="w-4 h-4" />
                       </button>
                       <div className="flex-1">
-                        <div className="text-[10px] text-zinc-500 mb-1">Height (px)</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1">Height (px)</div>
                         <input
                           type="number"
                           value={resizeHeight}
                           onChange={(e) => handleResizeHeightChange(e.target.value)}
-                          className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white font-mono outline-none focus:border-emerald-500/50"
+                          className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-foreground font-mono outline-none focus:border-emerald-500/50"
                         />
                       </div>
                     </div>
@@ -784,12 +784,12 @@ export default function FileStudioPage() {
                 <>
                   <div>
                     <div className="flex justify-between items-end mb-3">
-                      <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Compression Level</label>
-                      <span className="text-xs font-mono text-zinc-500">{100 - quality}% Ratio</span>
+                      <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Compression Level</label>
+                      <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{100 - quality}% Ratio</span>
                     </div>
                     <input
                       type="range" min="1" max="100" value={quality} onChange={(e) => setQuality(parseInt(e.target.value))}
-                      className="w-full h-2 bg-black/50 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      className="w-full h-2 bg-black/5 dark:bg-white/5 rounded-lg appearance-none cursor-pointer accent-emerald-500"
                     />
                   </div>
 
@@ -812,7 +812,7 @@ export default function FileStudioPage() {
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Export Format</label>
+                    <label className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3 block">Export Format</label>
                     <div className="grid grid-cols-4 gap-2">
                       {["TXT", "MD", "PDF", "DOCX"].map(fmt => (
                         <button
@@ -820,7 +820,7 @@ export default function FileStudioPage() {
                           onClick={() => setOcrFormat(fmt)}
                           className={`py-3 rounded-xl border cursor-pointer transition-all flex items-center justify-center ${ocrFormat === fmt
                               ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 font-bold"
-                              : "bg-black/30 border-white/5 hover:bg-white/5 hover:border-white/20 text-zinc-400 font-medium"
+                              : "bg-black/5 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:bg-background/5 dark:hover:bg-white/5 hover:border-white/20 text-zinc-500 dark:text-zinc-400 font-medium"
                             }`}
                         >
                           {fmt}
@@ -829,10 +829,10 @@ export default function FileStudioPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-black/30 border border-white/5 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl">
                     <div>
-                      <span className="text-sm font-medium text-zinc-300 block mb-1">Enable AI Refinement</span>
-                      <span className="text-[10px] text-zinc-500">Refine, format, or summarize the extracted text.</span>
+                      <span className="text-sm font-medium text-foreground block mb-1">Enable AI Refinement</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Refine, format, or summarize the extracted text.</span>
                     </div>
                     <button onClick={() => setOcrAiEnabled(!ocrAiEnabled)} className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${ocrAiEnabled ? "bg-emerald-500" : "bg-zinc-700"}`}>
                       <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${ocrAiEnabled ? "translate-x-7" : "translate-x-1"}`} />
@@ -840,13 +840,13 @@ export default function FileStudioPage() {
                   </div>
 
                   {ocrAiEnabled && (
-                    <div className="p-4 bg-black/30 border border-emerald-500/30 rounded-xl">
+                    <div className="p-4 bg-black/5 dark:bg-white/5 border border-emerald-500/30 rounded-xl">
                       <label className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2 block">AI Instructions</label>
                       <textarea
                         value={ocrPrompt}
                         onChange={(e) => setOcrPrompt(e.target.value)}
                         placeholder="e.g. Extract this into a structured table..."
-                        className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-sm text-zinc-200 outline-none focus:border-emerald-500/50 min-h-[80px] resize-none"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm text-zinc-800 dark:text-zinc-200 outline-none focus:border-emerald-500/50 min-h-[80px] resize-none"
                       />
                     </div>
                   )}
@@ -858,15 +858,15 @@ export default function FileStudioPage() {
                 <div className="flex flex-col gap-3 mt-6">
                   {/* Format Selector */}
                   {activeTool !== "convert" && (
-                    <div className="flex items-center justify-between p-4 bg-black/30 border border-white/5 rounded-xl">
+                    <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl">
                       <div>
-                        <span className="text-sm font-medium text-zinc-300 block mb-1">Export Format</span>
-                        <span className="text-[10px] text-zinc-500">Change the image type for this operation.</span>
+                        <span className="text-sm font-medium text-foreground block mb-1">Export Format</span>
+                        <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Change the image type for this operation.</span>
                       </div>
                       <select
                         value={outputFormat}
                         onChange={(e) => setOutputFormat(e.target.value)}
-                        className="bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-emerald-400 font-bold outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
+                        className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-emerald-400 font-bold outline-none focus:border-emerald-500/50 appearance-none cursor-pointer"
                       >
                         {formats.map(fmt => <option key={fmt} value={fmt}>{fmt}</option>)}
                       </select>
@@ -874,10 +874,10 @@ export default function FileStudioPage() {
                   )}
 
                   {/* Geolocation Toggle */}
-                  <div className="flex items-center justify-between p-4 bg-black/30 border border-white/5 rounded-xl">
+                  <div className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl">
                     <div>
-                      <span className="text-sm font-medium text-zinc-300 block mb-1">Remove Geolocation & EXIF</span>
-                      <span className="text-[10px] text-zinc-500">Strips GPS coordinates and camera metadata before downloading.</span>
+                      <span className="text-sm font-medium text-foreground block mb-1">Remove Geolocation & EXIF</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Strips GPS coordinates and camera metadata before downloading.</span>
                     </div>
                     <button onClick={() => setStripMetadata(!stripMetadata)} className={`w-12 h-6 rounded-full relative transition-colors shrink-0 ${stripMetadata ? "bg-emerald-500" : "bg-zinc-700"}`}>
                       <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${stripMetadata ? "translate-x-7" : "translate-x-1"}`} />
@@ -888,16 +888,16 @@ export default function FileStudioPage() {
 
               {/* Status Display */}
               {isProcessing && (
-                <div className="p-4 bg-black/50 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                <div className="p-4 bg-black/5 dark:bg-white/5 border border-emerald-500/20 rounded-xl flex items-center gap-3">
                   <div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin shrink-0" />
                   <span className="text-sm text-emerald-400 font-medium animate-pulse">{processStatus}</span>
                 </div>
               )}
 
               {!isProcessing && processResult && (
-                <div className="p-4 bg-black/50 border border-white/10 rounded-xl">
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">Output Result</span>
-                  <div className="text-sm text-white whitespace-pre-wrap max-h-48 overflow-y-auto font-mono bg-black/30 p-3 rounded border border-white/5">
+                <div className="p-4 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block mb-2">Output Result</span>
+                  <div className="text-sm text-foreground whitespace-pre-wrap max-h-48 overflow-y-auto font-mono bg-black/5 dark:bg-white/5 p-3 rounded border border-zinc-200 dark:border-white/10">
                     {processResult}
                   </div>
                 </div>
@@ -910,7 +910,7 @@ export default function FileStudioPage() {
                     <div className="text-orange-400 mt-0.5">⚠️</div>
                     <div className="w-full">
                       <span className="text-xs font-bold text-orange-400 block mb-1">Hardware Acceleration Required</span>
-                      <span className="text-[10px] text-zinc-300 block mb-3">
+                      <span className="text-[10px] text-foreground block mb-3">
                         If the AI upscaler crashes, your browser needs Hardware Acceleration enabled to run the WebGL models.
                       </span>
                       <button

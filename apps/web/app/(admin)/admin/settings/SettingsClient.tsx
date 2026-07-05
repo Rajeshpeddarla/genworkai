@@ -15,7 +15,7 @@ export default function SettingsClient({ initialLogs }: { initialLogs: any[] }) 
         </div>
       </div>
 
-      <div className="flex space-x-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl w-fit">
+      <div className="flex space-x-1 p-1 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl w-fit">
         <button
           onClick={() => setActiveTab("audit")}
           className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition-all ${
@@ -39,7 +39,7 @@ export default function SettingsClient({ initialLogs }: { initialLogs: any[] }) 
       </div>
 
       {activeTab === "audit" && (
-        <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
           <table className="w-full text-left text-sm text-zinc-500 dark:text-zinc-400">
             <thead className="text-xs text-zinc-700 dark:text-zinc-300 uppercase bg-zinc-50 dark:bg-white/5 border-b border-zinc-200 dark:border-white/10">
               <tr>
@@ -88,7 +88,7 @@ export default function SettingsClient({ initialLogs }: { initialLogs: any[] }) 
       )}
 
       {activeTab === "general" && (
-        <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-8">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-8">
            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Platform Settings</h3>
            <p className="text-zinc-500">Settings and configuration goes here.</p>
         </div>

@@ -167,7 +167,7 @@ export default function LandingPage() {
       </section>
 
       {/* Problem & Solution */}
-      <section className="py-24 bg-zinc-950 px-6 border-y border-white/5">
+      <section className="py-24 bg-card px-6 border-y border-white/5">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold mb-6">Your Knowledge Is <span className="text-red-400">Trapped</span>.</h2>

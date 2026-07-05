@@ -24,15 +24,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 });
     }
 
-    const { name, description, widgetType, sqlQuery, refreshInterval, visualizationConfig, layoutConfig } = await req.json();
+    const body = await req.json();
+    const { name, description, widgetType, refreshInterval, visualizationConfig, layoutConfig } = body;
+    const sqlQuery = body.sqlQuery || body.sql_query || body.query || body.sql || "SELECT 1 as result, 'Please edit widget to add a valid SQL query' as message";
 
     const [newWidget] = await db
       .insert(dashboardWidgets)
       .values({
         dashboardId,
-        name: name || 'New Widget',
-        description,
-        widgetType: widgetType || 'table',
+        name: name || body.title || 'AI Generated Widget',
+        description: JSON.stringify(body),
+        widgetType: widgetType || body.widget_type || 'table',
         sqlQuery,
         refreshInterval: refreshInterval || 'manual',
         visualizationConfig: visualizationConfig || {},

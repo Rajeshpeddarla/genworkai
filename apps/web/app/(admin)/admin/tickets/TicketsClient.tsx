@@ -26,9 +26,9 @@ export default function TicketsClient({ initialTickets, currentUserId }: { initi
         </div>
       </div>
 
-      <div className="flex-1 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden flex shadow-sm min-h-0">
+      <div className="flex-1 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden flex shadow-sm min-h-0">
         {/* Left Pane - Ticket List */}
-        <div className="w-1/3 border-r border-zinc-200 dark:border-white/10 flex flex-col bg-zinc-50 dark:bg-zinc-900/30">
+        <div className="w-1/3 border-r border-zinc-200 dark:border-white/10 flex flex-col bg-zinc-50 dark:bg-card/30">
           <div className="p-4 border-b border-zinc-200 dark:border-white/10 shrink-0">
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1">
@@ -91,7 +91,7 @@ export default function TicketsClient({ initialTickets, currentUserId }: { initi
           {currentTicket ? (
             <>
               {/* Chat Header */}
-              <div className="p-6 border-b border-zinc-200 dark:border-white/10 shrink-0 flex justify-between items-start bg-zinc-50 dark:bg-zinc-900/30">
+              <div className="p-6 border-b border-zinc-200 dark:border-white/10 shrink-0 flex justify-between items-start bg-zinc-50 dark:bg-card/30">
                 <div>
                   <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">{currentTicket.subject}</h2>
                   <div className="flex items-center gap-4 text-sm text-zinc-500">
@@ -122,7 +122,7 @@ export default function TicketsClient({ initialTickets, currentUserId }: { initi
                     <span className="text-xs font-medium text-zinc-500">{currentTicket.userName || 'User'}</span>
                     <span className="text-xs text-zinc-600 dark:text-zinc-500">{new Date(currentTicket.createdAt).toLocaleString()}</span>
                   </div>
-                  <div className="p-4 rounded-2xl max-w-[80%] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-sm shadow-sm">
+                  <div className="p-4 rounded-2xl max-w-[80%] bg-white dark:bg-card border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-sm shadow-sm">
                     {currentTicket.message}
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export default function TicketsClient({ initialTickets, currentUserId }: { initi
                     <div className={`p-4 rounded-2xl max-w-[80%] ${
                       msg.isAgent 
                         ? 'bg-rose-600 text-white rounded-tr-sm' 
-                        : 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-sm shadow-sm'
+                        : 'bg-white dark:bg-card border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 rounded-tl-sm shadow-sm'
                     }`}>
                       {msg.content}
                     </div>
@@ -147,7 +147,7 @@ export default function TicketsClient({ initialTickets, currentUserId }: { initi
 
               {/* Chat Input */}
               {currentTicket.status !== 'resolved' && (
-                <div className="p-4 border-t border-zinc-200 dark:border-white/10 shrink-0 bg-white dark:bg-zinc-950">
+                <div className="p-4 border-t border-zinc-200 dark:border-white/10 shrink-0 bg-white dark:bg-card">
                   <div className="flex items-center gap-2">
                     <button className="p-3 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors">
                       <Paperclip className="w-5 h-5" />

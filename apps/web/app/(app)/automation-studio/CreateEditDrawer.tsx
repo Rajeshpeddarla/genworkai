@@ -143,48 +143,48 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
             animate={{ x: 0 }} 
             exit={{ x: '100%' }} 
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-[45%] min-w-[500px] bg-[#0f0f0f] border-l border-gray-800 z-50 flex flex-col shadow-2xl"
+            className="fixed right-0 top-0 bottom-0 w-[45%] min-w-[500px] bg-[#0f0f0f] border-l border-zinc-200 dark:border-zinc-800 z-50 flex flex-col shadow-2xl"
           >
-            <div className="flex items-center justify-between p-6 border-b border-gray-800">
+            <div className="flex items-center justify-between p-6 border-b border-zinc-200 dark:border-zinc-800">
               <div>
-                <h2 className="text-xl font-bold text-white">{taskId ? 'Edit Automation' : 'Create Automation'}</h2>
-                <p className="text-sm text-gray-400 mt-1">Configure your database automation</p>
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{taskId ? 'Edit Automation' : 'Create Automation'}</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 mt-1">Configure your database automation</p>
               </div>
               <div className="flex items-center gap-3">
                 <button 
                   onClick={onClose}
-                  className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors"
+                  className="p-2 hover:bg-gray-800 rounded-lg text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar text-white">
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar text-zinc-900 dark:text-white">
               {loading ? (
                 <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>
               ) : (
                 <>
                   {/* General */}
                   <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
                       <Settings className="w-4 h-4" /> General
                     </h3>
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">Automation Name</label>
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Automation Name</label>
                       <input 
                         value={formData.name}
                         onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
                         placeholder="e.g. Daily Signups Report"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">Description</label>
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Description</label>
                       <input 
                         value={formData.description}
                         onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                        className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
                         placeholder="Briefly describe what this automation does"
                       />
                     </div>
@@ -192,15 +192,15 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
 
                   {/* Database */}
                   <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
                       <Database className="w-4 h-4" /> Database Configuration
                     </h3>
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">Connection</label>
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Connection</label>
                       <select 
                         value={formData.databaseId}
                         onChange={e => setFormData(prev => ({ ...prev, databaseId: e.target.value }))}
-                        className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none transition-colors"
                       >
                         <option value="">Select a database...</option>
                         {databases.filter((db: any) => db.engine === 'pg' || db.engine === 'mysql').map((db: any) => (
@@ -210,17 +210,17 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">Query Generation Mode</label>
-                      <div className="flex bg-[#151515] border border-gray-800 rounded-xl p-1">
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Query Generation Mode</label>
+                      <div className="flex bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1">
                         <button 
                           onClick={() => setFormData(prev => ({ ...prev, queryMode: 'manual' }))}
-                          className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${formData.queryMode === 'manual' ? 'bg-[#2a2a2a] text-white shadow' : 'text-gray-400 hover:text-gray-300'}`}
+                          className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${formData.queryMode === 'manual' ? 'bg-[#2a2a2a] text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:text-zinc-300'}`}
                         >
                           Manual SQL
                         </button>
                         <button 
                           onClick={() => setFormData(prev => ({ ...prev, queryMode: 'ai' }))}
-                          className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${formData.queryMode === 'ai' ? 'bg-[#2a2a2a] text-white shadow' : 'text-gray-400 hover:text-gray-300'}`}
+                          className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${formData.queryMode === 'ai' ? 'bg-[#2a2a2a] text-zinc-900 dark:text-white shadow' : 'text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:text-zinc-300'}`}
                         >
                           Generate with AI
                         </button>
@@ -239,7 +239,7 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
                           <textarea 
                             value={aiPrompt}
                             onChange={e => setAiPrompt(e.target.value)}
-                            className="w-full bg-[#0a0a0a] border border-indigo-500/30 rounded-lg px-3 py-2 text-white focus:border-indigo-400 focus:outline-none text-sm resize-y min-h-[80px]"
+                            className="w-full bg-[#0a0a0a] border border-indigo-500/30 rounded-lg px-3 py-2 text-zinc-900 dark:text-white focus:border-indigo-400 focus:outline-none text-sm resize-y min-h-[80px]"
                             placeholder="e.g. Find all users who signed up in the last 30 days and spent more than $100..."
                           />
                           <button
@@ -255,15 +255,15 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
                     </AnimatePresence>
 
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">SQL Query</label>
-                      <div className="bg-[#0a0a0a] border border-gray-800 rounded-xl overflow-hidden focus-within:border-indigo-500 transition-colors">
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">SQL Query</label>
+                      <div className="bg-[#0a0a0a] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden focus-within:border-indigo-500 transition-colors">
                         <textarea 
                           value={formData.sqlQuery}
                           onChange={e => setFormData(prev => ({ ...prev, sqlQuery: e.target.value }))}
                           className="w-full bg-transparent p-4 text-green-400 font-mono text-sm focus:outline-none min-h-[150px] resize-y"
                           placeholder="SELECT * FROM table_name;"
                         />
-                        <div className="bg-[#111] px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-500">
+                        <div className="bg-white dark:bg-[#111] px-4 py-2 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center text-xs text-gray-500">
                           <span>Only read-only queries are permitted.</span>
                           <button className="text-indigo-400 hover:text-indigo-300 font-medium">Test Query</button>
                         </div>
@@ -273,15 +273,15 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
 
                   {/* AI Analysis */}
                   <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
                       <Code className="w-4 h-4" /> AI Analysis
                     </h3>
                     <div>
-                      <label className="block text-sm font-medium mb-1.5 text-gray-300">System Prompt</label>
+                      <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">System Prompt</label>
                       <textarea 
                         value={formData.systemPrompt}
                         onChange={e => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-                        className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-3 focus:border-indigo-500 focus:outline-none min-h-[120px] resize-y"
+                        className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 focus:border-indigo-500 focus:outline-none min-h-[120px] resize-y"
                         placeholder="Instructions for the AI on how to interpret the data..."
                       />
                     </div>
@@ -289,16 +289,16 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
 
                   {/* Scheduling */}
                   <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-2">
                       <Clock4 className="w-4 h-4" /> Scheduling
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1.5 text-gray-300">Frequency</label>
+                        <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Frequency</label>
                         <select 
                           value={formData.schedule}
                           onChange={e => setFormData(prev => ({ ...prev, schedule: e.target.value }))}
-                          className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none"
+                          className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="manual">Manual (Run Now)</option>
                           <option value="hourly">Hourly</option>
@@ -308,11 +308,11 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1.5 text-gray-300">Initial Status</label>
+                        <label className="block text-sm font-medium mb-1.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300">Initial Status</label>
                         <select 
                           value={formData.status}
                           onChange={e => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                          className="w-full bg-[#151515] border border-gray-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none"
+                          className="w-full bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none"
                         >
                           <option value="draft">Draft</option>
                           <option value="active">Active</option>
@@ -325,10 +325,10 @@ export function CreateEditDrawer({ isOpen, onClose, taskId, databases, onSaved }
               )}
             </div>
 
-            <div className="p-6 border-t border-gray-800 bg-[#0a0a0a] flex justify-end gap-3">
+            <div className="p-6 border-t border-zinc-200 dark:border-zinc-800 bg-[#0a0a0a] flex justify-end gap-3">
               <button 
                 onClick={onClose}
-                className="px-6 py-2.5 text-gray-300 font-medium hover:text-white transition-colors"
+                className="px-6 py-2.5 text-zinc-600 dark:text-zinc-600 dark:text-zinc-300 font-medium hover:text-zinc-900 dark:text-white transition-colors"
               >
                 Cancel
               </button>

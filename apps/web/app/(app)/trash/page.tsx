@@ -54,12 +54,12 @@ export default function TrashPage() {
           <input 
             type="text" 
             placeholder="Search trash..." 
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
+            className="w-full bg-card/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all"
           />
         </div>
       </div>
 
-      <div className="bg-zinc-900/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
+      <div className="bg-card/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

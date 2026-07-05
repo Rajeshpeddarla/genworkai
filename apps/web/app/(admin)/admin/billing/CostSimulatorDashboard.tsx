@@ -85,34 +85,34 @@ export function CostSimulatorDashboard({
     <div className="space-y-8 mt-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">AI Economy & Cost Simulator</h2>
-        <p className="text-muted-foreground">Adjust provider costs and token estimates to ensure profitable margins.</p>
+        <p className="text-zinc-500 dark:text-zinc-400">Adjust provider costs and token estimates to ensure profitable margins.</p>
       </div>
 
       <div className="rounded-xl border bg-card text-card-foreground shadow">
         <div className="flex flex-col space-y-1.5 p-6">
           <h3 className="font-semibold leading-none tracking-tight">AI Provider Costs (Per 1M Tokens)</h3>
-          <p className="text-sm text-muted-foreground">Update these values to simulate changes in upstream pricing.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Update these values to simulate changes in upstream pricing.</p>
         </div>
         <div className="p-6 pt-0 grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Credit Value (USD)</label>
-            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.001" value={providerCosts.creditValueUSD} onChange={e => handleProviderChange('creditValueUSD', e.target.value)} />
+            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.001" value={providerCosts.creditValueUSD} onChange={e => handleProviderChange('creditValueUSD', e.target.value)} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">DeepSeek Input</label>
-            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.deepseekInput} onChange={e => handleProviderChange('deepseekInput', e.target.value)} />
+            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.deepseekInput} onChange={e => handleProviderChange('deepseekInput', e.target.value)} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">DeepSeek Output</label>
-            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.deepseekOutput} onChange={e => handleProviderChange('deepseekOutput', e.target.value)} />
+            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.deepseekOutput} onChange={e => handleProviderChange('deepseekOutput', e.target.value)} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Jina Embed</label>
-            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.jinaEmbedding} onChange={e => handleProviderChange('jinaEmbedding', e.target.value)} />
+            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.jinaEmbedding} onChange={e => handleProviderChange('jinaEmbedding', e.target.value)} />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Jina Reranker</label>
-            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.jinaReranker} onChange={e => handleProviderChange('jinaReranker', e.target.value)} />
+            <input className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" step="0.01" value={providerCosts.jinaReranker} onChange={e => handleProviderChange('jinaReranker', e.target.value)} />
           </div>
         </div>
       </div>
@@ -120,32 +120,32 @@ export function CostSimulatorDashboard({
       <div className="rounded-xl border bg-card text-card-foreground shadow mt-6">
         <div className="flex flex-col space-y-1.5 p-6">
           <h3 className="font-semibold leading-none tracking-tight">Simulation Table</h3>
-          <p className="text-sm text-muted-foreground">Real-time profitability calculations based on average token usage.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Real-time profitability calculations based on average token usage.</p>
         </div>
         <div className="p-6 pt-0">
           <div className="relative w-full overflow-auto">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b">
-                <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Operation</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cost</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Avg Input (T)</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Avg Output (T)</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Est. Provider Cost</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Revenue</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Margin</th>
-                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Recommendation</th>
+                <tr className="border-b transition-colors hover:bg-black/5 dark:bg-white/5/50 data-[state=selected]:bg-black/5 dark:bg-white/5">
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Operation</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Cost</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Avg Input (T)</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Avg Output (T)</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Est. Provider Cost</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Revenue</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Margin</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-zinc-500 dark:text-zinc-400">Recommendation</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {operations.map(op => {
                   const metrics = calculateRow(op);
                   return (
-                    <tr key={op.operationKey} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                    <tr key={op.operationKey} className="border-b transition-colors hover:bg-black/5 dark:bg-white/5/50 data-[state=selected]:bg-black/5 dark:bg-white/5">
                       <td className="p-4 align-middle font-medium">{op.displayName}</td>
                       <td className="p-4 align-middle">{op.credits} cr</td>
                       <td className="p-4 align-middle">
-                        <input className="flex h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" value={op.avgInput} onChange={(e) => {
+                        <input className="flex h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" value={op.avgInput} onChange={(e) => {
                           const newOps = [...operations];
                           const idx = newOps.findIndex(o => o.operationKey === op.operationKey);
                           if (idx !== -1 && newOps[idx]) {
@@ -155,7 +155,7 @@ export function CostSimulatorDashboard({
                         }} />
                       </td>
                       <td className="p-4 align-middle">
-                        <input className="flex h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" value={op.avgOutput} onChange={(e) => {
+                        <input className="flex h-9 w-24 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-zinc-500 dark:text-zinc-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" type="number" value={op.avgOutput} onChange={(e) => {
                           const newOps = [...operations];
                           const idx = newOps.findIndex(o => o.operationKey === op.operationKey);
                           if (idx !== -1 && newOps[idx]) {
@@ -167,7 +167,7 @@ export function CostSimulatorDashboard({
                       <td className="p-4 align-middle">${metrics.totalProviderCost.toFixed(5)}</td>
                       <td className="p-4 align-middle">${metrics.revenue.toFixed(5)}</td>
                       <td className="p-4 align-middle">{getMarginBadge(metrics.margin)}</td>
-                      <td className="p-4 align-middle text-xs text-muted-foreground">{getRecommendation(metrics.margin, op)}</td>
+                      <td className="p-4 align-middle text-xs text-zinc-500 dark:text-zinc-400">{getRecommendation(metrics.margin, op)}</td>
                     </tr>
                   );
                 })}

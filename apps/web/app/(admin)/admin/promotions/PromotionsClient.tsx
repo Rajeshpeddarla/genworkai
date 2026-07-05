@@ -51,7 +51,7 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {initialPromos.map(promo => (
-          <div key={promo.id} className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
+          <div key={promo.id} className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-6">
             <div className="flex justify-between items-start mb-6">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${promo.type === 'discount' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-violet-500/20 text-violet-500'}`}>
@@ -90,7 +90,7 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
       </div>
       
       {showForm && (
-        <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-8 mt-12 shadow-sm">
+        <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl p-8 mt-12 shadow-sm">
           <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Create New Promotion</h2>
           <form onSubmit={handleCreate}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -126,7 +126,7 @@ export default function PromotionsClient({ initialPromos }: { initialPromos: any
               </div>
             </div>
             <div className="mt-8 flex justify-end">
-              <button type="submit" className="px-6 py-2.5 bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold flex items-center gap-2 transition-colors">
+              <button type="submit" className="px-6 py-2.5 bg-card dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black rounded-xl font-bold flex items-center gap-2 transition-colors">
                 <CheckCircle2 className="w-5 h-5" /> Save Promotion
               </button>
             </div>

@@ -4,9 +4,9 @@ import { db } from "../../db";
 import { automationTasks, automationLogs, workspaceArtifacts, workspaceArtifactVersions } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { generateText } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 
-const openai = createOpenAI({
+const openai = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY || "",
   baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
 });

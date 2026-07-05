@@ -476,14 +476,14 @@ export default function WorkspacePage() {
                      id: art.existingArtifactId || null
                    });
                 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-violet-500/50 cursor-pointer transition-colors"
+                className="flex items-center gap-3 p-3 rounded-xl bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-zinc-800 hover:border-violet-500/50 cursor-pointer transition-colors"
               >
                 <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4 text-violet-400" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-zinc-200 truncate">{art.name}</div>
-                  <div className="text-[10px] text-zinc-500">{art.category} • {art.fileType?.toUpperCase()}</div>
+                  <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{art.name}</div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-500">{art.category} • {art.fileType?.toUpperCase()}</div>
                 </div>
                 <button className="text-[10px] text-violet-400 hover:text-violet-300 font-medium px-2 py-1 bg-violet-500/10 rounded">
                   Open Preview
@@ -510,14 +510,14 @@ export default function WorkspacePage() {
           collapsedSize={0}
           onCollapse={() => setIsChatHistoryCollapsed(true)}
           onExpand={() => setIsChatHistoryCollapsed(false)}
-          className={`flex flex-col bg-[#111113] rounded-3xl border border-zinc-800/50 overflow-hidden transition-opacity ${isChatHistoryCollapsed ? 'opacity-0' : 'opacity-100 mr-2'}`}
+          className={`flex flex-col bg-white dark:bg-[#111113] rounded-3xl border border-zinc-200 dark:border-zinc-800/50 overflow-hidden transition-opacity ${isChatHistoryCollapsed ? 'opacity-0' : 'opacity-100 mr-2'}`}
         >
-          <div className="p-4 border-b border-zinc-800/50 flex justify-between items-center">
-            <h2 className="font-semibold text-xs text-zinc-300 flex items-center gap-2">
+          <div className="p-4 border-b border-zinc-200 dark:border-zinc-800/50 flex justify-between items-center">
+            <h2 className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
               <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
               Chat History
             </h2>
-            <button onClick={toggleChatHistory} className="text-zinc-500 hover:text-white">
+            <button onClick={toggleChatHistory} className="text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:text-white">
               <PanelLeftClose className="w-4 h-4" />
             </button>
           </div>
@@ -527,10 +527,10 @@ export default function WorkspacePage() {
             <div>
               <button 
                 onClick={() => setExpandedGroups(prev => ({ ...prev, chats: !prev.chats }))}
-                className="w-full flex items-center justify-between text-xs font-semibold text-zinc-500 hover:text-zinc-300 transition-colors px-1 mb-2"
+                className="w-full flex items-center justify-between text-xs font-semibold text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 transition-colors px-1 mb-2"
               >
                 CHATS
-                <span className="text-[10px] bg-zinc-800/50 px-1.5 py-0.5 rounded">{chats.length}</span>
+                <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded">{chats.length}</span>
               </button>
               {expandedGroups.chats && (
                 <div className="space-y-1.5">
@@ -541,17 +541,17 @@ export default function WorkspacePage() {
                       className={`w-full text-left p-2.5 text-xs font-medium rounded-lg transition-colors truncate ${
                         activeChatId === chat.id 
                           ? 'text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 shadow-lg shadow-violet-500/20' 
-                          : 'text-zinc-300 hover:bg-zinc-800/50'
+                          : 'text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:bg-zinc-800/50'
                       }`}
                     >
                       {chat.title}
-                      <div className={`text-[9px] mt-0.5 font-normal ${activeChatId === chat.id ? 'text-white/70' : 'text-zinc-500'}`}>
+                      <div className={`text-[9px] mt-0.5 font-normal ${activeChatId === chat.id ? 'text-zinc-900 dark:text-white/70' : 'text-zinc-500 dark:text-zinc-500'}`}>
                         {getTimeAgo(chat.updatedAt)}
                       </div>
                     </button>
                   ))}
                   {chats.length === 0 && (
-                    <div className="text-center text-zinc-500 text-xs py-2">No chats yet</div>
+                    <div className="text-center text-zinc-500 dark:text-zinc-500 text-xs py-2">No chats yet</div>
                   )}
                 </div>
               )}
@@ -561,10 +561,10 @@ export default function WorkspacePage() {
             <div>
               <button 
                 onClick={() => setExpandedGroups(prev => ({ ...prev, artifacts: !prev.artifacts }))}
-                className="w-full flex items-center justify-between text-xs font-semibold text-zinc-500 hover:text-zinc-300 transition-colors px-1 mb-2"
+                className="w-full flex items-center justify-between text-xs font-semibold text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 dark:text-zinc-300 transition-colors px-1 mb-2"
               >
                 ARTIFACTS
-                <span className="text-[10px] bg-zinc-800/50 px-1.5 py-0.5 rounded">{artifacts.length}</span>
+                <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded">{artifacts.length}</span>
               </button>
               {expandedGroups.artifacts && (
                 <div className="space-y-1.5">
@@ -580,12 +580,12 @@ export default function WorkspacePage() {
                            id: art.id
                          });
                       }}
-                      className={`w-full text-left p-2.5 text-xs font-medium rounded-lg transition-colors truncate text-zinc-300 hover:bg-zinc-800/50 flex items-center gap-2`}
+                      className={`w-full text-left p-2.5 text-xs font-medium rounded-lg transition-colors truncate text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:bg-zinc-800/50 flex items-center gap-2`}
                     >
                       <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                       <div className="flex-1 truncate">
                          {art.name}
-                         <div className="text-[9px] mt-0.5 font-normal text-zinc-500 flex justify-between">
+                         <div className="text-[9px] mt-0.5 font-normal text-zinc-500 dark:text-zinc-500 flex justify-between">
                            <span>v{art.version} • {art.category}</span>
                            <span>{getTimeAgo(art.updatedAt)}</span>
                          </div>
@@ -593,17 +593,17 @@ export default function WorkspacePage() {
                     </button>
                   ))}
                   {artifacts.length === 0 && (
-                    <div className="text-center text-zinc-500 text-xs py-2">No artifacts generated</div>
+                    <div className="text-center text-zinc-500 dark:text-zinc-500 text-xs py-2">No artifacts generated</div>
                   )}
                 </div>
               )}
             </div>
 
           </div>
-          <div className="p-3 border-t border-zinc-800/50">
+          <div className="p-3 border-t border-zinc-200 dark:border-zinc-800/50">
             <button 
               onClick={handleNewChat}
-              className="w-full py-2 flex items-center justify-center gap-2 text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-lg transition-colors"
+              className="w-full py-2 flex items-center justify-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white hover:bg-zinc-100 dark:bg-zinc-800/50 rounded-lg transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               New Chat
@@ -612,34 +612,34 @@ export default function WorkspacePage() {
         </Panel>
 
         <PanelResizeHandle className={`w-2 flex items-center justify-center group outline-none ${isChatHistoryCollapsed ? 'pointer-events-none opacity-0' : ''}`}>
-          <div className="w-1 h-8 rounded-full bg-zinc-800 group-hover:bg-violet-500 transition-colors" />
+          <div className="w-1 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 group-hover:bg-violet-500 transition-colors" />
         </PanelResizeHandle>
 
         {/* Panel 2: Workspace Intelligence (Center) */}
         <Panel 
           defaultSize={isChatHistoryCollapsed ? 65 : 50} 
           minSize={30}
-          className="flex flex-col bg-[#111113] rounded-3xl border border-zinc-800/50 overflow-hidden relative shadow-2xl mx-1"
+          className="flex flex-col bg-white dark:bg-[#111113] rounded-3xl border border-zinc-200 dark:border-zinc-800/50 overflow-hidden relative shadow-2xl mx-1"
         >
           {/* Header */}
-          <div className="h-14 border-b border-zinc-800/50 flex items-center px-4 justify-between">
+          <div className="h-14 border-b border-zinc-200 dark:border-zinc-800/50 flex items-center px-4 justify-between">
             <div className="flex items-center gap-3">
               {isChatHistoryCollapsed && (
-                <button onClick={toggleChatHistory} className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors">
+                <button onClick={toggleChatHistory} className="text-zinc-500 dark:text-zinc-500 hover:text-zinc-900 dark:text-white p-1 rounded hover:bg-zinc-200 dark:bg-zinc-800 transition-colors">
                   <PanelLeftOpen className="w-4 h-4" />
                 </button>
               )}
-              <div className="flex items-center gap-2 bg-[#1A1A1D] px-3 py-1.5 rounded-lg border border-zinc-800/50">
+              <div className="flex items-center gap-2 bg-zinc-50 dark:bg-[#1A1A1D] px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800/50">
                 <Database className="w-4 h-4 text-violet-400" />
                 <select 
                   value={selectedKb} 
                   onChange={(e) => setSelectedKb(e.target.value)}
                   disabled={!!activeChatId} // Cannot change KB once chat started
-                  className="bg-transparent text-xs font-medium text-zinc-300 outline-none disabled:opacity-50 cursor-pointer"
+                  className="bg-transparent text-xs font-medium text-zinc-700 dark:text-zinc-300 outline-none disabled:opacity-50 cursor-pointer"
                 >
-                  <option value="" className="bg-[#1A1A1D] text-zinc-300">No Knowledge Base (General Chat)</option>
+                  <option value="" className="bg-zinc-50 dark:bg-[#1A1A1D] text-zinc-700 dark:text-zinc-300">No Knowledge Base (General Chat)</option>
                   {kbs.map(kb => (
-                    <option key={kb.id} value={kb.id} className="bg-[#1A1A1D] text-zinc-300">{kb.name}</option>
+                    <option key={kb.id} value={kb.id} className="bg-zinc-50 dark:bg-[#1A1A1D] text-zinc-700 dark:text-zinc-300">{kb.name}</option>
                   ))}
                 </select>
               </div>
@@ -647,23 +647,23 @@ export default function WorkspacePage() {
             
             <div className="flex items-center gap-4">
               {messages.length > 0 && (
-                <div className="flex gap-2 mr-2 border-r border-zinc-800/50 pr-4">
-                  <button onClick={() => handleExportChat('MD')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded">
+                <div className="flex gap-2 mr-2 border-r border-zinc-200 dark:border-zinc-800/50 pr-4">
+                  <button onClick={() => handleExportChat('MD')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white transition-colors bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded">
                     <Download className="w-3 h-3" />
                     MD
                   </button>
-                  <button onClick={() => handleExportChat('DOCX')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded">
+                  <button onClick={() => handleExportChat('DOCX')} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white transition-colors bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded">
                     <Download className="w-3 h-3" />
                     DOCX
                   </button>
                 </div>
               )}
-              <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-400 group relative">
+              <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 group relative">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
                 AI Ready 
-                <span className="flex items-center justify-center w-3 h-3 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 cursor-help">i</span>
-                <div className="absolute right-0 top-full mt-2 w-72 max-h-[60vh] overflow-y-auto custom-scrollbar p-3 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-xs text-zinc-300 z-50">
-                  <div className="font-semibold text-white mb-2 pb-2 border-b border-zinc-800">AI Economy</div>
+                <span className="flex items-center justify-center w-3 h-3 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-700 cursor-help">i</span>
+                <div className="absolute right-0 top-full mt-2 w-72 max-h-[60vh] overflow-y-auto custom-scrollbar p-3 bg-zinc-50 dark:bg-card border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity text-xs text-zinc-700 dark:text-zinc-300 z-50">
+                  <div className="font-semibold text-zinc-900 dark:text-white mb-2 pb-2 border-b border-zinc-200 dark:border-zinc-800">AI Economy</div>
                   <div className="space-y-1">
                     {aiCosts
                       .filter(c => c.credits > 0 && [
@@ -672,7 +672,7 @@ export default function WorkspacePage() {
                       ].includes(c.operationKey))
                       .map(cost => (
                       <div key={cost.operationKey} className="flex justify-between items-center py-1">
-                        <span className="capitalize truncate pr-4 text-zinc-400">{cost.displayName || cost.operationKey.replace(/_/g, ' ')}:</span>
+                        <span className="capitalize truncate pr-4 text-zinc-600 dark:text-zinc-400">{cost.displayName || cost.operationKey.replace(/_/g, ' ')}:</span>
                         <span className="font-medium text-violet-400 shrink-0">{cost.credits} Credits</span>
                       </div>
                     ))}
@@ -687,23 +687,23 @@ export default function WorkspacePage() {
             {messages.length === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
                 <div className="w-16 h-16 bg-gradient-to-tr from-violet-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mb-5 shadow-2xl shadow-violet-500/20">
-                  <LayoutDashboard className="w-8 h-8 text-white" />
+                  <LayoutDashboard className="w-8 h-8 text-zinc-900 dark:text-white" />
                 </div>
-                <h1 className="text-2xl font-bold text-white mb-3">Workspace Intelligence</h1>
-                <p className="text-sm text-zinc-400 max-w-sm mx-auto text-center mb-10">Select an optional Knowledge Base to ground your AI. Ask it to explain concepts, write emails, or generate full PDFs and presentations.</p>
+                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-3">Workspace Intelligence</h1>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-sm mx-auto text-center mb-10">Select an optional Knowledge Base to ground your AI. Ask it to explain concepts, write emails, or generate full PDFs and presentations.</p>
                 
                 <div className="grid grid-cols-3 gap-3 w-full max-w-lg">
-                  <button onClick={() => setPrompt("Explain a complex concept simply.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                  <button onClick={() => setPrompt("Explain a complex concept simply.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:bg-zinc-800/50 transition-colors">
                     <BrainCircuit className="w-5 h-5 text-fuchsia-400" />
-                    <span className="text-xs font-medium text-zinc-300">Explain concept</span>
+                    <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Explain concept</span>
                   </button>
-                  <button onClick={() => setPrompt("Draft a professional email updates to my team.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                  <button onClick={() => setPrompt("Draft a professional email updates to my team.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:bg-zinc-800/50 transition-colors">
                     <Mail className="w-5 h-5 text-fuchsia-400" />
-                    <span className="text-xs font-medium text-zinc-300">Draft email</span>
+                    <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Draft email</span>
                   </button>
-                  <button onClick={() => setPrompt("Generate a PPT presentation based on my KB.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-800 hover:bg-zinc-800/50 transition-colors">
+                  <button onClick={() => setPrompt("Generate a PPT presentation based on my KB.")} className="flex flex-col items-center gap-2 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:bg-zinc-800/50 transition-colors">
                     <Presentation className="w-5 h-5 text-fuchsia-400" />
-                    <span className="text-xs font-medium text-zinc-300">Generate PPT</span>
+                    <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Generate PPT</span>
                   </button>
                 </div>
               </div>
@@ -713,10 +713,10 @@ export default function WorkspacePage() {
                   <div key={idx} className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'assistant' && (
                       <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0 mt-1">
-                        <LayoutDashboard className="w-4 h-4 text-white" />
+                        <LayoutDashboard className="w-4 h-4 text-zinc-900 dark:text-white" />
                       </div>
                     )}
-                    <div className={`p-4 rounded-2xl max-w-[85%] ${msg.role === 'user' ? 'bg-[#1A1A1D] text-white border border-zinc-800/50' : 'bg-[#1A1A1D] text-zinc-300 border border-zinc-800/50'}`}>
+                    <div className={`p-4 rounded-2xl max-w-[85%] ${msg.role === 'user' ? 'bg-zinc-50 dark:bg-[#1A1A1D] text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800/50' : 'bg-zinc-50 dark:bg-[#1A1A1D] text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800/50'}`}>
                         {msg.role === 'assistant' ? renderMessageContent(msg.content) : (
                           <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
                             <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -728,9 +728,9 @@ export default function WorkspacePage() {
                 {isGenerating && (
                   <div className="flex gap-4 justify-start">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex items-center justify-center shrink-0 mt-1">
-                      <LayoutDashboard className="w-4 h-4 text-white" />
+                      <LayoutDashboard className="w-4 h-4 text-zinc-900 dark:text-white" />
                     </div>
-                    <div className="p-4 rounded-2xl bg-[#1A1A1D] border border-zinc-800/50 flex items-center gap-2">
+                    <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800/50 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce"></div>
                       <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       <div className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
@@ -743,18 +743,18 @@ export default function WorkspacePage() {
           </div>
 
           {/* Input Box */}
-          <div className="p-5 flex flex-col gap-2 relative z-10 bg-[#111113]">
+          <div className="p-5 flex flex-col gap-2 relative z-10 bg-white dark:bg-[#111113]">
             {previewDoc && (
               <div className="max-w-4xl mx-auto w-full flex justify-start px-4">
                 <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1.5 rounded-full text-[10px] font-medium transition-all">
                   <FileText className="w-3 h-3" />
                   Editing: {previewDoc.title} (v{previewDoc.version})
-                  <button onClick={() => setPreviewDoc(null)} className="ml-1 hover:text-white transition-colors">&times;</button>
+                  <button onClick={() => setPreviewDoc(null)} className="ml-1 hover:text-zinc-900 dark:text-white transition-colors">&times;</button>
                 </div>
               </div>
             )}
             <div className="max-w-4xl mx-auto w-full px-4">
-              <div className="relative flex items-center bg-[#1A1A1D] rounded-2xl border border-zinc-800 focus-within:border-violet-500/50 transition-colors shadow-lg">
+              <div className="relative flex items-center bg-zinc-50 dark:bg-[#1A1A1D] rounded-2xl border border-zinc-200 dark:border-zinc-800 focus-within:border-violet-500/50 transition-colors shadow-lg">
                 <textarea 
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
@@ -766,7 +766,7 @@ export default function WorkspacePage() {
                   }}
                   placeholder="Ask Workspace AI..."
                   disabled={isGenerating}
-                  className="w-full bg-transparent resize-none outline-none py-3 pl-4 pr-12 text-zinc-200 placeholder:text-zinc-500 disabled:opacity-50 min-h-[48px] text-sm"
+                  className="w-full bg-transparent resize-none outline-none py-3 pl-4 pr-12 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-500 dark:text-zinc-500 disabled:opacity-50 min-h-[48px] text-sm"
                   rows={1}
                 />
                 <button 
@@ -778,7 +778,7 @@ export default function WorkspacePage() {
                 </button>
               </div>
             </div>
-            <div className="max-w-4xl mx-auto mt-2 text-center flex justify-center items-center gap-2 text-[10px] text-zinc-500">
+            <div className="max-w-4xl mx-auto mt-2 text-center flex justify-center items-center gap-2 text-[10px] text-zinc-500 dark:text-zinc-500">
               <Type className="w-3 h-3" />
               <span>Workspace AI grounded on your selected Knowledge Base. <br/><span className="text-rose-500 mt-1 inline-block">Consumes AI Credits based on operations</span></span>
             </div>
@@ -786,7 +786,7 @@ export default function WorkspacePage() {
         </Panel>
 
         <PanelResizeHandle className="w-2 flex items-center justify-center group outline-none">
-          <div className="w-1 h-8 rounded-full bg-zinc-800 group-hover:bg-fuchsia-500 transition-colors" />
+          <div className="w-1 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 group-hover:bg-fuchsia-500 transition-colors" />
         </PanelResizeHandle>
 
         {/* Panel 3: Live Preview Panel */}
@@ -794,10 +794,10 @@ export default function WorkspacePage() {
           defaultSize={isChatHistoryCollapsed ? 35 : 30} 
           minSize={25}
           maxSize={50}
-          className="flex flex-col bg-[#111113] rounded-3xl border border-zinc-800/50 overflow-hidden ml-1"
+          className="flex flex-col bg-white dark:bg-[#111113] rounded-3xl border border-zinc-200 dark:border-zinc-800/50 overflow-hidden ml-1"
         >
-          <div className="h-14 border-b border-zinc-800/50 flex justify-between items-center px-4">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+          <div className="h-14 border-b border-zinc-200 dark:border-zinc-800/50 flex justify-between items-center px-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
               <File className="w-3.5 h-3.5 text-fuchsia-400" />
               Live Preview
             </div>
@@ -807,13 +807,13 @@ export default function WorkspacePage() {
                   onClick={() => {
                     navigator.clipboard.writeText(previewDoc.content);
                   }} 
-                  className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded"
+                  className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white transition-colors bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded"
                 >
                   <FileText className="w-3 h-3" />
                   Copy Text
                 </button>
                 {['MD', 'PDF', 'DOCX', 'PPTX', 'XLSX'].map(fmt => (
-                  <button key={fmt} onClick={() => handleExport(fmt)} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-400 hover:text-white transition-colors bg-zinc-800/50 px-2 py-1 rounded">
+                  <button key={fmt} onClick={() => handleExport(fmt)} className="flex items-center gap-1.5 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:text-white transition-colors bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded">
                     <Download className="w-3 h-3" />
                     {fmt}
                   </button>
@@ -824,16 +824,16 @@ export default function WorkspacePage() {
 
           <div className="flex-1 p-4 overflow-y-auto">
             {previewDoc ? (
-              <div className="bg-[#1A1A1D] border border-zinc-800 rounded-xl shadow-lg min-h-full flex flex-col overflow-hidden">
-                <div className="border-b border-zinc-800 p-2 flex gap-2 items-center bg-zinc-900/50">
+              <div className="bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-lg min-h-full flex flex-col overflow-hidden">
+                <div className="border-b border-zinc-200 dark:border-zinc-800 p-2 flex gap-2 items-center bg-zinc-100 dark:bg-card/50">
                   <div className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-fuchsia-500/20 text-fuchsia-400 rounded">
                     {previewDoc.type} EDITOR
                   </div>
-                  <div className="flex-1 text-center text-[9px] font-medium text-zinc-500">
+                  <div className="flex-1 text-center text-[9px] font-medium text-zinc-500 dark:text-zinc-500">
                     Saved {previewDoc.lastEdited}
                   </div>
                 </div>
-                <div className="p-5 flex-1 bg-[#1A1A1D] overflow-y-auto">
+                <div className="p-5 flex-1 bg-zinc-50 dark:bg-[#1A1A1D] overflow-y-auto">
                   <div ref={previewContentRef} className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown>{previewDoc.content}</ReactMarkdown>
                   </div>
@@ -841,17 +841,17 @@ export default function WorkspacePage() {
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                <div className="w-14 h-14 bg-[#1A1A1D] rounded-2xl flex items-center justify-center mb-5 border border-zinc-800/50 shadow-inner">
-                  <FileText className="w-6 h-6 text-zinc-500" />
+                <div className="w-14 h-14 bg-zinc-50 dark:bg-[#1A1A1D] rounded-2xl flex items-center justify-center mb-5 border border-zinc-200 dark:border-zinc-800/50 shadow-inner">
+                  <FileText className="w-6 h-6 text-zinc-500 dark:text-zinc-500" />
                 </div>
-                <h3 className="text-sm font-bold text-white mb-2">No Document</h3>
-                <p className="text-xs text-zinc-500 mb-6 max-w-[180px] mx-auto leading-relaxed">Ask AI to generate a PDF, Presentation, or Spreadsheet.</p>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-2">No Document</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-6 max-w-[180px] mx-auto leading-relaxed">Ask AI to generate a PDF, Presentation, or Spreadsheet.</p>
                 
                 <div className="flex flex-wrap gap-2 justify-center">
-                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-[#1A1A1D] border border-zinc-800 text-zinc-500">PDF</span>
-                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-[#1A1A1D] border border-zinc-800 text-zinc-500">PPTX</span>
-                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-[#1A1A1D] border border-zinc-800 text-zinc-500">XLSX</span>
-                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-[#1A1A1D] border border-zinc-800 text-zinc-500">DOCX</span>
+                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500">PDF</span>
+                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500">PPTX</span>
+                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500">XLSX</span>
+                  <span className="text-[9px] font-medium px-2 py-1 rounded bg-zinc-50 dark:bg-[#1A1A1D] border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-500">DOCX</span>
                 </div>
               </div>
             )}

@@ -40,7 +40,7 @@ export default function TeamPage() {
         
         {/* Left Column: Members List */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
             
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">Active Members (12)</h2>
@@ -138,7 +138,7 @@ export default function TeamPage() {
         <div className="space-y-6">
           
           {/* Roles Overview */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Shield className="w-5 h-5 text-blue-400" /> Roles & Permissions
             </h3>
@@ -175,7 +175,7 @@ export default function TeamPage() {
           </div>
 
           {/* Activity Log */}
-          <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
+          <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
             <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
               <Activity className="w-4 h-4" /> Team Activity
             </h3>

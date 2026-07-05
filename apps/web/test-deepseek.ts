@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createDeepSeek } from '@ai-sdk/deepseek';
 
-const openai = createOpenAI({
+const openai = createDeepSeek({
   apiKey: process.env.DEEPSEEK_API_KEY || "",
   baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
 });
@@ -10,7 +10,7 @@ const openai = createOpenAI({
 async function main() {
   try {
     const res = await generateText({
-      model: openai("deepseek-chat"),
+      model: openai("deepseek-v4-flash"),
       prompt: 'say hello. respond in JSON format with a response field.',
     });
     console.log("Success:", res.text);

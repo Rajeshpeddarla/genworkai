@@ -45,7 +45,7 @@ export default function ProjectsPage() {
           <input 
             type="text" 
             placeholder="Search projects..." 
-            className="w-full bg-zinc-900/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
+            className="w-full bg-card/50 border border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-all"
           />
         </div>
         <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-medium hover:bg-white/10 transition-colors text-zinc-300">
@@ -56,7 +56,7 @@ export default function ProjectsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Project Card 1 */}
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-emerald-500/50 transition-all flex flex-col cursor-pointer relative overflow-hidden">
+        <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-emerald-500/50 transition-all flex flex-col cursor-pointer relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <FolderKanban className="w-24 h-24 text-emerald-400" />
           </div>
@@ -114,7 +114,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Project Card 2 */}
-        <div className="bg-zinc-900/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-emerald-500/50 transition-all flex flex-col cursor-pointer relative overflow-hidden">
+        <div className="bg-card/50 border border-white/10 rounded-3xl p-6 backdrop-blur-sm group hover:border-emerald-500/50 transition-all flex flex-col cursor-pointer relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
             <FolderKanban className="w-24 h-24 text-emerald-400" />
           </div>

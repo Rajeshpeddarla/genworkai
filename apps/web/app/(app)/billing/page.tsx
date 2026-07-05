@@ -1,7 +1,7 @@
 "use client";
 
 import { useBillingStore } from "../../../store/billing";
-import { Check, Star, Zap, Building } from "lucide-react";
+import { Check, Star, Zap, Building, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { initializePaddle, Paddle } from "@paddle/paddle-js";
 import Link from "next/link";
@@ -16,9 +16,8 @@ export default function BillingPage() {
 
   // Filter and sort plans
   const displayPlans = plans
-    .filter(p => p.slug !== 'team' && p.slug !== 'teams')
     .sort((a, b) => {
-      const order = { 'free': 1, 'starter': 2, 'pro': 3, 'agency': 4, 'enterprise': 5 };
+      const order = { 'free': 1, 'starter': 2, 'pro': 3, 'team': 4, 'agency': 5, 'enterprise': 6 };
       return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
     });
 
@@ -39,8 +38,17 @@ export default function BillingPage() {
               const priceIds = d.plans.flatMap((plan: any) => [plan.paddleMonthlyPriceId, plan.paddleYearlyPriceId].filter(Boolean));
               if (priceIds.length > 0) {
                 try {
+                  // Fetch the public IP to ensure Paddle returns accurate local currency (e.g., INR for India) even on localhost
+                  let publicIp;
+                  try { 
+                    const ipRes = await fetch('https://api.ipify.org?format=json');
+                    const ipData = await ipRes.json();
+                    publicIp = ipData.ip;
+                  } catch(e) {}
+                  
                   const preview = await p.PricePreview({
-                    items: priceIds.map((id: string) => ({ priceId: id, quantity: 1 }))
+                    items: priceIds.map((id: string) => ({ priceId: id, quantity: 1 })),
+                    customerIpAddress: publicIp
                   });
                   
                   const newPrices: Record<string, { formatted: string, raw: number }> = {};
@@ -90,7 +98,7 @@ export default function BillingPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white dark:bg-zinc-950 p-8">
+    <div className="flex-1 overflow-y-auto bg-white dark:bg-card p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-10 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">Billing & Plans</h1>
@@ -108,7 +116,7 @@ export default function BillingPage() {
             let iconColor = "text-zinc-600 dark:text-zinc-400";
             let iconBg = "bg-zinc-100 dark:bg-zinc-800";
             let borderColor = "border-zinc-200 dark:border-white/10";
-            let bgColor = "bg-white dark:bg-zinc-900/50";
+            let bgColor = "bg-white dark:bg-card"; // Removed /50 which fails on hex variables
             let btnClasses = "";
             let checkColor = "text-zinc-500";
             
@@ -141,6 +149,14 @@ export default function BillingPage() {
               btnClasses = isCurrentTier 
                 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 cursor-not-allowed" 
                 : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md";
+            } else if (plan.slug === 'team') {
+              Icon = Users;
+              iconColor = "text-blue-600 dark:text-blue-400";
+              iconBg = "bg-blue-100 dark:bg-blue-900/30";
+              checkColor = "text-blue-500";
+              btnClasses = isCurrentTier 
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 cursor-not-allowed" 
+                : "bg-blue-600 hover:bg-blue-500 text-white shadow-md";
             } else {
               // Free or fallback
               checkColor = "text-violet-500";

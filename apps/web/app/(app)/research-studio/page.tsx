@@ -199,7 +199,7 @@ export default function ResearchStudioPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
           {/* Main Input Area */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-8 backdrop-blur-sm relative overflow-hidden group">
+            <div className="bg-card/50 border border-white/10 rounded-2xl p-8 backdrop-blur-sm relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/5 to-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               
               <h2 className="text-xl font-bold text-white mb-6 relative z-10">Generate New Report</h2>
@@ -264,7 +264,7 @@ export default function ResearchStudioPage() {
                 { name: "GitHub", icon: Code2, color: "text-zinc-300", bg: "bg-zinc-400/10" },
                 { name: "Images", icon: ImageIcon, color: "text-violet-400", bg: "bg-violet-400/10" },
               ].map((source) => (
-                <div key={source.name} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-zinc-900/30">
+                <div key={source.name} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-card/30">
                   <div className={`p-2 rounded-lg ${source.bg} ${source.color}`}>
                     <source.icon className="w-4 h-4" />
                   </div>
@@ -291,7 +291,7 @@ export default function ResearchStudioPage() {
           
           {/* Main Report Column */}
           <div className="lg:col-span-3 space-y-6">
-            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
+            <div className="bg-card/50 border border-white/10 rounded-2xl p-8 backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-6 pb-6 border-b border-white/10">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fuchsia-500 to-violet-500 flex items-center justify-center">
                   <FileBarChart className="w-6 h-6 text-white" />

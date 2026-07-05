@@ -42,7 +42,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-[#020202] text-white flex flex-col md:flex-row font-sans">
       
       {/* Left Column: Context & Visuals */}
-      <div className="hidden md:flex md:w-1/2 lg:w-5/12 bg-zinc-950 border-r border-white/10 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 lg:w-5/12 bg-card border-r border-white/10 p-12 flex-col justify-between relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-[20%] -left-[20%] w-[70%] h-[70%] rounded-full bg-fuchsia-600/10 blur-[120px]" />

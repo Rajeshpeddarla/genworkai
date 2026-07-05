@@ -32,7 +32,7 @@ const navigation = [
 
 const secondaryNavigation = [
   { name: "Settings", href: "/admin/settings", icon: Settings },
-  { name: "Back to App", href: "/dashboard", icon: ArrowLeft },
+  { name: "Back to App", href: "/workspace", icon: ArrowLeft },
 ];
 
 export function AdminSidebar() {

@@ -31,7 +31,7 @@ export default function FeaturesClient({ initialFlags }: { initialFlags: any[] }
         </div>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden">
         <ul className="divide-y divide-zinc-200 dark:divide-white/10">
           {initialFlags.map((flag) => {
             const IconComponent = iconMap[flag.key] || Zap;

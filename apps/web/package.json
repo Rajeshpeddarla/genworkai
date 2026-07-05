@@ -11,7 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "^3.0.1",
+    "@ai-sdk/deepseek": "^3.0.5",
     "@ai-sdk/openai": "^3.0.73",
     "@ai-sdk/react": "^4.0.15",
     "@imgly/background-removal": "^1.7.0",

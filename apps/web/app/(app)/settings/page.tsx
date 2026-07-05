@@ -104,8 +104,8 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
-            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg border border-zinc-200 dark:border-zinc-700">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <div className="p-2 bg-black/5 dark:bg-white/5 text-zinc-900 dark:text-zinc-100 rounded-lg border border-zinc-200 dark:border-zinc-700">
               <Settings className="w-6 h-6" />
             </div>
             Settings
@@ -125,7 +125,7 @@ export default function SettingsPage() {
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
                 activeTab === tab.id 
                   ? "bg-violet-500/10 text-violet-700 dark:text-violet-400 shadow-sm border border-violet-500/20" 
-                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
+                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"
               }`}
             >
               <tab.icon className="w-5 h-5" /> {tab.name}
@@ -133,7 +133,7 @@ export default function SettingsPage() {
           ))}
           
           <div className="pt-4 mt-4 border-t border-zinc-200 dark:border-white/10">
-            <Link href="/mcp-builder" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">
+            <Link href="/mcp-builder" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors">
                <Server className="w-5 h-5" /> MCP Servers
             </Link>
             <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors mt-2">
@@ -146,9 +146,9 @@ export default function SettingsPage() {
         <div className="flex-1">
           
           {activeTab === "profile" && (
-            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">Profile Details</h2>
+                <h2 className="text-xl font-bold text-foreground mb-1">Profile Details</h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">Your personal information and identity.</p>
                 
                 <div className="flex items-center gap-6 mb-8">
@@ -165,7 +165,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="p-4 bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-xl">
+                <div className="p-4 bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-xl">
                   <p className="text-sm text-zinc-500 mb-2">Member since</p>
                   <p className="font-medium">{new Date(profile?.createdAt || Date.now()).toLocaleDateString()}</p>
                 </div>
@@ -205,8 +205,8 @@ export default function SettingsPage() {
 
               {/* Usage Limits */}
               {limits && (
-                <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-6">Current Usage</h3>
+                <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-foreground mb-6">Current Usage</h3>
                   
                   <div className="space-y-6">
                     <div>
@@ -214,7 +214,7 @@ export default function SettingsPage() {
                         <span className="font-medium">Knowledge Bases</span>
                         <span className="text-zinc-500">{limits.knowledgeBases?.current || 0} / {Number(limits.knowledgeBases?.limit) === -1 ? 'Unlimited' : limits.knowledgeBases?.limit || 0}</span>
                       </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-2">
                         <div className="bg-violet-500 h-2 rounded-full" style={{ width: `${Number(limits.knowledgeBases?.limit) === -1 ? 100 : limits.knowledgeBases?.limit > 0 ? Math.min(100, ((limits.knowledgeBases?.current || 0) / limits.knowledgeBases.limit) * 100) : 0}%` }}></div>
                       </div>
                     </div>
@@ -224,7 +224,7 @@ export default function SettingsPage() {
                         <span className="font-medium">Business Flows</span>
                         <span className="text-zinc-500">{limits.flows?.current || 0} / {Number(limits.flows?.limit) === -1 ? 'Unlimited' : limits.flows?.limit || 0}</span>
                       </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-2">
                         <div className="bg-fuchsia-500 h-2 rounded-full" style={{ width: `${Number(limits.flows?.limit) === -1 ? 100 : limits.flows?.limit > 0 ? Math.min(100, ((limits.flows?.current || 0) / limits.flows.limit) * 100) : 0}%` }}></div>
                       </div>
                     </div>
@@ -234,7 +234,7 @@ export default function SettingsPage() {
                         <span className="font-medium">AI Credits Available</span>
                         <span className="text-zinc-500">{limits.aiCredits?.current?.toLocaleString() || 0} Credits</span>
                       </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-2">
                         <div className="bg-sky-500 h-2 rounded-full" style={{ width: `100%` }}></div>
                       </div>
                       <p className="text-xs text-zinc-400 mt-1">Includes {limits.aiCredits?.monthly?.toLocaleString() || 0} monthly plan credits and {limits.aiCredits?.purchased?.toLocaleString() || 0} purchased credits.</p>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                         <span className="font-medium">Context Data Uploaded</span>
                         <span className="text-zinc-500">{formatBytes(limits.context?.current || 0)} / {Number(limits.context?.limit) === -1 ? 'Unlimited' : formatBytes(limits.context?.limit || 0)}</span>
                       </div>
-                      <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2">
+                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-2">
                         <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Number(limits.context?.limit) === -1 ? 100 : limits.context?.limit > 0 ? Math.min(100, ((limits.context?.current || 0) / limits.context.limit) * 100) : 0}%` }}></div>
                       </div>
                     </div>
@@ -258,21 +258,21 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "referrals" && (
-            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center mb-8">
                  <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-4">
                    <Gift className="w-8 h-8" />
                  </div>
-                 <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Refer & Earn</h2>
+                 <h2 className="text-2xl font-bold text-foreground mb-2">Refer & Earn</h2>
                  <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto">
                    We won't give anything permanent until referrer hasn't purchased. We give free context, and size increase for one existing knowledgebase. If his referrer has subscribed he get 1 month of the tier their referrer subscribed. After that ends even if referer subscribed he wont get any.
                  </p>
               </div>
 
-              <div className="bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-xl p-6 text-center">
+              <div className="bg-black/5 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl p-6 text-center">
                  <p className="text-sm text-zinc-500 mb-2">Your Unique Referral Code</p>
                  <div className="flex items-center justify-center gap-3">
-                   <code className="text-3xl font-black tracking-widest text-zinc-900 dark:text-white">{profile?.referralCode || "LOADING"}</code>
+                   <code className="text-3xl font-black tracking-widest text-foreground">{profile?.referralCode || "LOADING"}</code>
                  </div>
                  <button className="mt-4 text-violet-600 dark:text-violet-400 text-sm font-semibold hover:underline">
                    Copy Invite Link
@@ -309,9 +309,9 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "appearance" && (
-            <div className="bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-card border border-zinc-200 dark:border-white/10 rounded-3xl p-8 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div>
-                <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-1">Appearance</h2>
+                <h2 className="text-xl font-bold text-foreground mb-1">Appearance</h2>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">Customize the look and feel of your GenWorkAI workspace.</p>
                 
                 <div className="space-y-4">

@@ -76,37 +76,108 @@ The user is viewing a dashboard named "${dashboard.name}".
 
 ${schemaContext}
 
-You can use the 'create_widget' tool to automatically generate a widget configuration (SQL + Chart type).
-Only generate SQL that is strictly READ-ONLY (SELECT).
-Widget types available: 'table', 'line', 'bar', 'pie', 'stat', 'area'.
-Respond conversationally, and use tools when the user asks you to create or add a widget.
-`;
+CRITICAL INSTRUCTION:
+When the user asks you to create a widget, chart, or graph, you MUST output a JSON block wrapped in markdown. Do NOT use any tool calling APIs.
+You MUST output EXACTLY this format in your response:
+
+\`\`\`json
+{
+  "name": "Title of the widget",
+  "widgetType": "table",
+  "sqlQuery": "SELECT * FROM ...",
+  "description": "Short description"
+}
+\`\`\`
+
+Available widget types: 'table', 'line', 'bar', 'pie', 'stat', 'area'.
+You MUST provide a valid SQL query. Only generate SQL that is strictly READ-ONLY (SELECT).
+Respond conversationally before or after the JSON block.`;
 
     const result = streamText({
-      model: deepseek('deepseek-chat'),
+      model: deepseek('deepseek-v4-flash'),
       system: systemPrompt,
-      messages,
-      tools: {
-        create_widget: tool({
-          description: 'Create a new dashboard widget with SQL query and visualization config.',
-          parameters: z.object({
-            name: z.string().describe('Title of the widget'),
-            widgetType: z.enum(['table', 'line', 'bar', 'pie', 'stat', 'area']).describe('Type of chart'),
-            sqlQuery: z.string().describe('PostgreSQL/MySQL SELECT query'),
-            description: z.string().optional().describe('Short description of what the widget shows'),
-          }),
-          execute: async (params) => {
-            return {
-              success: true,
-              message: `Generated widget configuration for "${params.name}"`,
-              widgetConfig: params
-            };
+      messages: messages
+        .filter((m: any) => {
+          if (m.role === 'system') return true;
+          if (m.role === 'user') return true;
+          if (m.role === 'assistant') {
+            return typeof m.content === 'string' && m.content.length > 0;
           }
+          return false;
         })
+        .map((m: any) => {
+          return { 
+            role: m.role,
+            content: m.content
+          };
+        }),
+      onFinish: async (completion) => {
+        console.log("DEEPSEEK COMPLETED RESPONSE:");
+        const text = completion.text || "";
+        console.log(text);
+        
+        // Directly parse and create widget in the backend
+        let jsonStr = null;
+        const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+        if (match) {
+          jsonStr = match[1];
+        } else {
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonStr = text.substring(firstBrace, lastBrace + 1);
+          }
+        }
+        
+        if (jsonStr) {
+          try {
+            const body = JSON.parse(jsonStr);
+            if (body && typeof body === 'object' && (body.sqlQuery || body.sql_query || body.sql || body.query)) {
+              
+              const sqlQuery = body.sqlQuery || body.sql_query || body.query || body.sql;
+              console.log("[Backend] Creating widget:", body.name);
+              
+              // Automatically fetch the db schema for dashboardWidgets and insert
+              const { dashboardWidgets } = require('@/db/schema');
+              await db.insert(dashboardWidgets).values({
+                dashboardId: parseInt(dashboardId, 10),
+                name: body.name || body.title || 'AI Generated Widget',
+                description: body.description || JSON.stringify(body),
+                widgetType: body.widgetType || body.widget_type || 'table',
+                sqlQuery: sqlQuery,
+                refreshInterval: body.refreshInterval || 'manual',
+                visualizationConfig: body.visualizationConfig || {},
+                layoutConfig: body.layoutConfig || { x: 0, y: 0, w: 4, h: 4 },
+              });
+              console.log("[Backend] Widget saved successfully!");
+            }
+          } catch (e) {
+            console.error("Failed to parse AI widget JSON in backend", e);
+          }
+        }
       }
     });
 
-    return result.toTextStreamResponse();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result.textStream) {
+            controller.enqueue(new TextEncoder().encode(`0:${JSON.stringify(chunk)}\n`));
+          }
+        } catch (err) {
+          console.error("Stream error:", err);
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'x-vercel-ai-data-stream': 'v1'
+      }
+    });
   } catch (error: any) {
     console.error('Copilot API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

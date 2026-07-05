@@ -469,7 +469,7 @@ export default function ArchitectureExplorerPage() {
   ];
 
   if (isLoading && !rawNodes.length && !overviewData) {
-    return <div className="w-full h-[calc(100vh-64px)] flex items-center justify-center text-white bg-zinc-950">
+    return <div className="w-full h-[calc(100vh-64px)] flex items-center justify-center text-white bg-card">
        <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
           <p className="text-zinc-400">Loading Business Architecture...</p>
@@ -478,12 +478,12 @@ export default function ArchitectureExplorerPage() {
   }
 
   return (
-    <div className="w-full h-[calc(100vh-64px)] flex relative bg-zinc-950">
+    <div className="w-full h-[calc(100vh-64px)] flex relative bg-card">
       
       {/* Top Overlay: Search, Filters, and View Switcher */}
       <div className="absolute top-4 left-4 z-20 flex flex-col gap-3">
          <div className="flex items-center gap-2">
-           <div className="bg-zinc-900/90 border border-zinc-800 rounded-xl p-1 backdrop-blur-md flex items-center shadow-2xl w-max">
+           <div className="bg-card/90 border border-zinc-800 rounded-xl p-1 backdrop-blur-md flex items-center shadow-2xl w-max">
               {primaryViews.map(mode => {
                 const Icon = mode.icon;
                 return (
@@ -517,7 +517,7 @@ export default function ArchitectureExplorerPage() {
                <input 
                   type="text" 
                   placeholder="Search capabilities, concepts, or business logic..." 
-                  className="w-full bg-zinc-900/90 border-2 border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 backdrop-blur-md"
+                  className="w-full bg-card/90 border-2 border-zinc-700/50 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-bold text-white placeholder:text-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 backdrop-blur-md"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                />
@@ -535,7 +535,7 @@ export default function ArchitectureExplorerPage() {
       </div>
 
       {viewMode === 'overview' && overviewData ? (
-         <div className="flex-1 w-full h-full overflow-y-auto p-12 pt-36 bg-zinc-950">
+         <div className="flex-1 w-full h-full overflow-y-auto p-12 pt-36 bg-card">
             <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-500">
                <div>
                   <h1 className="text-6xl font-black text-white mb-4 tracking-tight">Business Knowledge</h1>
@@ -544,22 +544,22 @@ export default function ArchitectureExplorerPage() {
                   </p>
                </div>
                <div className="grid grid-cols-4 gap-6">
-                  <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
+                  <div className="bg-card/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
                      <div className="bg-violet-500/20 p-3 rounded-2xl w-max"><Box className="w-8 h-8 text-violet-500" /></div>
                      <div className="text-5xl font-black text-white mt-2">{overviewData.stats.totalFeatures}</div>
                      <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Business Features</div>
                   </div>
-                  <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
+                  <div className="bg-card/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
                      <div className="bg-emerald-500/20 p-3 rounded-2xl w-max"><PlayCircle className="w-8 h-8 text-emerald-500" /></div>
                      <div className="text-5xl font-black text-white mt-2">{overviewData.stats.totalFlows}</div>
                      <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">User Journeys</div>
                   </div>
-                  <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
+                  <div className="bg-card/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
                      <div className="bg-indigo-500/20 p-3 rounded-2xl w-max"><Workflow className="w-8 h-8 text-indigo-500" /></div>
                      <div className="text-5xl font-black text-white mt-2">{overviewData.stats.totalDependencies}</div>
                      <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Connections</div>
                   </div>
-                  <div className="bg-zinc-900/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
+                  <div className="bg-card/50 border border-zinc-800/80 rounded-3xl p-8 flex flex-col gap-3 shadow-xl">
                      <div className="bg-blue-500/20 p-3 rounded-2xl w-max"><FileText className="w-8 h-8 text-blue-500" /></div>
                      <div className="text-5xl font-black text-white mt-2">{overviewData.stats.totalDocuments}</div>
                      <div className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Impl. Files</div>
@@ -572,7 +572,7 @@ export default function ArchitectureExplorerPage() {
           
           {/* Flows Sidebar */}
           {viewMode === 'flows' && !isBuildingFlow && (
-             <div className="absolute left-4 top-24 bottom-4 z-10 w-80 bg-zinc-900/90 border border-zinc-800 rounded-3xl p-5 backdrop-blur-xl shadow-2xl flex flex-col">
+             <div className="absolute left-4 top-24 bottom-4 z-10 w-80 bg-card/90 border border-zinc-800 rounded-3xl p-5 backdrop-blur-xl shadow-2xl flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                    <h3 className="text-lg font-black text-white flex items-center gap-2">
                       <PlayCircle className="w-5 h-5 text-emerald-400" /> Available Flows
@@ -604,9 +604,9 @@ export default function ArchitectureExplorerPage() {
 
           {/* Custom Flow Builder Modal/Overlay */}
           {viewMode === 'flows' && isBuildingFlow && (
-             <div className="absolute inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex items-center justify-center p-8">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                   <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
+             <div className="absolute inset-0 z-40 bg-card/80 backdrop-blur-md flex items-center justify-center p-8">
+                <div className="bg-card border border-zinc-800 rounded-3xl shadow-2xl w-full max-w-4xl max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                   <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-card/50">
                       <div className="flex items-center gap-3">
                          <div className="bg-emerald-500/20 p-2 rounded-xl"><Plus className="w-6 h-6 text-emerald-500" /></div>
                          <h2 className="text-2xl font-black text-white">Create Custom Flow</h2>
@@ -634,7 +634,7 @@ export default function ArchitectureExplorerPage() {
                                value={newFlowName}
                                onChange={(e) => setNewFlowName(e.target.value)}
                                placeholder="e.g. User Authentication Flow"
-                               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-lg font-bold"
+                               className="w-full bg-card border border-zinc-800 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 text-lg font-bold"
                             />
                          </div>
                          <div>
@@ -643,7 +643,7 @@ export default function ArchitectureExplorerPage() {
                                value={newFlowDesc}
                                onChange={(e) => setNewFlowDesc(e.target.value)}
                                placeholder="**Purpose:** Automates the creation of..."
-                               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-white h-24 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                               className="w-full bg-card border border-zinc-800 rounded-xl px-4 py-3 text-white h-24 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                             />
                          </div>
                       </div>
@@ -661,7 +661,7 @@ export default function ArchitectureExplorerPage() {
                          
                          <div className="space-y-4">
                             {newFlowSteps.map((step, idx) => (
-                               <div key={idx} className="bg-zinc-950/50 border border-zinc-800 rounded-2xl p-5 flex gap-4 transition-all hover:border-zinc-700">
+                               <div key={idx} className="bg-card/50 border border-zinc-800 rounded-2xl p-5 flex gap-4 transition-all hover:border-zinc-700">
                                   <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-black shrink-0">{idx + 1}</div>
                                   <div className="flex-1 space-y-4">
                                      <input 
@@ -672,7 +672,7 @@ export default function ArchitectureExplorerPage() {
                                            setNewFlowSteps(newSteps);
                                         }}
                                         placeholder="Step Name (e.g. API Gateway)"
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 font-bold text-white focus:border-emerald-500 focus:outline-none"
+                                        className="w-full bg-card border border-zinc-800 rounded-xl px-4 py-2 font-bold text-white focus:border-emerald-500 focus:outline-none"
                                      />
                                      <textarea 
                                         value={step.description}
@@ -682,7 +682,7 @@ export default function ArchitectureExplorerPage() {
                                            setNewFlowSteps(newSteps);
                                         }}
                                         placeholder="Detailed step processing explanation..."
-                                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white h-32 focus:border-emerald-500 focus:outline-none leading-relaxed"
+                                        className="w-full bg-card border border-zinc-800 rounded-xl px-4 py-3 text-white h-32 focus:border-emerald-500 focus:outline-none leading-relaxed"
                                      />
                                   </div>
                                   <button 
@@ -701,7 +701,7 @@ export default function ArchitectureExplorerPage() {
                       </div>
                    </div>
 
-                   <div className="p-6 border-t border-zinc-800 bg-zinc-950/50 flex justify-end gap-3">
+                   <div className="p-6 border-t border-zinc-800 bg-card/50 flex justify-end gap-3">
                       <button 
                          onClick={() => setIsBuildingFlow(false)}
                          className="px-6 py-2.5 rounded-xl font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
@@ -731,15 +731,15 @@ export default function ArchitectureExplorerPage() {
                onNodeDragStop={onNodeDragStop}
                onInit={setRfInstance}
                nodeTypes={nodeTypes}
-               className="bg-zinc-950"
+               className="bg-card"
                defaultEdgeOptions={{ type: 'smoothstep' }}
              >
                <Background color="#27272a" gap={24} size={2} />
-               <Controls className="bg-zinc-900 border-zinc-800 fill-zinc-400 hover:fill-white mb-4 ml-4" />
+               <Controls className="bg-card border-zinc-800 fill-zinc-400 hover:fill-white mb-4 ml-4" />
                <MiniMap 
                  nodeColor={(n: any) => n.data.color || '#3b82f6'} 
                  maskColor="rgba(0,0,0,0.8)" 
-                 className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl" 
+                 className="bg-card border border-zinc-800 rounded-xl overflow-hidden shadow-2xl" 
                />
              </ReactFlow>
           )}
@@ -748,8 +748,8 @@ export default function ArchitectureExplorerPage() {
 
       {/* Node Details Panel */}
       {selectedNode && viewMode !== 'overview' && !isBuildingFlow && (
-        <div className="w-[500px] h-full border-l border-zinc-800/80 bg-zinc-950/95 backdrop-blur-2xl flex flex-col shadow-2xl absolute right-0 top-0 animate-in slide-in-from-right-8 duration-200 z-30">
-          <div className="p-8 border-b border-zinc-800/80 bg-zinc-900/30">
+        <div className="w-[500px] h-full border-l border-zinc-800/80 bg-card/95 backdrop-blur-2xl flex flex-col shadow-2xl absolute right-0 top-0 animate-in slide-in-from-right-8 duration-200 z-30">
+          <div className="p-8 border-b border-zinc-800/80 bg-card/30">
             <div className="flex justify-end mb-4">
                <button onClick={() => { setSelectedNode(null); setIsEditing(false); }} className="text-zinc-500 hover:text-white p-2 rounded-xl hover:bg-zinc-800 transition-colors">
                  <X className="w-6 h-6" />
@@ -764,7 +764,7 @@ export default function ArchitectureExplorerPage() {
                      <input 
                        value={editName}
                        onChange={e => setEditName(e.target.value)}
-                       className="bg-zinc-900 border border-zinc-700 text-white font-black text-2xl p-2 rounded-xl focus:outline-none focus:border-violet-500 flex-1"
+                       className="bg-card border border-zinc-700 text-white font-black text-2xl p-2 rounded-xl focus:outline-none focus:border-violet-500 flex-1"
                        autoFocus
                      />
                      <button onClick={handleSaveRename} className="bg-emerald-600 hover:bg-emerald-500 text-white p-2.5 rounded-xl shadow-lg">
@@ -824,7 +824,7 @@ export default function ArchitectureExplorerPage() {
                   <p className="text-xs text-zinc-500 mb-4 font-medium">The underlying technical files that execute this capability.</p>
                   
                   {selectedNode.data.documentIds?.length > 0 ? (
-                     <div className="space-y-2 bg-zinc-900/30 p-4 rounded-2xl border border-zinc-800/50">
+                     <div className="space-y-2 bg-card/30 p-4 rounded-2xl border border-zinc-800/50">
                         {selectedNode.data.documentIds.map((docId: number) => {
                            const doc = allDocs.find(d => d.id === docId);
                            if (!doc) return null;
@@ -837,7 +837,7 @@ export default function ArchitectureExplorerPage() {
                         })}
                      </div>
                   ) : (
-                     <div className="text-xs text-zinc-400 break-all font-mono bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800/50">
+                     <div className="text-xs text-zinc-400 break-all font-mono bg-card/50 p-4 rounded-2xl border border-zinc-800/50">
                        {selectedNode.data.source}
                      </div>
                   )}

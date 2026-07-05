@@ -51,7 +51,7 @@ export default function ApiKeysPage() {
         </div>
       </div>
 
-      <div className="bg-zinc-900/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
+      <div className="bg-card/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

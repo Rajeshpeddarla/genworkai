@@ -22,7 +22,7 @@ export default function AdminDashboardClient({ stats }: { stats: any }) {
         </div>
       </div>
 
-      <div className="flex space-x-1 p-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl w-fit">
+      <div className="flex space-x-1 p-1 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-xl w-fit">
         {["overview", "usage_cost", "health"].map((tab) => (
           <button
             key={tab}
@@ -66,7 +66,7 @@ function EnterpriseOverviewTab({ stats }: { stats: any }) {
 
       {/* Charts Area */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-6">User Growth (Last 7 Days)</h3>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -87,7 +87,7 @@ function EnterpriseOverviewTab({ stats }: { stats: any }) {
           </div>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-6">Subscription Distribution</h3>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -113,7 +113,7 @@ function EnterpriseOverviewTab({ stats }: { stats: any }) {
           </div>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-6">API & Token Usage Trends</h3>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +130,7 @@ function EnterpriseOverviewTab({ stats }: { stats: any }) {
           </div>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl h-96 flex flex-col">
           <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-6">Top Countries</h3>
           <div className="flex-1 min-h-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -180,7 +180,7 @@ function SystemHealthTab({ stats }: { stats: any }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl">
           <h3 className="text-lg font-medium text-white mb-4">Queue Health</h3>
           <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -198,7 +198,7 @@ function SystemHealthTab({ stats }: { stats: any }) {
           </div>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl">
+        <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl">
           <h3 className="text-lg font-medium text-white mb-4">MCP Request Volume</h3>
           <div className="h-40 flex items-center justify-center border border-white/5 rounded-xl">
             <span className="text-zinc-500">Volume Chart</span>
@@ -211,7 +211,7 @@ function SystemHealthTab({ stats }: { stats: any }) {
 
 function StatCard({ title, value, icon, trend }: { title: string; value: string | number; icon: React.ReactNode, trend?: string }) {
   return (
-    <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-sm flex flex-col justify-between h-full">
+    <div className="p-6 bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 shadow-sm flex flex-col justify-between h-full">
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{title}</p>
         <div className="p-2 bg-zinc-50 dark:bg-white/5 rounded-lg">
@@ -229,7 +229,7 @@ function StatCard({ title, value, icon, trend }: { title: string; value: string 
 function HealthCard({ name, status, latency }: { name: string, status: string, latency: string }) {
   const isOk = status === "Operational";
   return (
-    <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center gap-4">
+    <div className="p-6 bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 shadow-sm flex items-center gap-4">
       {isOk ? <CheckCircle2 className="w-8 h-8 text-emerald-500" /> : <AlertCircle className="w-8 h-8 text-rose-500" />}
       <div className="flex-1">
         <h4 className="text-white font-medium">{name}</h4>
@@ -244,7 +244,7 @@ function HealthCard({ name, status, latency }: { name: string, status: string, l
 
 function TopListCard({ title, items }: { title: string, items: string[] }) {
   return (
-    <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl">
+    <div className="p-6 bg-white dark:bg-card border border-zinc-200 dark:border-white/10 rounded-2xl">
       <h3 className="text-lg font-medium text-white mb-4">{title}</h3>
       <ul className="space-y-3">
         {items.map((item, i) => (
