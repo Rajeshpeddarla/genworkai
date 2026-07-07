@@ -90,7 +90,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
         const result = await streamWithFallbacks({
           system: systemPrompt,
           messages: [{ role: "user", content: queryText }],
-          taskCategory: TaskCategory.COMPLEX,
+          taskCategory: TaskCategory.REASONING,
         }, apiKey || "", process.env.DEEPSEEK_API_URL);
         return result.toTextStreamResponse();
       }
@@ -98,7 +98,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
       const result = await generateWithFallbacks({
         system: systemPrompt,
         messages: [{ role: "user", content: queryText }],
-        taskCategory: TaskCategory.COMPLEX,
+        taskCategory: TaskCategory.REASONING,
       }, apiKey || "", process.env.DEEPSEEK_API_URL);
       
       return NextResponse.json({ response: result.content });
@@ -216,7 +216,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
         const result = await streamWithFallbacks({
           system: systemPrompt,
           messages: [{ role: "user", content: queryText }],
-          taskCategory: TaskCategory.COMPLEX,
+          taskCategory: TaskCategory.REASONING,
         }, apiKey || "", process.env.DEEPSEEK_API_URL);
         return result.toTextStreamResponse();
       }
@@ -224,7 +224,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
       const result = await generateWithFallbacks({
         system: systemPrompt,
         messages: [{ role: "user", content: queryText }],
-        taskCategory: TaskCategory.COMPLEX,
+        taskCategory: TaskCategory.REASONING,
       }, apiKey || "", process.env.DEEPSEEK_API_URL);
       
       return NextResponse.json({ response: result.content });
