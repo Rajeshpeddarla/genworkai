@@ -111,6 +111,10 @@ Description: ${description || 'Not provided'}`;
       isAiGenerated: true,
     }).returning();
 
+    if (!insertedDashboard) {
+      throw new Error("Failed to insert dashboard.");
+    }
+
     // 2. Insert Widgets with layout calculation
     if (object.widgets && object.widgets.length > 0) {
       const widgetInserts = object.widgets.map((w, index) => {

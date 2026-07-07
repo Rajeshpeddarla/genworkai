@@ -14,11 +14,15 @@ export default function BillingPage() {
   const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  // Filter and sort plans
+  // Filter and sort plans dynamically
   const displayPlans = plans
+    .filter(p => p.isActive !== false) // ensure we only show active plans
     .sort((a, b) => {
-      const order = { 'free': 1, 'starter': 2, 'pro': 3, 'team': 4, 'agency': 5, 'enterprise': 6 };
-      return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
+      if (a.slug === 'free') return -1;
+      if (b.slug === 'free') return 1;
+      if (a.slug === 'enterprise' || a.slug === 'custom') return 1;
+      if (b.slug === 'enterprise' || b.slug === 'custom') return -1;
+      return (a.monthlyPrice || 0) - (b.monthlyPrice || 0);
     });
 
   useEffect(() => {
@@ -35,7 +39,7 @@ export default function BillingPage() {
             
             // Fetch localized prices for internal billing page
             if (d.plans) {
-              const priceIds = d.plans.flatMap((plan: any) => [plan.paddleMonthlyPriceId, plan.paddleYearlyPriceId].filter(Boolean));
+              const priceIds = d.plans.flatMap((plan: any) => [plan.paddleMonthlyPriceId, plan.paddleYearlyPriceId].filter(id => id && typeof id === 'string' && id.startsWith('pri_01')));
               if (priceIds.length > 0) {
                 try {
                   // Fetch the public IP to ensure Paddle returns accurate local currency (e.g., INR for India) even on localhost

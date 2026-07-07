@@ -21,6 +21,11 @@ export async function createPlan(data: any) {
   revalidatePath('/admin/billing');
 }
 
+export async function deletePlan(id: number) {
+  await db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, id));
+  revalidatePath('/admin/billing');
+}
+
 export async function updateCreditPack(id: number, data: any) {
   await db.update(aiCreditPackProducts).set(data).where(eq(aiCreditPackProducts.id, id));
   revalidatePath('/admin/billing');

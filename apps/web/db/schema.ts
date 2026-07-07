@@ -472,6 +472,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   concurrencyLimit: integer('concurrency_limit').default(5),
   rateLimit: integer('rate_limit').default(60),
   monthlyAiCredits: integer('monthly_ai_credits').default(0),
+  endpointLimit: integer('endpoint_limit').default(0),
 
   // Features
   knowledgeBaseEnabled: boolean('knowledge_base_enabled').default(false),
@@ -861,5 +862,37 @@ export const dashboardWidgetCache = pgTable('dashboard_widget_cache', {
   widgetId: integer('widget_id').primaryKey().references(() => dashboardWidgets.id, { onDelete: 'cascade' }),
   data: jsonb('data'), // The actual result set
   hash: varchar('hash', { length: 255 }), // Hash of query + filters
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const apiEndpoints = pgTable('api_endpoints', {
+  id: serial('id').primaryKey(),
+  workspaceId: integer('workspace_id'), // Nullable for future compatibility
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  version: integer('version').default(1),
+  method: varchar('method', { length: 50 }).default('POST'),
+  endpointType: varchar('endpoint_type', { length: 100 }),
+  
+  knowledgeSources: jsonb('knowledge_sources'),
+  workflow: jsonb('workflow'),
+  inputSchema: jsonb('input_schema'),
+  outputSchema: jsonb('output_schema'),
+  
+  systemPrompt: text('system_prompt'),
+  temperature: numeric('temperature', { precision: 3, scale: 2 }),
+  maxTokens: integer('max_tokens'),
+  streamEnabled: boolean('stream_enabled').default(false),
+  
+  authenticationType: varchar('authentication_type', { length: 50 }).default('api_key'),
+  requestsPerMinute: integer('requests_per_minute').default(60),
+  dailyQuota: integer('daily_quota'),
+  monthlyQuota: integer('monthly_quota'),
+  timeout: integer('timeout').default(30),
+  
+  isPublished: boolean('is_published').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

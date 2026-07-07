@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -32,7 +32,14 @@ export async function middleware(request: NextRequest) {
 
   const {
     data: { user },
+    error
   } = await supabase.auth.getUser();
+
+  // If there's an auth error like an invalid refresh token, we can just proceed as unauthenticated.
+  if (error && error.message !== 'Auth session missing!') {
+    // Supabase will have already cleared the invalid cookies via the setAll callback above.
+    console.debug("Supabase auth error (e.g. invalid token):", error.message);
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/signup");
   const protectedPrefixes = [
@@ -62,6 +69,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/inngest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

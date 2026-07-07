@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Check, Save, Edit2, CreditCard, RefreshCw, Activity, Users, Globe, Play, Pause, XCircle, Settings } from "lucide-react";
-import { updatePlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription, createCreditPack, updateCreditPack, updateCreditCost } from "./actions";
+import { Plus, Check, Save, Edit2, CreditCard, RefreshCw, Activity, Users, Globe, Play, Pause, XCircle, Settings, Trash2 } from "lucide-react";
+import { updatePlan, createPlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription, createCreditPack, updateCreditPack, updateCreditCost, deletePlan } from "./actions";
 import { CostSimulatorDashboard } from "./CostSimulatorDashboard";
 
 interface Props {
@@ -43,20 +43,27 @@ export default function BillingClient({
     const formData = new FormData(e.target as HTMLFormElement);
     const data = {
       name: formData.get("name") as string,
+      slug: (formData.get("slug") as string) || (formData.get("name") as string).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
       monthlyPrice: parseInt(formData.get("monthlyPrice") as string),
       knowledgeBaseLimit: parseInt(formData.get("knowledgeBaseLimit") as string) || 0,
       databaseLimit: parseInt(formData.get("databaseLimit") as string) || 0,
       mcpServerLimit: parseInt(formData.get("mcpServerLimit") as string) || 0,
       automationLimit: parseInt(formData.get("automationLimit") as string) || 0,
-      contextLimit: parseInt(formData.get("contextLimit") as string) || 0,
+      contextLimit: Math.round((parseFloat(formData.get("contextLimit") as string) || 0) * 1048576),
       apiRequestLimit: parseInt(formData.get("apiRequestLimit") as string) || 0,
       mcpRequestLimit: parseInt(formData.get("mcpRequestLimit") as string) || 0,
       mcpToolLimit: parseInt(formData.get("mcpToolLimit") as string) || 0,
       concurrencyLimit: parseInt(formData.get("concurrencyLimit") as string) || 0,
       rateLimit: parseInt(formData.get("rateLimit") as string) || 0,
+      workspaceLimit: parseInt(formData.get("workspaceLimit") as string) || 0,
+      apiKeyLimit: parseInt(formData.get("apiKeyLimit") as string) || 0,
+      knowledgeBaseEnabled: formData.get("knowledgeBaseEnabled") === "on",
+      databaseIntelligenceEnabled: formData.get("databaseIntelligenceEnabled") === "on",
       apiAccessEnabled: formData.get("apiAccessEnabled") === "on",
       automationStudioEnabled: formData.get("automationStudioEnabled") === "on",
       mcpEnabled: formData.get("mcpEnabled") === "on",
+      byokEnabled: formData.get("byokEnabled") === "on",
+      prioritySupportEnabled: formData.get("prioritySupportEnabled") === "on",
       paddleProductId: (formData.get("paddleProductId") as string)?.trim() || null,
       paddleMonthlyPriceId: (formData.get("paddleMonthlyPriceId") as string)?.trim() || null,
       paddleYearlyPriceId: (formData.get("paddleYearlyPriceId") as string)?.trim() || null,
@@ -102,6 +109,12 @@ export default function BillingClient({
       await updateCreditCost(editingCost.operationKey, creditCost);
     }
     setEditingCost(null);
+  };
+
+  const handleDeletePlan = async (id: number, name: string) => {
+    if (confirm(`Are you sure you want to delete the plan "${name}"? This action cannot be undone.`)) {
+      await deletePlan(id);
+    }
   };
 
   const handleSubAction = async (action: 'cancel' | 'pause' | 'resume', subId: string) => {
@@ -304,12 +317,21 @@ export default function BillingClient({
               </li>
             </ul>
 
-            <button 
-              onClick={() => setEditingPlan(plan)}
-              className="w-full py-2 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-xl border border-zinc-200 dark:border-white/10 font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <Edit2 className="w-4 h-4" /> Edit Configuration
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setEditingPlan(plan)}
+                className="flex-1 py-2 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-900 dark:text-white rounded-xl border border-zinc-200 dark:border-white/10 font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <Edit2 className="w-4 h-4" /> Edit Configuration
+              </button>
+              <button 
+                onClick={() => handleDeletePlan(plan.id, plan.name)}
+                className="px-3 py-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-100 dark:border-rose-500/20 font-medium transition-colors flex items-center justify-center"
+                title="Delete Plan"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )})}
       </div>
@@ -602,6 +624,34 @@ export default function BillingClient({
                         {prod.status}
                       </span>
                     </div>
+                    <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-white/5 flex justify-end">
+                      <button 
+                        onClick={() => {
+                          const monthlyPrice = pricesByProduct[prod.id]?.find((p: any) => p.billingCycle?.interval === 'month');
+                          const yearlyPrice = pricesByProduct[prod.id]?.find((p: any) => p.billingCycle?.interval === 'year');
+                          
+                          setEditingPlan({
+                            name: prod.name,
+                            slug: prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
+                            paddleProductId: prod.id,
+                            paddleMonthlyPriceId: monthlyPrice?.id || '',
+                            paddleYearlyPriceId: yearlyPrice?.id || '',
+                            monthlyPrice: monthlyPrice ? parseInt(monthlyPrice.unitPrice?.amount || '0') : 0,
+                            yearlyPrice: yearlyPrice ? parseInt(yearlyPrice.unitPrice?.amount || '0') : 0,
+                            // Default limits to 0
+                            knowledgeBaseLimit: 0,
+                            databaseLimit: 0,
+                            mcpServerLimit: 0,
+                            automationLimit: 0,
+                            monthlyAiCredits: 0
+                          });
+                          setActiveTab('plans');
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Import as Plan
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -669,6 +719,10 @@ export default function BillingClient({
                   <input name="name" type="text" defaultValue={editingPlan.name} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                 </div>
                 <div>
+                  <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Slug</label>
+                  <input name="slug" type="text" defaultValue={editingPlan.slug} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" placeholder="free" />
+                </div>
+                <div>
                   <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Monthly Price (Cents)</label>
                   <input name="monthlyPrice" type="number" defaultValue={editingPlan.monthlyPrice} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                 </div>
@@ -715,8 +769,8 @@ export default function BillingClient({
                     <input name="monthlyAiCredits" type="number" defaultValue={editingPlan.monthlyAiCredits} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                   </div>
                   <div>
-                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Context Limit (Bytes)</label>
-                    <input name="contextLimit" type="number" defaultValue={editingPlan.contextLimit?.toString() || "0"} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Context Limit (MB)</label>
+                    <input name="contextLimit" type="number" step="any" defaultValue={editingPlan.contextLimit ? editingPlan.contextLimit / 1048576 : 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                   </div>
                   <div>
                     <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">API Request Limit</label>
@@ -738,12 +792,28 @@ export default function BillingClient({
                     <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">MCP Tool Limit</label>
                     <input name="mcpToolLimit" type="number" defaultValue={editingPlan.mcpToolLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
                   </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">API Key Limit</label>
+                    <input name="apiKeyLimit" type="number" defaultValue={editingPlan.apiKeyLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Workspace Limit</label>
+                    <input name="workspaceLimit" type="number" defaultValue={editingPlan.workspaceLimit} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                  </div>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Features</h3>
                 <div className="space-y-2">
+                  <label className="flex items-center gap-3">
+                    <input name="knowledgeBaseEnabled" type="checkbox" defaultChecked={editingPlan.knowledgeBaseEnabled} className="w-4 h-4 accent-rose-500" />
+                    <span className="text-zinc-700 dark:text-zinc-300">Knowledge Base Enabled</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input name="databaseIntelligenceEnabled" type="checkbox" defaultChecked={editingPlan.databaseIntelligenceEnabled} className="w-4 h-4 accent-rose-500" />
+                    <span className="text-zinc-700 dark:text-zinc-300">Database Intelligence Enabled</span>
+                  </label>
                   <label className="flex items-center gap-3">
                     <input name="apiAccessEnabled" type="checkbox" defaultChecked={editingPlan.apiAccessEnabled} className="w-4 h-4 accent-rose-500" />
                     <span className="text-zinc-700 dark:text-zinc-300">API Access Enabled</span>
@@ -755,6 +825,14 @@ export default function BillingClient({
                   <label className="flex items-center gap-3">
                     <input name="mcpEnabled" type="checkbox" defaultChecked={editingPlan.mcpEnabled} className="w-4 h-4 accent-rose-500" />
                     <span className="text-zinc-700 dark:text-zinc-300">MCP Enabled</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input name="byokEnabled" type="checkbox" defaultChecked={editingPlan.byokEnabled} className="w-4 h-4 accent-rose-500" />
+                    <span className="text-zinc-700 dark:text-zinc-300">BYOK Enabled</span>
+                  </label>
+                  <label className="flex items-center gap-3">
+                    <input name="prioritySupportEnabled" type="checkbox" defaultChecked={editingPlan.prioritySupportEnabled} className="w-4 h-4 accent-rose-500" />
+                    <span className="text-zinc-700 dark:text-zinc-300">Priority Support Enabled</span>
                   </label>
                 </div>
               </div>

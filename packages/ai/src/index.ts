@@ -19,6 +19,7 @@ export interface ProviderConfig {
 }
 
 export interface ChatCompletionOptions {
+  system?: string;
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
   responseFormatJson?: boolean;
   maxTokens?: number;
@@ -66,6 +67,7 @@ function getModelInstance(
   switch (providerType) {
     case 'openai':
     case 'custom':
+    case 'deepseek':
     case 'createDeepSeek': {
       // All these are OpenAI-compatible endpoints
       const openai = createDeepSeek({
@@ -132,7 +134,8 @@ export async function generateWithFallbacks(
 
       const { text, usage } = await generateText({
         model: model,
-        messages: options.messages as any,
+        system: options.system,
+        messages: options.messages.filter(m => m.role !== 'system') as any,
         maxTokens: options.maxTokens,
         temperature: options.temperature,
         topP: options.topP,
@@ -180,4 +183,65 @@ export async function generateWithFallbacks(
   }
   
   throw new Error('Unexpected error in generateWithFallbacks');
+}
+
+import { streamText } from 'ai';
+
+export async function streamWithFallbacks(
+  options: ChatCompletionOptions,
+  fallbackApiKey: string,
+  fallbackUrl: string = "https://api.deepseek.com", // Default DeepSeek API
+  maxRetries = 3
+): Promise<any> {
+  let attempt = 0;
+  
+  const contextStr = options.messages.map(m => m.content).join('\n');
+  const taskCategory = options.taskCategory || TaskCategory.FAST;
+  
+  let currentRoute = AIRouter.getOptimalModel(taskCategory, contextStr, {
+    providerConfig: options.providerConfig,
+    documentCount: options.documentCount,
+    toolCount: options.toolCount
+  });
+
+  while (attempt < maxRetries) {
+    try {
+      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl);
+      const providerName = options.providerConfig?.provider || 'platform_deepseek';
+      
+      options.onLog?.(`AI (Stream): Routing to ${providerName} using model ${currentRoute.model}`);
+
+      const result = await streamText({
+        model: model,
+        system: options.system,
+        messages: options.messages.filter(m => m.role !== 'system') as any,
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        abortSignal: AbortSignal.timeout(options.timeoutMs ?? 120000),
+      } as any);
+
+      return result;
+      
+    } catch (err: any) {
+      attempt++;
+      const msg = err?.message || 'unknown error';
+      console.warn(`[LLM Stream] AI Attempt ${attempt} failed with ${currentRoute.model}: ${msg}`);
+      
+      const fallbackModel = AIRouter.getFallbackModel(currentRoute.model);
+      
+      if (fallbackModel && attempt < maxRetries) {
+        options.onLog?.(`AI (Stream): Falling back from ${currentRoute.model} to ${fallbackModel}`);
+        currentRoute.model = fallbackModel;
+      } else if (attempt >= maxRetries) {
+        options.onLog?.(`AI (Stream): Failed after ${maxRetries} attempts`);
+        throw new Error(`AI generation failed after ${maxRetries} attempts: ${msg}`);
+      }
+      
+      const delay = Math.pow(3, attempt) * 1000;
+      await sleep(delay);
+    }
+  }
+  
+  throw new Error('Unexpected error in streamWithFallbacks');
 }

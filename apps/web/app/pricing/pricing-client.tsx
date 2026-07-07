@@ -13,12 +13,15 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
   const [localizedPrices, setLocalizedPrices] = useState<Record<string, { formatted: string, raw: number }>>({});
   const [isLoadingPrices, setIsLoadingPrices] = useState(true);
 
-  // Filter and sort plans
+  // Filter and sort plans dynamically
   const plans = rawPlans
-    .filter(p => p.slug !== 'team' && p.slug !== 'teams')
+    .filter(p => p.isActive !== false) // ensure we only show active plans if rawPlans hasn't filtered them
     .sort((a, b) => {
-      const order = { 'free': 1, 'pro': 2, 'enterprise': 3 };
-      return (order[a.slug as keyof typeof order] || 99) - (order[b.slug as keyof typeof order] || 99);
+      if (a.slug === 'free') return -1;
+      if (b.slug === 'free') return 1;
+      if (a.slug === 'enterprise' || a.slug === 'custom') return 1;
+      if (b.slug === 'enterprise' || b.slug === 'custom') return -1;
+      return (a.monthlyPrice || 0) - (b.monthlyPrice || 0);
     });
 
   const supabase = createBrowserClient(
@@ -39,13 +42,21 @@ export default function PricingClient({ plans: rawPlans, activePromo }: { plans:
         
         // Phase 6: Dynamic Pricing System - fetch localized prices
         const priceIds = plans
-          .filter(p => p.slug !== 'enterprise')
-          .flatMap(p => [p.paddleMonthlyPriceId, p.paddleYearlyPriceId].filter(Boolean));
+          .filter(p => p.slug !== 'enterprise' && p.slug !== 'free')
+          .flatMap(p => [p.paddleMonthlyPriceId, p.paddleYearlyPriceId].filter(id => id && typeof id === 'string' && id.startsWith('pri_01')));
         
         if (priceIds.length > 0) {
           try {
+            let publicIp;
+            try { 
+              const ipRes = await fetch('https://api.ipify.org?format=json');
+              const ipData = await ipRes.json();
+              publicIp = ipData.ip;
+            } catch(e) {}
+
             const preview = await paddleInstance.PricePreview({
-              items: priceIds.map(id => ({ priceId: id, quantity: 1 }))
+              items: priceIds.map(id => ({ priceId: id, quantity: 1 })),
+              customerIpAddress: publicIp
             });
             
             const newPrices: Record<string, { formatted: string, raw: number }> = {};

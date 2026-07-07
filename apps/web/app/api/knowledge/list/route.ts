@@ -39,7 +39,7 @@ export async function GET() {
       .from(syncJobs)
       .innerJoin(knowledgeSources, eq(syncJobs.sourceId, knowledgeSources.id))
       .where(
-        sql`${knowledgeSources.kbId} IN ${kbIds} AND ${syncJobs.status} IN ('queued', 'processing')`
+        sql`${knowledgeSources.kbId} IN ${kbIds} AND ${syncJobs.status} IN ('queued', 'processing', 'partially_completed')`
       )
       .groupBy(knowledgeSources.kbId);
 

@@ -124,11 +124,14 @@ export default function KnowledgePage() {
   const [newKbName, setNewKbName] = useState("");
   const [newKbDesc, setNewKbDesc] = useState("");
 
-  // Delete Document Modal
-  const [docToDelete, setDocToDelete] = useState<any | null>(null);
-  
   // Delete KB Modal
   const [kbToDelete, setKbToDelete] = useState<any | null>(null);
+
+  // API Details Modal
+  const [showApiDetails, setShowApiDetails] = useState(false);
+
+  // File Delete
+  const [docToDelete, setDocToDelete] = useState<any | null>(null);
 
   // Add Source Modal
   const [showAddSource, setShowAddSource] = useState(false);
@@ -676,6 +679,13 @@ export default function KnowledgePage() {
                   View Node Tree
                 </Link>
                 <button 
+                  onClick={() => setShowApiDetails(true)}
+                  className="flex items-center gap-2 bg-zinc-100 dark:bg-card border border-black/10 dark:border-white/10 hover:bg-zinc-800 text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <FileJson className="w-4 h-4" />
+                  API Details
+                </button>
+                <button 
                   onClick={() => { setShowAddSource(true); if(githubRepos.length === 0) fetchGithubRepos(); }}
                   disabled={isUploading}
                   className={`flex items-center gap-2 bg-zinc-100 dark:bg-card border border-black/10 dark:border-white/10 hover:bg-zinc-800 text-foreground px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isUploading ? 'opacity-50' : ''}`}
@@ -886,6 +896,44 @@ export default function KnowledgePage() {
                 className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
                 Delete Knowledge Base
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Details Modal */}
+      {showApiDetails && activeKb && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
+          <div className="bg-card p-6 rounded-2xl shadow-2xl max-w-2xl w-full border border-black/10 dark:border-white/10">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <FileJson className="w-5 h-5 text-emerald-500" />
+                Knowledge Base API Details
+              </h3>
+              <button onClick={() => setShowApiDetails(false)} className="text-zinc-500 hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-6">
+              You can query this Knowledge Base directly using its unique API endpoint. The AI will perform semantic search across your documents and return a synthesized response.
+            </p>
+
+            <div className="bg-neutral-900 text-neutral-300 p-4 rounded-xl font-mono text-sm overflow-x-auto whitespace-pre mb-6">
+              {`curl -X POST "${typeof window !== 'undefined' ? window.location.origin : ''}/api/v1/${activeKb.userId}/kb/${activeKb.id}?stream=true" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "query": "What are the key concepts from these documents?"
+  }'`}
+            </div>
+
+            <div className="flex justify-end border-t border-zinc-200 dark:border-white/10 pt-4">
+              <button 
+                onClick={() => setShowApiDetails(false)}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Done
               </button>
             </div>
           </div>

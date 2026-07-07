@@ -106,7 +106,11 @@ export const uploadIngestion: any = inngest.createFunction(
       });
 
       await step.run("finalize-sync", async () => {
-        await db.update(syncJobs).set({ status: 'partially_completed' }).where(eq(syncJobs.id, syncJobId));
+        await db.execute(sql`
+          UPDATE sync_jobs 
+          SET status = 'partially_completed' 
+          WHERE id = ${syncJobId} AND status != 'completed'
+        `);
         await db.update(knowledgeSources).set({ latestHash: batchStats.fileHash, lastSuccessfulHash: batchStats.fileHash, syncStatus: 'processing' }).where(eq(knowledgeSources.id, sourceId));
       });
 
