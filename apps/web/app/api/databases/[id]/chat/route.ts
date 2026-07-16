@@ -54,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const schemaData = schemas[0]!.schemaData;
 
-    const apiKey = process.env.DEEPSEEK_API_KEY || '';
+    const apiKey = process.env.GEMINI_API_KEY || '';
     if (!apiKey) {
       return NextResponse.json({ error: 'AI API Key is not configured' }, { status: 500 });
     }
@@ -81,7 +81,7 @@ CRITICAL RULES:
       messages: [{ role: 'system', content: prompt }],
       responseFormatJson: true,
       taskCategory: TaskCategory.REASONING
-    }, apiKey, process.env.DEEPSEEK_API_URL);
+    }, apiKey, undefined);
 
     let parsed = { message: "Generated query.", sql: "" };
     try {

@@ -63,7 +63,7 @@ Generate the final output now.
 `;
 
       const deepseek = createDeepSeek({
-        apiKey: process.env.DEEPSEEK_API_KEY || '',
+        apiKey: process.env.GEMINI_API_KEY || '',
       });
 
       let finalContent = '';

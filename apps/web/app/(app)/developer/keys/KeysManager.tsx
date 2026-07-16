@@ -141,9 +141,21 @@ export default function KeysManager({ initialKeys, entitlements }: { initialKeys
         <div className="bg-green-50 border border-green-200 text-green-900 p-4 rounded-lg mb-8 dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-300">
           <h3 className="font-bold mb-2">Save your API key!</h3>
           <p className="mb-4 text-sm">This is the only time we will show you this key. Please save it securely.</p>
-          <code className="block bg-white dark:bg-black p-3 rounded border border-green-200 dark:border-green-900 break-all select-all">
-            {newKeyData.rawKey}
-          </code>
+          <div className="relative group">
+            <code className="block bg-white dark:bg-black p-3 rounded border border-green-200 dark:border-green-900 break-all select-all font-mono">
+              {newKeyData.rawKey}
+            </code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(newKeyData.rawKey);
+                alert("Copied to clipboard!");
+              }}
+              className="absolute top-2 right-2 p-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-colors text-neutral-600 dark:text-neutral-400"
+              title="Copy to clipboard"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+          </div>
         </div>
       )}
 

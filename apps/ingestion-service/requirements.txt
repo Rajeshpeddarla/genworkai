@@ -1,0 +1,30 @@
+# API and Task Queue
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+pydantic-settings==2.3.4
+redis==5.0.7
+rq==1.16.2
+
+# Database & Supabase Storage
+supabase==2.5.1
+SQLAlchemy==2.0.31
+psycopg2-binary==2.9.9
+pgvector==0.3.0
+
+# Document Parsers
+pypdfium2==4.30.0
+pdfplumber==0.11.2
+python-docx==1.1.2
+markdown==3.6
+Pillow>=10.3.0
+
+# LLM and Vision
+google-generativeai==0.5.2
+
+# Embeddings
+fastembed==0.3.1
+
+# Utilities
+loguru==0.7.2
+python-dotenv==1.0.1

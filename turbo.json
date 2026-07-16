@@ -12,7 +12,10 @@
         "CKEY_API_KEY",
         "CKEY_API_URL",
         "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+        "PADDLE_API_KEY",
+        "PADDLE_WEBHOOK_ID",
+        "PADDLE_WEBHOOK_SECRET"
       ]
     },
     "lint": {

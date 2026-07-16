@@ -6,6 +6,8 @@ import { Database, Plus, FileText, Search, UploadCloud, Trash2, ArrowLeft, Prese
 import { PanelGroup, Panel, PanelResizeHandle } from "react-resizable-panels";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import dynamic from 'next/dynamic';
+const PdfViewer = dynamic(() => import('../../../components/knowledge/PdfViewer').then(mod => mod.PdfViewer), { ssr: false });
 import ignore from 'ignore';
 
 const UNIVERSAL_IGNORES = [
@@ -286,11 +288,13 @@ export default function KnowledgePage() {
           successCount++;
         } else {
           const errData = await res.json();
-          if (errData.error && errData.error.toLowerCase().includes('limit')) {
-            alert(errData.error);
+          const errorMsg = typeof errData.error === 'string' ? errData.error : (errData.error?.message || "Unknown error");
+          
+          if (errorMsg && errorMsg.toLowerCase().includes('limit')) {
+            alert(errorMsg);
             break; // Stop trying to upload more files if we hit a limit
           }
-          console.error(`Failed to upload ${file.name}:`, errData.error);
+          console.error(`Failed to upload ${file.name}:`, errorMsg);
         }
       } catch (err: any) {
         if (err.name === 'AbortError') {
@@ -786,12 +790,18 @@ export default function KnowledgePage() {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="p-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar">
-                    <div className="prose prose-invert prose-sm max-w-none text-zinc-600 dark:text-zinc-300">
-                      <ReactMarkdown>
-                        {activeDoc.enhancedContent || activeDoc.content || 'No text content available for this document.'}
-                      </ReactMarkdown>
-                    </div>
+                  <div className="p-0 overflow-y-auto flex-1 min-h-0 custom-scrollbar relative">
+                    {activeDoc.sourceType === 'pdf' ? (
+                      <div className="absolute inset-0 h-full w-full">
+                        <PdfViewer url={`/uploads/${activeDoc.storageKey}`} />
+                      </div>
+                    ) : (
+                      <div className="p-6 prose prose-invert prose-sm max-w-none text-zinc-600 dark:text-zinc-300">
+                        <ReactMarkdown>
+                          {activeDoc.enhancedContent || activeDoc.content || 'No text content available for this document.'}
+                        </ReactMarkdown>
+                      </div>
+                    )}
                   </div>
                 </Panel>
               </>

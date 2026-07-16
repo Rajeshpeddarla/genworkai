@@ -1,0 +1,23 @@
+import { db } from './lib/db';
+import { documentChunks } from './lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+async function main() {
+  const chunks = await db.select().from(documentChunks).where(eq(documentChunks.documentId, 521));
+  console.log('Total chunks:', chunks.length);
+  
+  const imageChunks = chunks.filter(c => c.content.includes('[Diagram/Image Detected]'));
+  console.log('\n--- IMAGES/DIAGRAMS DETECTED ---');
+  console.log('Total images detected:', imageChunks.length);
+  
+  if (imageChunks.length > 0) {
+      console.log('\nExample Image 1:');
+      console.log(imageChunks[0].content);
+      
+      if (imageChunks.length > 1) {
+          console.log('\nExample Image 2:');
+          console.log(imageChunks[1].content);
+      }
+  }
+}
+main().catch(console.error);

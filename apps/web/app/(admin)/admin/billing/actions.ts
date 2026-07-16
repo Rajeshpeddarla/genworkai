@@ -26,6 +26,24 @@ export async function deletePlan(id: number) {
   revalidatePath('/admin/billing');
 }
 
+export async function createBaseParsePlan(data: any) {
+  const { baseparsePricingPlans } = await import("@/db/schema");
+  await db.insert(baseparsePricingPlans).values(data);
+  revalidatePath('/admin/billing');
+}
+
+export async function updateBaseParsePlan(id: number, data: any) {
+  const { baseparsePricingPlans } = await import("@/db/schema");
+  await db.update(baseparsePricingPlans).set(data).where(eq(baseparsePricingPlans.id, id));
+  revalidatePath('/admin/billing');
+}
+
+export async function deleteBaseParsePlan(id: number) {
+  const { baseparsePricingPlans } = await import("@/db/schema");
+  await db.delete(baseparsePricingPlans).where(eq(baseparsePricingPlans.id, id));
+  revalidatePath('/admin/billing');
+}
+
 export async function updateCreditPack(id: number, data: any) {
   await db.update(aiCreditPackProducts).set(data).where(eq(aiCreditPackProducts.id, id));
   revalidatePath('/admin/billing');

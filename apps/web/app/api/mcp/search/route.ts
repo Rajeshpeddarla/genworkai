@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { documentChunks, documents, mcpApiKeys, mcpServers } from '../../../../db/schema';
+import { documentChunks, documentEmbeddings, documents, mcpApiKeys, mcpServers } from '../../../../db/schema';
 import { generateEmbedding } from '../../../../lib/embeddings';
 import { cosineDistance, eq } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     const queryVector = await generateEmbedding(query);
 
     // 3. Perform vector search in the database
-    const similarity = cosineDistance(documentChunks.embedding, queryVector);
+    const similarity = cosineDistance(documentEmbeddings.vector, queryVector);
 
     const results = await db
       .select({
@@ -68,6 +68,7 @@ export async function POST(req: Request) {
         knowledgeContent: documents.knowledgeContent,
       })
       .from(documentChunks)
+      .innerJoin(documentEmbeddings, eq(documentChunks.id, documentEmbeddings.chunkId))
       .innerJoin(documents, eq(documentChunks.documentId, documents.id))
       .where(eq(documents.kbId, parseInt(kbId, 10)))
       .orderBy(similarity)

@@ -7,7 +7,7 @@ import { generateText } from 'ai';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 
 const deepseek = createDeepSeek({
-  apiKey: process.env.DEEPSEEK_API_KEY || '',
+  apiKey: process.env.GEMINI_API_KEY || '',
 });
 
 export async function POST(req: Request) {
@@ -50,7 +50,7 @@ ${schemaContext}
 
 Output ONLY the raw SQL query. Do not wrap it in markdown block quotes (\`\`\`). Just the raw SQL text.`;
 
-    if (!process.env.DEEPSEEK_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: 'AI API Key is not configured' }, { status: 500 });
     }
 

@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Flow name is required for generation' }, { status: 400, headers: corsHeaders });
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com';
 
     if (!apiKey) {

@@ -43,7 +43,7 @@ Write the response in clean Markdown.
       ],
       maxTokens: 1000,
       temperature: 0.3,
-    }, process.env.DEEPSEEK_API_KEY || '');
+    }, process.env.GEMINI_API_KEY || '');
 
     return NextResponse.json({ 
       success: true, 

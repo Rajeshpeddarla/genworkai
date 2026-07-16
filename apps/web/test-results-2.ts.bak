@@ -1,0 +1,37 @@
+import { db } from './lib/db';
+import { documentChunks } from './lib/db/schema';
+import { desc } from 'drizzle-orm';
+
+async function main() {
+  // Get the most recent document's chunks
+  const chunks = await db.select().from(documentChunks).orderBy(desc(documentChunks.id)).limit(10);
+  
+  if (chunks.length === 0) {
+      console.log('No chunks found in the database.');
+      return;
+  }
+  
+  const latestDocId = chunks[0].documentId;
+  console.log(`--- Fetching chunks for Document ID: ${latestDocId} ---`);
+  
+  const allChunks = await db.select().from(documentChunks).where(
+      (chunks, { eq }) => eq(chunks.documentId, latestDocId)
+  );
+  
+  console.log(`Total chunks for Document ${latestDocId}: ${allChunks.length}`);
+  
+  // Find chunks that might be page contents
+  const pageChunks = allChunks.filter(c => c.content.length > 200); // Filter out short fragments
+  
+  if (pageChunks.length > 0) {
+      console.log('\n--- SAMPLE PAGE CONTENT EXTRACTED BY GEMINI ---');
+      // Show first 1500 chars of the most interesting looking chunk
+      console.log(pageChunks[0].content.substring(0, 1500));
+      
+      if (pageChunks.length > 2) {
+          console.log('\n--- ANOTHER PAGE SAMPLE ---');
+          console.log(pageChunks[2].content.substring(0, 1500));
+      }
+  }
+}
+main().catch(console.error);

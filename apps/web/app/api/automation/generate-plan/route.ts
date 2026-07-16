@@ -96,7 +96,7 @@ Guidelines when generating a plan:
 - billingMode: "platform".
 - workflowSteps: return a logical array of steps. e.g. [{id: '1', type: 'source', label: 'Knowledge Base'}, {id: '2', type: 'action', label: 'Summarize'}, {id: '3', type: 'output', label: 'Generate PDF'}, {id: '4', type: 'schedule', label: 'Every Monday'}]`;
 
-    if (!process.env.DEEPSEEK_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       throw new Error("Missing DEEPSEEK_API_KEY environment variable");
     }
 
@@ -130,11 +130,11 @@ Do not include markdown blocks, just the JSON string.`;
       temperature: 0.1,
     };
 
-    const response = await fetch((process.env.DEEPSEEK_API_URL || "https://api.deepseek.com") + "/chat/completions", {
+    const response = await fetch((process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com") + "/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
       },
       body: JSON.stringify(deepseekReq)
     });

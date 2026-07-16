@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+Requests
+# Ingestion
+docling
+marker-pdf
+
+# ML
+torch
+torchvision
+pdf2image

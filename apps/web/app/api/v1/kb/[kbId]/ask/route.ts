@@ -141,8 +141,8 @@ ${contextText}
         responseFormatJson: true,
         providerConfig
       },
-      process.env.DEEPSEEK_API_KEY || "dummy", 
-      process.env.DEEPSEEK_API_URL
+      process.env.GEMINI_API_KEY || "dummy", 
+      undefined
     );
 
     // Rough token estimation

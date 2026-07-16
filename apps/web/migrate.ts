@@ -5,7 +5,7 @@ import { db } from './db/index';
 import { sql } from 'drizzle-orm';
 
 async function main() {
-  const fileContent = fs.readFileSync('drizzle/0009_safe_slyde.sql', 'utf8');
+  const fileContent = fs.readFileSync('baseparse_migration_2.sql', 'utf8');
   const statements = fileContent.split('--> statement-breakpoint');
   
   for (const statement of statements) {

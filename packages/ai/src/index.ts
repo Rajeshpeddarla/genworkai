@@ -93,10 +93,10 @@ function getModelInstance(
     }
     case 'gemini':
     case 'google': {
-      const google = createGoogleGenerativeAI({
-        apiKey: apiKey,
-        baseURL: baseUrl,
-      });
+      const googleConfig: any = { apiKey: apiKey };
+      if (baseUrl) googleConfig.baseURL = baseUrl;
+      
+      const google = createGoogleGenerativeAI(googleConfig);
       return google(modelName);
     }
     default:
@@ -110,7 +110,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateWithFallbacks(
   options: ChatCompletionOptions,
   fallbackApiKey: string,
-  fallbackUrl: string = "https://api.createDeepSeek.com", // Default DeepSeek API
+  fallbackUrl?: string, // Let Vercel SDK use default provider URLs
   maxRetries = 3
 ): Promise<ChatCompletionResult> {
   let attempt = 0;
@@ -127,8 +127,8 @@ export async function generateWithFallbacks(
 
   while (attempt < maxRetries) {
     try {
-      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl);
-      const providerName = options.providerConfig?.provider || 'platform_createDeepSeek';
+      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl || '');
+      const providerName = options.providerConfig?.provider || 'platform_gemini';
       
       options.onLog?.(`AI: Routing to ${providerName} using model ${currentRoute.model}`);
 
@@ -190,7 +190,7 @@ import { streamText } from 'ai';
 export async function streamWithFallbacks(
   options: ChatCompletionOptions,
   fallbackApiKey: string,
-  fallbackUrl: string = "https://api.deepseek.com", // Default DeepSeek API
+  fallbackUrl?: string, // Let Vercel SDK use default provider URLs
   maxRetries = 3
 ): Promise<any> {
   let attempt = 0;
@@ -206,8 +206,8 @@ export async function streamWithFallbacks(
 
   while (attempt < maxRetries) {
     try {
-      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl);
-      const providerName = options.providerConfig?.provider || 'platform_deepseek';
+      const model = getModelInstance(currentRoute, options, fallbackApiKey, fallbackUrl || '');
+      const providerName = options.providerConfig?.provider || 'platform_gemini';
       
       options.onLog?.(`AI (Stream): Routing to ${providerName} using model ${currentRoute.model}`);
 

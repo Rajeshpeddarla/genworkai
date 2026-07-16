@@ -112,7 +112,7 @@ export const githubIngestion: any = inngest.createFunction(
         let filesProcessed = 0;
         let chunksGenerated = 0;
         const allChunkIds: number[] = [];
-        const apiKey = process.env.DEEPSEEK_API_KEY || '';
+        const apiKey = process.env.GEMINI_API_KEY || '';
 
         // To prevent massive memory spikes, we process in chunks
         for (const zipEntry of entries) {
@@ -128,7 +128,7 @@ export const githubIngestion: any = inngest.createFunction(
             if (!extractedText || extractedText.length < 10) continue;
 
             const cleanedText = cleanExtractedText(extractedText);
-            const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.DEEPSEEK_API_URL) : {
+            const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, undefined) : {
               summary: "", topics: [], keywords: [], classification: "Unclassified",
               knowledgeContent: cleanedText, embeddingContent: cleanedText
             };

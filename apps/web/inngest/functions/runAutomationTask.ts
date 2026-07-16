@@ -7,12 +7,12 @@ import { generateText } from "ai";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 
 const openai = createDeepSeek({
-  apiKey: process.env.DEEPSEEK_API_KEY || "",
-  baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
+  apiKey: process.env.GEMINI_API_KEY || "",
+  baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
 });
 
 async function executeLLM(task: any, systemPrompt: string) {
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return `# LLM Disabled\n\nNo DEEPSEEK_API_KEY found in the environment. Task: ${task.name}\nGoal: ${task.goal}`;
   }
 

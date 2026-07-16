@@ -1,5 +1,5 @@
 async function testDeepSeek() {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   const apiUrl = process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com/v1';
 
   if (!apiKey) {

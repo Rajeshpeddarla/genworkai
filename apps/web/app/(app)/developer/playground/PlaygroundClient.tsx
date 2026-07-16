@@ -17,7 +17,7 @@ export default function PlaygroundClient({ initialKeys, initialSpec, resources, 
   const [execTime, setExecTime] = useState<number | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [activeTab, setActiveTab] = useState<'params' | 'body' | 'headers' | 'auth'>('params');
-  const [responseTab, setResponseTab] = useState<'response' | 'code' | 'docs'>('response');
+  const [responseTab, setResponseTab] = useState<'response' | 'preview' | 'code' | 'docs'>('response');
   const [codeLanguage, setCodeLanguage] = useState<'curl' | 'js' | 'python'>('curl');
 
   // Derive available endpoints from OpenAPI spec
@@ -298,8 +298,9 @@ print(response.json())`;
         {/* Right Tabs */}
         <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 px-4 pt-2 bg-neutral-50 dark:bg-[#111]">
           <div className="flex gap-4">
-            <button onClick={() => setResponseTab('response')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'response' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Response</button>
-            <button onClick={() => setResponseTab('code')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'code' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Code</button>
+            <button onClick={() => setResponseTab('response')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'response' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Raw JSON</button>
+            <button onClick={() => setResponseTab('preview')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'preview' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Preview</button>
+            <button onClick={() => setResponseTab('code')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'code' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Snippets</button>
             <button onClick={() => setResponseTab('docs')} className={`pb-2 text-xs font-bold uppercase tracking-wider border-b-2 transition-colors ${responseTab === 'docs' ? 'border-violet-500 text-violet-600 dark:text-violet-400' : 'border-transparent text-neutral-500'}`}>Docs</button>
           </div>
           
@@ -324,6 +325,25 @@ print(response.json())`;
                 {response || '// Hit send to execute request...'}
               </pre>
             </>
+          )}
+
+          {responseTab === 'preview' && (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(response);
+                  const markdownContent = parsed.markdown || parsed.content || parsed.text || parsed.answer || (parsed.data && parsed.data.markdown);
+                  
+                  if (markdownContent) {
+                    return <div dangerouslySetInnerHTML={{ __html: markdownContent.replace(/\n/g, '<br/>') }} />;
+                  }
+                  
+                  return <div className="text-neutral-500 italic">No markdown or text content found in the response to preview.</div>;
+                } catch {
+                  return <div className="text-neutral-500 italic">No valid JSON response to preview.</div>;
+                }
+              })()}
+            </div>
           )}
 
           {responseTab === 'code' && (

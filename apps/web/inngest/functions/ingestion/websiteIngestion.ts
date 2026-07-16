@@ -64,8 +64,8 @@ export const websiteIngestion: any = inngest.createFunction(
       await updateProgress("enhancing", { stage: "enhancing", current_step: "Applying AI enhancement" });
 
       const batchStats = await step.run("process-content", async () => {
-        const apiKey = process.env.DEEPSEEK_API_KEY || '';
-        const enhancedData = apiKey ? await enhanceTextWithAI(extractedText, apiKey, process.env.DEEPSEEK_API_URL) : {
+        const apiKey = process.env.GEMINI_API_KEY || '';
+        const enhancedData = apiKey ? await enhanceTextWithAI(extractedText, apiKey, undefined) : {
           summary: "Website Content", topics: [], keywords: [], classification: "Web Page",
           knowledgeContent: extractedText, embeddingContent: extractedText
         };

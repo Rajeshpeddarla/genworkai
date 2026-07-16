@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { PremiumUpgradeDialog } from "@/components/billing/PremiumUpgradeDialog";
 import { MessageSquare, Download, FileText, File, Send, Database, LayoutDashboard, BrainCircuit, Mail, Presentation, Type, GripVertical, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { PdfViewer } from "../../../components/knowledge/PdfViewer";
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from "react-resizable-panels";
 
 export default function WorkspacePage() {
@@ -14,6 +15,7 @@ export default function WorkspacePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<any | null>(null);
+  const [pdfCitationUrl, setPdfCitationUrl] = useState<string | null>(null);
   
   const [chats, setChats] = useState<any[]>([]);
   const [artifacts, setArtifacts] = useState<any[]>([]);
@@ -459,7 +461,27 @@ export default function WorkspacePage() {
       <div className="space-y-3">
         {displayContent && (
           <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-            <ReactMarkdown>{displayContent}</ReactMarkdown>
+            <ReactMarkdown
+              components={{
+                a: ({ node, ...props }) => {
+                  const isCitation = props.href?.includes('/uploads/') || props.href?.includes('.pdf');
+                  return (
+                    <a
+                      {...props}
+                      onClick={(e) => {
+                        if (isCitation && props.href) {
+                          e.preventDefault();
+                          setPdfCitationUrl(props.href);
+                        }
+                      }}
+                      className={isCitation ? "cursor-pointer text-violet-500 hover:text-violet-600 font-medium underline" : "text-violet-500 hover:text-violet-600 underline"}
+                    />
+                  );
+                }
+              }}
+            >
+              {displayContent}
+            </ReactMarkdown>
           </div>
         )}
         {extractedArtifacts.length > 0 && (
@@ -497,7 +519,26 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="flex-1 flex h-full bg-transparent overflow-hidden">
+    <div className="flex-1 flex h-full bg-transparent overflow-hidden relative">
+      {/* Citation Modal */}
+      {pdfCitationUrl && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8">
+          <div className="bg-zinc-100 dark:bg-[#0f0f13] w-full max-w-5xl h-full max-h-[85vh] rounded-2xl shadow-2xl flex flex-col border border-zinc-200 dark:border-white/10 overflow-hidden relative">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 dark:border-white/10 bg-white dark:bg-[#16161c]">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-4 h-4 text-rose-500" />
+                Source Document
+              </h3>
+              <button onClick={() => setPdfCitationUrl(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-zinc-500 transition-colors">
+                <PanelLeftClose className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <PdfViewer url={pdfCitationUrl} />
+            </div>
+          </div>
+        </div>
+      )}
       <PanelGroup direction="horizontal" className="w-full h-full">
         
         {/* Panel 1: Chat History */}

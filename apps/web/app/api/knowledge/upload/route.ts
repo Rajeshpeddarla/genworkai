@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../db';
-import { knowledgeSources, syncJobs } from '../../../../db/schema';
+import { knowledgeSources, syncJobs, documents, documentProcessingLogs } from '../../../../db/schema';
 import { inngest } from '../../../../inngest/client';
 import fs from 'fs/promises';
 import os from 'os';
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
       endpoint: '/api/knowledge/upload'
     });
 
-    if (!reserveResult.success) {
+    if (!reserveResult.success && process.env.NODE_ENV !== 'development') {
       return NextResponse.json({ 
         error: { code: 'INSUFFICIENT_AI_CREDITS', message: reserveResult.reason || "You don't have enough AI Credits." } 
       }, { status: 403 });
@@ -69,6 +69,7 @@ export async function POST(req: Request) {
       });
       if (!filesSource) {
         const newSource = await db.insert(knowledgeSources).values({
+          userId: user.id,
           kbId,
           name: 'Direct Uploads',
           type: 'file',
@@ -86,27 +87,64 @@ export async function POST(req: Request) {
       startedAt: new Date()
     }).returning();
 
-    // Save buffer to a temporary file
-    const tempDir = os.tmpdir();
-    const tempFileName = `upload_${crypto.randomUUID()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const tempFilePath = path.join(tempDir, tempFileName);
+    // Save buffer to persistent local storage (Development mode)
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
     
-    await fs.writeFile(tempFilePath, buffer);
+    const fileId = crypto.randomUUID();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storageKey = `upload_${fileId}_${safeName}`;
+    const permanentPath = path.join(uploadsDir, storageKey);
+    
+    await fs.writeFile(permanentPath, buffer);
+    const checksum = crypto.createHash('sha256').update(buffer).digest('hex');
 
-    // Dispatch to Inngest Worker
-    await inngest.send({
-      name: 'knowledge/process.upload',
-      data: {
-        sourceId,
-        syncJobId: syncJob[0]!.id,
-        filePath: tempFilePath,
-        originalName: file.name,
-        mimeType,
-        usageId: reserveResult.usageId
-      }
+    // Create the Document Manifest early in the lifecycle
+    const newDoc = await db.insert(documents).values({
+      kbId,
+      sourceId,
+      title: file.name,
+      sourceType: fileExtension || 'unknown',
+      mimeType,
+      storageKey: storageKey,
+      storageProvider: 'local',
+      status: 'uploaded',
+      sizeBytes: buffer.length,
+      checksum,
+    }).returning({ id: documents.id });
+
+    const documentId = newDoc[0]!.id;
+
+    // Create Document Processing Log
+    await db.insert(documentProcessingLogs).values({
+      documentId,
+      stage: 'storage',
+      status: 'success',
+      message: 'Document permanently stored in local volume.',
     });
 
-    return NextResponse.json({ success: true, sourceId, syncJobId: syncJob[0]!.id });
+    // Dispatch to the new extraction orchestrator (FastAPI)
+    try {
+      const apiResponse = await fetch('http://localhost:8000/api/v1/ingest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_id: documentId,
+          storage_key: storageKey,
+          mime_type: mimeType
+        })
+      });
+      
+      if (!apiResponse.ok) {
+        console.error("FastAPI returned error", await apiResponse.text());
+      }
+    } catch (apiError) {
+      console.error("Failed to call FastAPI ingest:", apiError);
+    }
+
+    return NextResponse.json({ success: true, sourceId, syncJobId: syncJob[0]!.id, documentId });
 
   } catch (error: unknown) {
     return safeErrorResponse(error, 'KB Document Upload Route');

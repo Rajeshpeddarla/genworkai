@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../../../db';
-import { workspaceChats, workspaceMessages, workspaceArtifacts, workspaceArtifactVersions, knowledgeBases } from '../../../../../../db/schema';
+import { workspaceChats, workspaceMessages, workspaceArtifacts, workspaceArtifactVersions, knowledgeBases, semanticCache } from '../../../../../../db/schema';
 import { eq, asc, sql } from 'drizzle-orm';
+import crypto from 'crypto';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 import { streamText } from 'ai';
 import { requireUser, requireOwnership } from '../../../../../../lib/auth';
@@ -75,6 +76,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ chatId:
 
     let contextText = "";
     let kbName: string | null = null;
+    let queryHash = crypto.createHash('sha256').update(content).digest('hex');
+
+    // Semantic Cache Check
+    if (chat.kbId) {
+      const cached = await db.query.semanticCache.findFirst({
+        where: eq(semanticCache.queryHash, queryHash)
+      });
+      if (cached && cached.kbId === chat.kbId) {
+        // Cache Hit
+        await db.update(semanticCache)
+          .set({ hitCount: (cached.hitCount || 0) + 1, lastHitAt: new Date() })
+          .where(eq(semanticCache.id, cached.id));
+          
+        await db.insert(workspaceMessages).values({
+          chatId,
+          role: 'assistant',
+          content: (cached.response as any)?.text || '',
+        });
+        
+        if (usageId) await CreditService.refund(usageId, "Semantic Cache Hit");
+
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode((cached.response as any)?.text || ''));
+            controller.close();
+          }
+        });
+        const response = new Response(stream, { headers: { "Content-Type": "text/plain", "x-cache-hit": "true" } });
+        return response;
+      }
+    }
 
     // If there is a KB, perform search
     if (chat.kbId) {
@@ -112,6 +144,11 @@ ${knowStr}...
 **Relevant Extracted Excerpt (Search Match):**
 ${r.content}`;
             }).join("\n\n");
+         }
+         
+         if (searchData.graphNodes && searchData.graphNodes.length > 0) {
+            const graphStr = searchData.graphNodes.map((n: any) => `- [${n.type}] ${n.name}: ${n.description}`).join('\n');
+            contextText += `\n\n--- RELEVANT KNOWLEDGE GRAPH CONCEPTS ---\n${graphStr}`;
          }
        }
     }
@@ -151,7 +188,7 @@ CRITICAL RULES FOR FACTUAL ACCURACY AND CODE GENERATION:
        systemPrompt += `\n\nYou have access to a knowledge base. Here is relevant context retrieved for the user's query:\n\n---\n${contextText}\n---\n\nBase your answer on the context provided.`;
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       // Provide a mock stream response for local testing if no key is present
       const stream = new ReadableStream({
@@ -165,7 +202,7 @@ CRITICAL RULES FOR FACTUAL ACCURACY AND CODE GENERATION:
 
     const deepseek = createDeepSeek({
       apiKey,
-      baseURL: process.env.DEEPSEEK_API_URL || "https://api.deepseek.com",
+      baseURL: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
     });
 
     const llmMessages: {role: "user"|"assistant", content: string}[] = [];
@@ -263,6 +300,21 @@ CRITICAL RULES FOR FACTUAL ACCURACY AND CODE GENERATION:
             role: 'assistant',
             content: text,
           });
+
+          // Save to Semantic Cache
+          if (chat.kbId) {
+             try {
+               await db.insert(semanticCache).values({
+                 kbId: chat.kbId,
+                 queryHash: queryHash,
+                 queryText: content,
+                 response: { text: text },
+                 hitCount: 1,
+               }).onConflictDoNothing();
+             } catch (cacheErr) {
+               console.error("Cache save error:", cacheErr);
+             }
+          }
 
           await db.update(workspaceChats)
             .set({ updatedAt: new Date() })

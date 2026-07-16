@@ -95,8 +95,8 @@ ${JSON.stringify(cachedSchema.schemaData, null, 2)}
         maxTokens: 2000,
         providerConfig
       },
-      process.env.DEEPSEEK_API_KEY || "dummy", 
-      process.env.DEEPSEEK_API_URL
+      process.env.GEMINI_API_KEY || "dummy", 
+      undefined
     );
 
     metrics.llm_tokens += Math.floor((systemPrompt.length + question.length + llmRes.content.length) / 4);

@@ -49,8 +49,8 @@ export const uploadIngestion: any = inngest.createFunction(
         }
 
         const cleanedText = cleanExtractedText(extractedText);
-        const apiKey = process.env.DEEPSEEK_API_KEY || '';
-        const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.DEEPSEEK_API_URL) : {
+        const apiKey = process.env.GEMINI_API_KEY || '';
+        const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, undefined) : {
           summary: "", topics: [], keywords: [], classification: "Unclassified",
           knowledgeContent: cleanedText, embeddingContent: cleanedText
         };

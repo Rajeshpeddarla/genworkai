@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { subscriptionPlans, userSubscriptions, billingEvents, profiles, aiCreditPackProducts, userAiCreditBalance, aiCreditCosts } from "@/db/schema";
+import { subscriptionPlans, userSubscriptions, billingEvents, profiles, aiCreditPackProducts, userAiCreditBalance, aiCreditCosts, baseparsePricingPlans } from "@/db/schema";
 import BillingClient from "./BillingClient";
 import { eq, desc } from "drizzle-orm";
 import { fetchPaddleData } from "./actions";
@@ -58,6 +58,9 @@ export default async function BillingStudioPage() {
   const serializedPacks = JSON.parse(JSON.stringify(packs));
   const serializedBalances = JSON.parse(JSON.stringify(balances));
   const serializedCosts = JSON.parse(JSON.stringify(costs));
+  
+  const baseparsePlans = await db.select().from(baseparsePricingPlans).orderBy(baseparsePricingPlans.displayOrder);
+  const serializedBaseparsePlans = JSON.parse(JSON.stringify(baseparsePlans));
 
   return <BillingClient 
     initialPlans={serializedPlans} 
@@ -68,5 +71,6 @@ export default async function BillingStudioPage() {
     userBalances={serializedBalances}
     initialCosts={serializedCosts}
     initialProviderCosts={providerCosts}
+    initialBaseparsePlans={serializedBaseparsePlans}
   />;
 }

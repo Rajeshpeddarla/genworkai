@@ -94,31 +94,164 @@ export const knowledgeBases = pgTable('knowledge_bases', {
 export const documents = pgTable('documents', {
   id: serial('id').primaryKey(),
   kbId: integer('kb_id').references(() => knowledgeBases.id),
-  sourceId: integer('source_id'), // Will be linked to knowledgeSources once it's created below
+  sourceId: integer('source_id'),
 
   title: varchar('title', { length: 255 }).notNull(),
   sourceType: varchar('source_type', { length: 50 }).notNull(), // pdf, docx, url
-  sourceUrl: text('source_url'), // the filename or url
+  sourceUrl: text('source_url'), // Backwards compatibility for v1/v2 pipeline
+  mimeType: varchar('mime_type', { length: 100 }),
+  storageKey: text('storage_key'), // Key/Path in R2/S3/local
+  storageProvider: varchar('storage_provider', { length: 50 }).default('local'), // 'local', 'r2', 's3'
+  
+  status: varchar('status', { length: 50 }).default('uploaded'), // 'uploaded', 'extracting', 'rendering', 'chunking', 'embedding', 'graph', 'completed', 'failed'
+  intelligenceScore: numeric('intelligence_score', { precision: 5, scale: 2 }), // Score based on extraction quality, OCR, etc.
+  
+  // Versions for Incremental Reprocessing
+  storageVersion: integer('storage_version').default(1),
+  extractionVersion: integer('extraction_version').default(0),
+  ocrVersion: integer('ocr_version').default(0),
+  chunkingVersion: integer('chunking_version').default(0),
+  embeddingVersion: integer('embedding_version').default(0),
+  kgVersion: integer('kg_version').default(0),
+
+  content: text('content'), // Raw extracted text
+  knowledgeContent: text('knowledge_content'), // V1/V2 Enhanced text
+  embeddingContent: text('embedding_content'), // V1/V2 Chunking text
+
   summary: text('summary'),
   classification: varchar('classification', { length: 100 }),
   topics: jsonb('topics'),
   keywords: jsonb('keywords'),
-  content: text('content'), // Source Document
-  knowledgeContent: text('knowledge_content'), // Knowledge Document
-  embeddingContent: text('embedding_content'), // Embedding Document
-  metadata: jsonb('metadata'), // any extra info
+  metadata: jsonb('metadata'),
   sizeBytes: integer('size_bytes').default(0),
+  checksum: varchar('checksum', { length: 255 }), // SHA256 of the file
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const documentPages = pgTable('document_pages', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  pageNumber: integer('page_number').notNull(),
+  
+  imageStorageKey: text('image_storage_key'), // High-res rendered page
+  thumbnailKey: text('thumbnail_key'),
+  
+  width: integer('width'),
+  height: integer('height'),
+  rotation: integer('rotation').default(0),
+  
+  hasVisualContent: boolean('has_visual_content').default(false), // True if charts, diagrams, etc. present
+  ocrConfidence: numeric('ocr_confidence', { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const documentArtifacts = pgTable('document_artifacts', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  pageNumber: integer('page_number'),
+  
+  type: varchar('type', { length: 50 }).notNull(), // 'figure', 'table', 'equation', 'ocr_region'
+  identifier: varchar('identifier', { length: 100 }), // e.g., 'Fig 1', 'Table 2'
+  
+  content: text('content'), // Markdown, LaTeX, or structured text
+  storageKey: text('storage_key'), // S3 key if it's a cropped image of the artifact
+  
+  boundingBox: jsonb('bounding_box'), // [x, y, width, height]
+  confidenceScore: numeric('confidence_score', { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const documentProcessingLogs = pgTable('document_processing_logs', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  stage: varchar('stage', { length: 50 }).notNull(), // 'extraction', 'chunking', 'embedding'
+  status: varchar('status', { length: 50 }).notNull(), // 'started', 'success', 'failed'
+  message: text('message'),
+  durationMs: integer('duration_ms'),
+  metrics: jsonb('metrics'), // { tokens, cost, pages, artifacts_found }
+  createdAt: timestamp('created_at').defaultNow(),
 });
 
 export const documentChunks = pgTable('document_chunks', {
   id: serial('id').primaryKey(),
   documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  parentId: integer('parent_id'), // Hierarchical linking
+  
+  level: integer('level').default(3), // 0: Doc, 1: Section, 2: Question, 3: Paragraph, etc.
+  chunkType: varchar('chunk_type', { length: 50 }), // 'text', 'header', 'list', 'code'
+  
   content: text('content').notNull(),
+  pageNumber: integer('page_number'),
+  readingOrder: integer('reading_order'),
+  
+  boundingBox: jsonb('bounding_box'), // [x, y, w, h]
+  
+  artifactRefs: jsonb('artifact_refs'), // Array of artifact IDs linked to this chunk
+  assets: jsonb('assets'), // Dictionary of UUID to Base64 strings for autonomous images
+  
   hash: varchar('hash', { length: 64 }), // sha256 chunk hash for deduplication
-  // bge-m3 produces 1024-dimensional embeddings
-  embedding: vector('embedding', { dimensions: 1024 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const documentEmbeddings = pgTable('document_embeddings', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  chunkId: integer('chunk_id').references(() => documentChunks.id, { onDelete: 'cascade' }),
+  artifactId: integer('artifact_id').references(() => documentArtifacts.id, { onDelete: 'cascade' }),
+  
+  model: varchar('model', { length: 100 }).notNull().default('bge-m3'),
+  vector: vector('vector', { dimensions: 1024 }),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const documentQuestions = pgTable('document_questions', {
+  id: serial('id').primaryKey(),
+  documentId: integer('document_id').references(() => documents.id, { onDelete: 'cascade' }),
+  identifier: varchar('identifier', { length: 100 }).notNull(), // 'Q1', 'Question 4'
+  
+  pageNumber: integer('page_number'),
+  boundingBox: jsonb('bounding_box'),
+  
+  content: text('content'),
+  options: jsonb('options'), // If multiple choice
+  
+  artifactRefs: jsonb('artifact_refs'), // Associated diagrams or tables
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const knowledgeNodes = pgTable('knowledge_nodes', {
+  id: serial('id').primaryKey(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 50 }), // 'Concept', 'Entity', 'Topic'
+  description: text('description'),
+  metadata: jsonb('metadata'), // e.g., associated document IDs
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const knowledgeEdges = pgTable('knowledge_edges', {
+  id: serial('id').primaryKey(),
+  sourceNodeId: integer('source_node_id').references(() => knowledgeNodes.id, { onDelete: 'cascade' }),
+  targetNodeId: integer('target_node_id').references(() => knowledgeNodes.id, { onDelete: 'cascade' }),
+  relationshipType: varchar('relationship_type', { length: 100 }), // 'relates_to', 'part_of', 'depends_on'
+  weight: numeric('weight', { precision: 5, scale: 2 }).default('1.0'),
+  documentRefs: jsonb('document_refs'), // Documents where this edge is found
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const semanticCache = pgTable('semantic_cache', {
+  id: serial('id').primaryKey(),
+  kbId: integer('kb_id').references(() => knowledgeBases.id, { onDelete: 'cascade' }),
+  queryHash: varchar('query_hash', { length: 64 }).notNull().unique(),
+  queryText: text('query_text').notNull(),
+  response: jsonb('response').notNull(), // The complete structured response
+  hitCount: integer('hit_count').default(1),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastHitAt: timestamp('last_hit_at').defaultNow(),
 });
 
 export const workspaceChats = pgTable('workspace_chats', {
@@ -483,6 +616,54 @@ export const subscriptionPlans = pgTable('subscription_plans', {
   byokEnabled: boolean('byok_enabled').default(false),
   prioritySupportEnabled: boolean('priority_support_enabled').default(false),
 
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const baseparsePricingPlans = pgTable('baseparse_pricing_plans', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  priceCents: integer('price_cents').notNull(),
+  pageExtractionLimit: integer('page_extraction_limit').notNull(),
+  paddleProductId: varchar('paddle_product_id', { length: 255 }),
+  paddlePriceId: varchar('paddle_price_id', { length: 255 }),
+  isActive: boolean('is_active').default(true),
+  displayOrder: integer('display_order').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const baseparseUserPlans = pgTable('baseparse_user_plans', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  planId: integer('plan_id').references(() => baseparsePricingPlans.id, { onDelete: 'cascade' }),
+  pagesExtractedThisMonth: integer('pages_extracted_this_month').default(0),
+  paddleSubscriptionId: varchar('paddle_subscription_id', { length: 255 }),
+  status: varchar('status', { length: 50 }).default('active'),
+  currentPeriodStart: timestamp('current_period_start'),
+  currentPeriodEnd: timestamp('current_period_end'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const baseparseApiKeys = pgTable('baseparse_api_keys', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  keyHash: varchar('key_hash', { length: 255 }).notNull(),
+  keyPrefix: varchar('key_prefix', { length: 50 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('active'),
+  createdAt: timestamp('created_at').defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+});
+
+export const baseparseDocuments = pgTable('baseparse_documents', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  status: varchar('status', { length: 50 }).default('processing'), // processing, completed, failed
+  pageCount: integer('page_count').default(0),
+  extractedData: jsonb('extracted_data'), // JSON payload
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -893,6 +1074,29 @@ export const apiEndpoints = pgTable('api_endpoints', {
   timeout: integer('timeout').default(30),
   
   isPublished: boolean('is_published').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// SaaS Expansion Tables
+
+export const supportTickets = pgTable('support_tickets', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  status: varchar('status', { length: 50 }).default('pending'), // 'pending', 'working', 'resolved'
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const pricingPlans = pgTable('pricing_plans', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  credits: integer('credits').notNull(),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 10 }).default('USD'),
+  isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });

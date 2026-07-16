@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       // Mocked fallback if no API key is provided
       return NextResponse.json({
@@ -54,7 +54,7 @@ Output ONLY valid JSON. Do not include markdown blocks like \`\`\`json.`;
       ],
       taskCategory: TaskCategory.STRUCTURED,
       responseFormatJson: true
-    }, apiKey, process.env.DEEPSEEK_API_URL);
+    }, apiKey, undefined);
 
     // If it wrapped in markdown blocks, strip them
     let cleanedContent = result.content.trim();

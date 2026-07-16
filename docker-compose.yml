@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  ingestion-api:
+    build: 
+      context: ./apps/ingestion-service
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./apps/web/.env.local
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    volumes:
+      - ./apps/ingestion-service/src:/app/src
+
+  ingestion-worker:
+    build: 
+      context: ./apps/ingestion-service
+      dockerfile: Dockerfile.worker
+    env_file:
+      - ./apps/web/.env.local
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - ingestion-api
+    volumes:
+      - ./apps/ingestion-service/src:/app/src
+      - ./apps/web/public/uploads:/app/uploads
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

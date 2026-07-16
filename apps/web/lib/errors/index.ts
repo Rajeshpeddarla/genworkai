@@ -84,7 +84,7 @@ export function safeErrorResponse(error: unknown, context?: string): NextRespons
   );
 
   return NextResponse.json(
-    { error: 'An unexpected error occurred. Please try again.' },
+    { error: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.' },
     { status: 500 }
   );
 }

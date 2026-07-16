@@ -9,7 +9,7 @@ import { DatabaseService, DBConnectionConfig } from '@/lib/database/DatabaseServ
 import { decryptSecret, isEncrypted } from '@/lib/security/encryption';
 
 const deepseek = createDeepSeek({
-  apiKey: process.env.DEEPSEEK_API_KEY || "",
+  apiKey: process.env.GEMINI_API_KEY || "",
 });
 
 export const maxDuration = 30;

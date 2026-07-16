@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Markdown content is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       if (type === "clean_and_analyze") {
         // Fallback basic regex cleaning to simulate AI optimization
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
         { role: "user", content: type === "summary" ? markdown : prompt }
       ],
       taskCategory: type === "summary" ? TaskCategory.STRUCTURED : TaskCategory.REASONING,
-    }, apiKey, process.env.DEEPSEEK_API_URL);
+    }, apiKey, undefined);
 
     return NextResponse.json({ success: true, data: result.content });
   } catch (error: any) {

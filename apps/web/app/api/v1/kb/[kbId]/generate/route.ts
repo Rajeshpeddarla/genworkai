@@ -146,8 +146,8 @@ ${schemaDefinition}`;
         maxTokens: 3000,
         providerConfig
       },
-      process.env.DEEPSEEK_API_KEY || "dummy",
-      process.env.DEEPSEEK_API_URL
+      process.env.GEMINI_API_KEY || "dummy",
+      undefined
     );
 
     metrics.llm_tokens += Math.floor((systemPrompt.length + contextText.length + llmRes.content.length) / 4);

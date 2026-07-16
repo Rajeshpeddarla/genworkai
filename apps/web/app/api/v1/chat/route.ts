@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       taskCategory: TaskCategory.FAST,
       maxTokens: body.maxTokens || 2000,
       providerConfig
-    }, process.env.DEEPSEEK_API_KEY || "dummy", process.env.DEEPSEEK_API_URL);
+    }, process.env.GEMINI_API_KEY || "dummy", undefined);
 
     metrics.llm_tokens += res.usage?.totalTokens || 0;
 

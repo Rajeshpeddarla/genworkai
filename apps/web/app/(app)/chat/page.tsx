@@ -5,6 +5,8 @@ import { Send, User, Sparkles, Link as LinkIcon, Paperclip, Plus, MessageSquare,
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
+import { PdfViewer } from "@/components/knowledge/PdfViewer";
+import { PanelLeftClose } from "lucide-react";
 
 type Message = {
   role: "user" | "assistant";
@@ -27,6 +29,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pdfCitationUrl, setPdfCitationUrl] = useState<string | null>(null);
   
   // Theme State - Default to Light Mode as requested previously
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -130,7 +133,27 @@ export default function ChatPage() {
   if (!extractedData) return null;
 
   return (
-    <div className={`flex h-screen overflow-hidden font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500 bg-[#F3F6F9] dark:bg-[#0B0F19] p-3 md:p-5 gap-5`}>
+    <div className={`flex h-screen overflow-hidden font-sans text-slate-800 dark:text-slate-200 transition-colors duration-500 bg-[#F3F6F9] dark:bg-[#0B0F19] p-3 md:p-5 gap-5 relative`}>
+      
+      {/* Citation Modal */}
+      {pdfCitationUrl && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8">
+          <div className="bg-zinc-100 dark:bg-[#0f0f13] w-full max-w-5xl h-full max-h-[85vh] rounded-2xl shadow-2xl flex flex-col border border-zinc-200 dark:border-white/10 overflow-hidden relative">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 dark:border-white/10 bg-white dark:bg-[#16161c]">
+              <h3 className="font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-4 h-4 text-rose-500" />
+                Extracted Document
+              </h3>
+              <button onClick={() => setPdfCitationUrl(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg text-zinc-500 transition-colors">
+                <PanelLeftClose className="w-5 h-5 rotate-180" />
+              </button>
+            </div>
+            <div className="flex-1 relative">
+              <PdfViewer url={pdfCitationUrl} />
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex w-[280px] flex-col shrink-0 absolute md:relative z-20 h-full bg-white dark:bg-[#161C2D] rounded-[24px] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden transition-colors duration-500`}>
@@ -266,7 +289,16 @@ export default function ChatPage() {
                   {msg.role === 'user' ? (
                     <div className="bg-slate-100 dark:bg-[#2A3245] px-5 py-4 rounded-[20px] rounded-tr-sm border border-slate-200 dark:border-white/10 shadow-sm min-w-[280px] transition-colors duration-500">
                       {msg.content === "DOC_INJECTION" ? (
-                        <div className="flex flex-col gap-1.5">
+                        <div 
+                          className="flex flex-col gap-1.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700/50 p-2 rounded-lg transition-colors -m-2"
+                          onClick={() => {
+                            if (extractedData.storageKey) {
+                              setPdfCitationUrl(`/uploads/${extractedData.storageKey}`);
+                            } else if (extractedData.url) {
+                              setPdfCitationUrl(extractedData.url);
+                            }
+                          }}
+                        >
                           <div className="flex items-center gap-2 text-[13px] font-medium text-purple-600 dark:text-purple-300">
                             <Paperclip className="w-3.5 h-3.5" />
                             Extracted Document
@@ -282,7 +314,27 @@ export default function ChatPage() {
                   ) : (
                     <div className="max-w-[85%] bg-slate-50 dark:bg-[#1E2638] px-7 py-6 rounded-[24px] rounded-tl-sm text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 shadow-sm transition-colors duration-500">
                       <div className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-indigo-500 dark:prose-a:text-cyan-400 text-[14px] leading-relaxed break-words">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown
+                          components={{
+                            a: ({ node, ...props }) => {
+                              const isCitation = props.href?.includes('/uploads/') || props.href?.includes('.pdf');
+                              return (
+                                <a
+                                  {...props}
+                                  onClick={(e) => {
+                                    if (isCitation && props.href) {
+                                      e.preventDefault();
+                                      setPdfCitationUrl(props.href);
+                                    }
+                                  }}
+                                  className={isCitation ? "cursor-pointer font-medium underline decoration-indigo-500/30 underline-offset-2" : "underline"}
+                                />
+                              );
+                            }
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   )}

@@ -7,7 +7,7 @@ import { EntitlementEngine } from '../../../../lib/billing/entitlements';
 import { DatabaseService } from '../../../../lib/database/DatabaseService';
 
 const deepseek = createDeepSeek({
-  apiKey: process.env.DEEPSEEK_API_KEY || "",
+  apiKey: process.env.GEMINI_API_KEY || "",
 });
 
 export async function POST(req: Request) {
@@ -62,7 +62,7 @@ ${dataContext}`;
 
     const startTime = Date.now();
     
-    if (!process.env.DEEPSEEK_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       // Mock for local without key
       return NextResponse.json({
         success: true,

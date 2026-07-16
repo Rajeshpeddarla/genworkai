@@ -48,8 +48,8 @@ export async function POST(req: Request) {
     
     const pageText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 15000); // Get up to 15000 chars
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    const apiUrl = process.env.DEEPSEEK_API_URL;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const apiUrl = undefined;
 
     if (!apiKey || !apiUrl) {
       // Fallback to basic extraction if no API keys

@@ -56,7 +56,7 @@ export const folderIngestion: any = inngest.createFunction(
         let filesProcessed = 0;
         let chunksGenerated = 0;
         const allChunkIds: number[] = [];
-        const apiKey = process.env.DEEPSEEK_API_KEY || '';
+        const apiKey = process.env.GEMINI_API_KEY || '';
 
         const sourceRecord = await db.select({ kbId: knowledgeSources.kbId }).from(knowledgeSources).where(eq(knowledgeSources.id, sourceId)).limit(1);
         const kbId = sourceRecord[0]?.kbId || 0;
@@ -73,7 +73,7 @@ export const folderIngestion: any = inngest.createFunction(
             if (!extractedText || extractedText.length < 10) continue;
 
             const cleanedText = cleanExtractedText(extractedText);
-            const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, process.env.DEEPSEEK_API_URL) : {
+            const enhancedData = apiKey ? await enhanceTextWithAI(cleanedText, apiKey, undefined) : {
               summary: "", topics: [], keywords: [], classification: "Unclassified",
               knowledgeContent: cleanedText, embeddingContent: cleanedText
             };

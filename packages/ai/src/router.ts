@@ -16,13 +16,13 @@ export interface RouterResult {
   provider: string; // 'deepseek' | 'openai' | 'anthropic' etc.
 }
 
-const DEEPSEEK_FLASH = 'deepseek-v4-flash';
-const DEEPSEEK_PRO = 'deepseek-v4-pro';
+const GEMINI_FLASH = 'gemini-3.5-flash';
+const GEMINI_PRO = 'gemini-2.5-pro';
 
 // Pricing per 1M tokens
 const PRICING = {
-  [DEEPSEEK_FLASH]: { input: 0.14, output: 0.28 },
-  [DEEPSEEK_PRO]: { input: 0.55, output: 2.19 }, 
+  [GEMINI_FLASH]: { input: 1.50, output: 9.00 },
+  [GEMINI_PRO]: { input: 2.50, output: 15.00 }, 
   // Default fallback if unknown
   'default': { input: 0.0, output: 0.0 }
 };
@@ -81,16 +81,16 @@ export class AIRouter {
       };
     }
 
-    // 2. Intelligent Routing for DeepSeek
+    // 2. Intelligent Routing for Gemini
     const tokenCount = this.estimateTokens(contextStr);
 
     switch (task) {
       case TaskCategory.FAST:
-        return { model: DEEPSEEK_FLASH, provider: 'deepseek' };
+        return { model: GEMINI_FLASH, provider: 'gemini' };
         
       case TaskCategory.REASONING:
       case TaskCategory.STRUCTURED:
-        return { model: DEEPSEEK_PRO, provider: 'deepseek' };
+        return { model: GEMINI_FLASH, provider: 'gemini' }; // Using Flash for everything for now
         
       case TaskCategory.AUTOMATION: {
         // Dynamic Automation Routing
@@ -101,21 +101,21 @@ export class AIRouter {
         
         // Complex Automation -> Pro
         if (score > 40 || tokenCount > 20000) {
-          return { model: DEEPSEEK_PRO, provider: 'deepseek' };
+          return { model: GEMINI_PRO, provider: 'gemini' };
         }
         
         // Simple Automation -> Flash
-        return { model: DEEPSEEK_FLASH, provider: 'deepseek' };
+        return { model: GEMINI_FLASH, provider: 'gemini' };
       }
       
       default:
-        return { model: DEEPSEEK_FLASH, provider: 'deepseek' };
+        return { model: GEMINI_FLASH, provider: 'gemini' };
     }
   }
 
   static getFallbackModel(currentModel: string): string | null {
-    if (currentModel === DEEPSEEK_PRO) {
-      return DEEPSEEK_FLASH;
+    if (currentModel === GEMINI_PRO) {
+      return GEMINI_FLASH;
     }
     // No fallback for Flash, it should just retry
     return null;

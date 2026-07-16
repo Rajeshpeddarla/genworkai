@@ -59,7 +59,7 @@ export async function POST(
     }
 
     const payload = await req.json();
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     // Handle KB Query API
     if (entityTypeOrSlug === 'kb') {
@@ -91,7 +91,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
           system: systemPrompt,
           messages: [{ role: "user", content: queryText }],
           taskCategory: TaskCategory.REASONING,
-        }, apiKey || "", process.env.DEEPSEEK_API_URL);
+        }, apiKey || "", undefined);
         return result.toTextStreamResponse();
       }
 
@@ -99,7 +99,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
         system: systemPrompt,
         messages: [{ role: "user", content: queryText }],
         taskCategory: TaskCategory.REASONING,
-      }, apiKey || "", process.env.DEEPSEEK_API_URL);
+      }, apiKey || "", undefined);
       
       return NextResponse.json({ response: result.content });
     }
@@ -135,7 +135,7 @@ Execute these steps and return the final response.${!isStream ? ' Do not include
         system: systemPrompt,
         messages: [{ role: "user", content: JSON.stringify(payload) }],
         taskCategory: TaskCategory.STRUCTURED,
-      }, apiKey, process.env.DEEPSEEK_API_URL);
+      }, apiKey, undefined);
       return result.toTextStreamResponse();
     }
 
@@ -144,7 +144,7 @@ Execute these steps and return the final response.${!isStream ? ' Do not include
       messages: [{ role: "user", content: JSON.stringify(payload) }],
       taskCategory: TaskCategory.STRUCTURED,
       responseFormatJson: true
-    }, apiKey, process.env.DEEPSEEK_API_URL);
+    }, apiKey, undefined);
 
     let cleanedContent = result.content.trim();
     cleanedContent = cleanedContent.replace(/^```json\n/, '').replace(/^```\n/, '').replace(/\n```$/, '');
@@ -185,7 +185,7 @@ export async function GET(
 
     const url = new URL(req.url);
     const payload = Object.fromEntries(url.searchParams.entries());
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     // Handle KB Query API
     if (entityTypeOrSlug === 'kb') {
@@ -217,7 +217,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
           system: systemPrompt,
           messages: [{ role: "user", content: queryText }],
           taskCategory: TaskCategory.REASONING,
-        }, apiKey || "", process.env.DEEPSEEK_API_URL);
+        }, apiKey || "", undefined);
         return result.toTextStreamResponse();
       }
 
@@ -225,7 +225,7 @@ ${contextText || "No context found in the Knowledge Base for this query."}
         system: systemPrompt,
         messages: [{ role: "user", content: queryText }],
         taskCategory: TaskCategory.REASONING,
-      }, apiKey || "", process.env.DEEPSEEK_API_URL);
+      }, apiKey || "", undefined);
       
       return NextResponse.json({ response: result.content });
     }
@@ -261,7 +261,7 @@ Execute these steps and return the final response.${!isStream ? ' Do not include
         system: systemPrompt,
         messages: [{ role: "user", content: Object.keys(payload).length > 0 ? JSON.stringify(payload) : "Execute the workflow." }],
         taskCategory: TaskCategory.STRUCTURED,
-      }, apiKey, process.env.DEEPSEEK_API_URL);
+      }, apiKey, undefined);
       return result.toTextStreamResponse();
     }
 
@@ -270,7 +270,7 @@ Execute these steps and return the final response.${!isStream ? ' Do not include
       messages: [{ role: "user", content: Object.keys(payload).length > 0 ? JSON.stringify(payload) : "Execute the workflow." }],
       taskCategory: TaskCategory.STRUCTURED,
       responseFormatJson: true
-    }, apiKey, process.env.DEEPSEEK_API_URL);
+    }, apiKey, undefined);
 
     let cleanedContent = result.content.trim();
     cleanedContent = cleanedContent.replace(/^```json\n/, '').replace(/^```\n/, '').replace(/\n```$/, '');

@@ -10,7 +10,7 @@ import { createDeepSeek } from '@ai-sdk/deepseek';
 import { decryptSecret, isEncrypted } from '@/lib/security/encryption';
 
 const deepseek = createDeepSeek({
-  apiKey: process.env.DEEPSEEK_API_KEY || "",
+  apiKey: process.env.GEMINI_API_KEY || "",
 });
 
 export const cronDatabaseAutomations: any = inngest.createFunction(

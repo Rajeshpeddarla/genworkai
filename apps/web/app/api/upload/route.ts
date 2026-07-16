@@ -106,8 +106,8 @@ export async function POST(req: Request) {
 
     const pageText = extractedText.substring(0, 15000); // Send up to 15000 chars to LLM
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
-    const apiUrl = process.env.DEEPSEEK_API_URL;
+    const apiKey = process.env.GEMINI_API_KEY;
+    const apiUrl = undefined;
 
     if (!apiKey || !apiUrl) {
       return NextResponse.json({

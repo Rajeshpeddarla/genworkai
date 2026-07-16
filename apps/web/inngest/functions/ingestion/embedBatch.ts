@@ -1,6 +1,6 @@
 import { inngest } from "../../client";
 import { db } from "../../../db";
-import { documentChunks, syncJobs, knowledgeSources } from "../../../db/schema";
+import { documentChunks, documentEmbeddings, documents, syncJobs, knowledgeSources } from "../../../db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { generateEmbedding } from "../../../lib/embeddings";
 
@@ -43,17 +43,24 @@ export const embedBatch: any = inngest.createFunction(
     
     // We could batch further here or just process sequentially per step
     for (const chunk of chunks) {
-      if (chunk.embedding) {
+      // Check if already embedded (idempotency)
+      const existing = await db.query.documentEmbeddings.findFirst({
+        where: (e, { eq }) => eq(e.chunkId, chunk.id)
+      });
+      if (existing) {
         successCount++;
-        continue; // Skip if already embedded (idempotency)
+        continue;
       }
 
       await step.run(`embed-chunk-${chunk.id}`, async () => {
         try {
           const vector = await generateEmbedding(chunk.content);
-          await db.update(documentChunks)
-            .set({ embedding: vector })
-            .where(eq(documentChunks.id, chunk.id));
+          await db.insert(documentEmbeddings).values({
+            documentId: chunk.documentId,
+            chunkId: chunk.id,
+            vector: vector,
+            model: 'bge-m3'
+          });
         } catch (error) {
           console.error(`Failed to embed chunk ${chunk.id}:`, error);
           throw error; // Will trigger Inngest step retry
@@ -89,7 +96,8 @@ export const embedBatch: any = inngest.createFunction(
         SELECT COUNT(dc.id) as remaining
         FROM document_chunks dc
         JOIN documents d ON dc.document_id = d.id
-        WHERE d.source_id = ${sourceId} AND dc.embedding IS NULL
+        LEFT JOIN document_embeddings de ON de.chunk_id = dc.id
+        WHERE d.source_id = ${sourceId} AND de.id IS NULL
       `);
       const remaining = Number(remainingResult.rows[0]?.remaining || 0);
 

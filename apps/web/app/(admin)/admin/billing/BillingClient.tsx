@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Plus, Check, Save, Edit2, CreditCard, RefreshCw, Activity, Users, Globe, Play, Pause, XCircle, Settings, Trash2 } from "lucide-react";
-import { updatePlan, createPlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription, createCreditPack, updateCreditPack, updateCreditCost, deletePlan } from "./actions";
+import { updatePlan, createPlan, syncWithPaddle, cancelSubscription, pauseSubscription, resumeSubscription, createCreditPack, updateCreditPack, updateCreditCost, deletePlan, createBaseParsePlan, updateBaseParsePlan, deleteBaseParsePlan } from "./actions";
 import { CostSimulatorDashboard } from "./CostSimulatorDashboard";
 
 interface Props {
@@ -14,6 +14,7 @@ interface Props {
   userBalances?: any[];
   initialCosts?: any[];
   initialProviderCosts?: any;
+  initialBaseparsePlans?: any[];
 }
 
 export default function BillingClient({ 
@@ -24,12 +25,14 @@ export default function BillingClient({
   initialPacks,
   userBalances,
   initialCosts,
-  initialProviderCosts
+  initialProviderCosts,
+  initialBaseparsePlans
 }: Props) {
   const [editingPlan, setEditingPlan] = useState<any | null>(null);
   const [editingPack, setEditingPack] = useState<any | null>(null);
   const [editingCost, setEditingCost] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'packs' | 'costs' | 'simulator' | 'balances' | 'subscriptions' | 'events' | 'paddle' | 'regional'>('overview');
+  const [editingBaseparsePlan, setEditingBaseparsePlan] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'packs' | 'baseparse' | 'costs' | 'simulator' | 'balances' | 'subscriptions' | 'events' | 'paddle' | 'regional'>('overview');
   const [isSyncing, startSync] = useTransition();
 
   const handleSync = () => {
@@ -109,6 +112,33 @@ export default function BillingClient({
       await updateCreditCost(editingCost.operationKey, creditCost);
     }
     setEditingCost(null);
+  };
+
+  const handleSaveBaseparsePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const data = {
+      name: formData.get("name") as string,
+      priceCents: parseInt(formData.get("priceCents") as string),
+      pageExtractionLimit: parseInt(formData.get("pageExtractionLimit") as string) || 0,
+      paddleProductId: (formData.get("paddleProductId") as string)?.trim() || null,
+      paddlePriceId: (formData.get("paddlePriceId") as string)?.trim() || null,
+      isActive: formData.get("isActive") === "on",
+      displayOrder: parseInt(formData.get("displayOrder") as string) || 0,
+    };
+
+    if (editingBaseparsePlan?.id) {
+      await updateBaseParsePlan(editingBaseparsePlan.id, data);
+    } else {
+      await createBaseParsePlan(data);
+    }
+    setEditingBaseparsePlan(null);
+  };
+
+  const handleDeleteBaseparsePlan = async (id: number, name: string) => {
+    if (confirm(`Are you sure you want to delete the BaseParse plan "${name}"?`)) {
+      await deleteBaseParsePlan(id);
+    }
   };
 
   const handleDeletePlan = async (id: number, name: string) => {
@@ -191,6 +221,13 @@ export default function BillingClient({
         >
           <div className="flex items-center gap-2"><CreditCard className="w-4 h-4" /> AI Credit Packs</div>
           {activeTab === 'packs' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('baseparse')}
+          className={`pb-3 px-4 font-medium text-sm transition-colors relative whitespace-nowrap ${activeTab === 'baseparse' ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-white'}`}
+        >
+          <div className="flex items-center gap-2"><Globe className="w-4 h-4" /> BaseParse Plans</div>
+          {activeTab === 'baseparse' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500" />}
         </button>
         <button 
           onClick={() => setActiveTab('costs')}
@@ -470,6 +507,58 @@ export default function BillingClient({
           </table>
         </div>
       )}
+      {activeTab === 'baseparse' && (
+        <div className="bg-white dark:bg-card rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden">
+          <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-end">
+            <button 
+              onClick={() => setEditingBaseparsePlan({})}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg flex items-center gap-2 font-medium text-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Create BaseParse Plan
+            </button>
+          </div>
+          <table className="w-full text-sm text-left">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
+              <tr>
+                <th className="px-6 py-4 font-medium">Plan Name</th>
+                <th className="px-6 py-4 font-medium">Price</th>
+                <th className="px-6 py-4 font-medium">Page Limit</th>
+                <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200 dark:divide-white/10">
+              {(initialBaseparsePlans || []).map((plan) => (
+                <tr key={plan.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                  <td className="px-6 py-4 font-medium">{plan.name}</td>
+                  <td className="px-6 py-4">${(plan.priceCents / 100).toFixed(2)}</td>
+                  <td className="px-6 py-4 font-medium text-emerald-600">{plan.pageExtractionLimit.toLocaleString()}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                      plan.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
+                    }`}>
+                      {plan.isActive ? 'Active' : 'Disabled'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end gap-3">
+                    <button onClick={() => setEditingBaseparsePlan(plan)} className="text-indigo-600 hover:text-indigo-800 font-medium text-sm">Edit</button>
+                    <button onClick={() => handleDeleteBaseparsePlan(plan.id, plan.name)} className="text-rose-600 hover:text-rose-800 font-medium text-sm">Delete</button>
+                  </td>
+                </tr>
+              ))}
+              {(!initialBaseparsePlans || initialBaseparsePlans.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                    No BaseParse plans configured.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {/* Costs Tab */}
       {activeTab === 'costs' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
@@ -929,6 +1018,89 @@ export default function BillingClient({
                 className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
               >
                 <Save className="w-4 h-4" /> Save Pack
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    {/* BaseParse Plan Editor Modal */}
+      {editingBaseparsePlan && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
+                {editingBaseparsePlan.id ? `Edit Plan: ${editingBaseparsePlan.name}` : 'Create BaseParse Plan'}
+              </h2>
+              <button 
+                onClick={() => setEditingBaseparsePlan(null)}
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-500 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto">
+              <form id="baseparseForm" onSubmit={handleSaveBaseparsePlan} className="space-y-8">
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Basic Info</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Name</label>
+                      <input name="name" defaultValue={editingBaseparsePlan.name} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price (Cents)</label>
+                      <input name="priceCents" type="number" defaultValue={editingBaseparsePlan.priceCents || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-2">Page Extraction Limit</label>
+                      <input name="pageExtractionLimit" type="number" defaultValue={editingBaseparsePlan.pageExtractionLimit || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Display Order</label>
+                      <input name="displayOrder" type="number" defaultValue={editingBaseparsePlan.displayOrder || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Paddle Configuration</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Product ID</label>
+                      <input name="paddleProductId" defaultValue={editingBaseparsePlan.paddleProductId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price ID</label>
+                      <input name="paddlePriceId" defaultValue={editingBaseparsePlan.paddlePriceId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Status</h3>
+                  <label className="flex items-center gap-3">
+                    <input type="checkbox" name="isActive" defaultChecked={editingBaseparsePlan.isActive !== false} className="w-4 h-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-600" />
+                    <span className="text-sm text-zinc-700 dark:text-zinc-300">Is Active</span>
+                  </label>
+                </div>
+              </form>
+            </div>
+            
+            <div className="p-6 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-800/50 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingBaseparsePlan(null)}
+                className="px-4 py-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                form="baseparseForm"
+                className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
+              >
+                <Save className="w-4 h-4" /> Save Plan
               </button>
             </div>
           </div>

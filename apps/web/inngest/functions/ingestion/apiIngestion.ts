@@ -58,8 +58,8 @@ export const apiIngestion: any = inngest.createFunction(
       await updateProgress("enhancing", { stage: "enhancing", current_step: "Applying AI enhancement" });
 
       const batchStats = await step.run("process-content", async () => {
-        const apiKey = process.env.DEEPSEEK_API_KEY || '';
-        const enhancedData = apiKey ? await enhanceTextWithAI(specText, apiKey, process.env.DEEPSEEK_API_URL) : {
+        const apiKey = process.env.GEMINI_API_KEY || '';
+        const enhancedData = apiKey ? await enhanceTextWithAI(specText, apiKey, undefined) : {
           summary: "OpenAPI Specification Document", topics: ["API", "Endpoints"], keywords: ["REST", "OpenAPI", "Swagger"], classification: "API Documentation",
           knowledgeContent: specText, embeddingContent: specText
         };

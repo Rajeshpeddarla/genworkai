@@ -14,6 +14,13 @@ import { cronMonthlyRefill } from "../../../inngest/functions/cronMonthlyRefill"
 import { cronDatabaseAutomations, runDatabaseAutomation } from "../../../inngest/functions/cronDatabaseAutomations";
 import { cronDashboardWidgets } from "../../../inngest/functions/cronDashboardWidgets";
 
+// New V3 Multimodal Knowledge Pipeline Workers
+import { extractWorker } from "../../../inngest/functions/knowledge/extract";
+import { renderWorker } from "../../../inngest/functions/knowledge/render";
+import { chunkWorker } from "../../../inngest/functions/knowledge/chunk";
+import { embedWorker } from "../../../inngest/functions/knowledge/embed";
+import { graphWorker } from "../../../inngest/functions/knowledge/graph";
+
 // Create an API that serves zero-config routing for Inngest
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -30,5 +37,12 @@ export const { GET, POST, PUT } = serve({
     cronDatabaseAutomations,
     runDatabaseAutomation,
     cronDashboardWidgets,
+    
+    // V3 Knowledge Pipeline
+    extractWorker,
+    renderWorker,
+    chunkWorker,
+    embedWorker,
+    graphWorker,
   ],
 });
