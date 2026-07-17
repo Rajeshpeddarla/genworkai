@@ -549,6 +549,17 @@ export default function LandingPage() {
         </section>
 
       </main>
+
+      <footer className="border-t border-white/10 bg-black py-12 relative z-10">
+        <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 font-mono text-xs text-zinc-500">
+          <div>&copy; {new Date().getFullYear()} BaseParse. All rights reserved.</div>
+          <div className="flex gap-6">
+            <Link href="/terms" className="hover:text-cyan-400 transition-colors uppercase">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-violet-400 transition-colors uppercase">Privacy Notice</Link>
+            <Link href="/refund" className="hover:text-emerald-400 transition-colors uppercase">Refund Policy</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
