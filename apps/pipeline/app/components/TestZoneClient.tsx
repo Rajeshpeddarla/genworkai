@@ -52,7 +52,7 @@ export default function TestZoneClient() {
     formData.append("file", file);
 
     try {
-      const uploadRes = await fetch("/api/upload", {
+      const uploadRes = await fetch("/api/v1/parse", {
         method: "POST",
         body: formData,
       });
@@ -61,51 +61,33 @@ export default function TestZoneClient() {
         throw new Error("Failed to upload document");
       }
 
-      const uploadData = await uploadRes.json();
-      
-      if (!uploadData.success || !uploadData.job_id) {
-        throw new Error(uploadData.error || "Upload failed");
-      }
-
       setStatus("extracting");
 
-      // Poll for job status
-      const jobId = uploadData.job_id;
-      const docId = uploadData.document_id;
+      const uploadData = await uploadRes.json();
       
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusRes = await fetch(`/api/jobs/${jobId}`);
-          if (statusRes.ok) {
-            const statusData = await statusRes.json();
-            
-            if (statusData.status === "complete") {
-              clearInterval(pollInterval);
-              
-              // Fetch extracted document data
-              const docRes = await fetch(`/api/documents/${docId}`);
-              if (docRes.ok) {
-                const docData = await docRes.json();
-                setExtractedContent(docData.markdown || "No markdown extracted.");
-                setAssets(docData.assets || {});
-                
-                setStatus("complete");
-                setChatMessages([
-                  { role: "bot", content: "INGESTION_COMPLETE. Visual diagrams preserved in base64 payload. Ready for queries." }
-                ]);
-              } else {
-                throw new Error("Failed to fetch extracted document data.");
-              }
-            } else if (statusData.status === "error") {
-              clearInterval(pollInterval);
-              setError("PIPELINE_ERROR: Failed to extract document.");
-              setStatus("idle");
-            }
-          }
-        } catch (err) {
-          console.error("Polling error", err);
-        }
-      }, 2000);
+      if (uploadData.error) {
+        throw new Error(uploadData.error);
+      }
+
+      // Our new V1 parse returns extractedData directly
+      const docData = uploadData.extractedData || uploadData;
+      
+      let markdownOutput = "";
+      if (docData.pages && Array.isArray(docData.pages)) {
+         markdownOutput = docData.pages.map((p: any) => p.markdown || p.text).join("\\n\\n");
+      } else {
+         markdownOutput = JSON.stringify(docData, null, 2);
+      }
+
+      setExtractedContent(markdownOutput);
+      
+      // If we have images in the new JSON structure, we could map them to assets, but for now we just show markdown
+      setAssets({});
+      
+      setStatus("complete");
+      setChatMessages([
+        { role: "bot", content: "INGESTION_COMPLETE. Visual diagrams and structure extracted via Document Intelligence API. Ready for queries." }
+      ]);
 
     } catch (err: any) {
       setError(err.message || "UNKNOWN_ERROR");
@@ -125,10 +107,10 @@ export default function TestZoneClient() {
     setChatMessages(prev => [...prev, { role: 'bot', content: "..." }]);
     
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/v1/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: userMsg, context: extractedContent }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: userMsg }], documentText: extractedContent }),
       });
       
       const data = await res.json();
@@ -138,7 +120,7 @@ export default function TestZoneClient() {
         // Replace the "..." with the actual response
         newMessages[newMessages.length - 1] = { 
           role: 'bot', 
-          content: data.reply || data.error || "An error occurred." 
+          content: data.content || data.error || "An error occurred." 
         };
         return newMessages;
       });

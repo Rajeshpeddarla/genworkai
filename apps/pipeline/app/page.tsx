@@ -271,32 +271,32 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-16">
             <div>
               <h2 className="font-pixel text-[50px] md:text-[80px] leading-[0.9] text-white mb-8">
-                EXTRACTION <br/> AT SCALE.
+                DOCUMENT <br/> INTELLIGENCE.
               </h2>
               <p className="text-zinc-400 font-mono text-lg mb-12 leading-relaxed max-w-xl">
-                Our autonomous nodes can parse millions of unstructured PDF documents, identifying graphs, charts, and diagrams with 99.9% accuracy using proprietary Vision-Language Models. Forget manual bounding boxes.
+                Our autonomous nodes do more than basic OCR. They extract rich structural JSON, mathematical formulas, and generate AI-ready semantic chunks and embeddings out-of-the-box using advanced Vision-Language Models.
               </p>
               
               <div className="grid grid-cols-2 gap-4 font-mono text-sm">
                 <div className="p-8 border border-white/10 bg-black/50 backdrop-blur-sm group hover:border-cyan-500/50 transition-all cursor-crosshair">
                   <div className="text-cyan-400 font-bold mb-4 text-2xl group-hover:scale-110 transition-transform origin-left">01.</div>
-                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Ingest</div>
-                  <div className="text-zinc-500">Raw PDF pipeline injection via highly concurrent Node gateway.</div>
+                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Parse</div>
+                  <div className="text-zinc-500">Extracts rich JSON, CSV tables, and LaTeX formulas.</div>
                 </div>
                 <div className="p-8 border border-white/10 bg-black/50 backdrop-blur-sm group hover:border-violet-500/50 transition-all cursor-crosshair">
                   <div className="text-violet-400 font-bold mb-4 text-2xl group-hover:scale-110 transition-transform origin-left">02.</div>
-                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Reason</div>
-                  <div className="text-zinc-500">VLM visual reasoning applied. Contextual diagram splitting.</div>
+                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Chunk</div>
+                  <div className="text-zinc-500">Intelligently splits documents into semantic chunks.</div>
                 </div>
                 <div className="p-8 border border-white/10 bg-black/50 backdrop-blur-sm group hover:border-emerald-500/50 transition-all cursor-crosshair">
                   <div className="text-emerald-400 font-bold mb-4 text-2xl group-hover:scale-110 transition-transform origin-left">03.</div>
-                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Extract</div>
-                  <div className="text-zinc-500">Base64 encoding and structural JSON mapping generation.</div>
+                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Embed</div>
+                  <div className="text-zinc-500">Generates precise vector embeddings via Gemini.</div>
                 </div>
                 <div className="p-8 border border-white/10 bg-black/50 backdrop-blur-sm group hover:border-amber-500/50 transition-all cursor-crosshair">
                   <div className="text-amber-500 font-bold mb-4 text-2xl group-hover:scale-110 transition-transform origin-left">04.</div>
-                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Deliver</div>
-                  <div className="text-zinc-500">Webhook delivery of fully parsed autonomous Markdown.</div>
+                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Search (RAG)</div>
+                  <div className="text-zinc-500">Query your documents instantly with our built-in Search API.</div>
                 </div>
               </div>
             </div>

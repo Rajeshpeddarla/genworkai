@@ -25,13 +25,13 @@ export default function PricingPage() {
 
       <div className="max-w-7xl mx-auto pt-32 pb-24 px-6 relative z-10">
         <div className="text-center max-w-3xl mx-auto mb-20">
-          <h1 className="text-5xl font-black mb-6 tracking-tight">Simple, Transparent Pricing</h1>
+          <h1 className="text-5xl font-black mb-6 tracking-tight">Document Intelligence API Pricing</h1>
           <p className="text-xl text-zinc-400">
-            Stop paying per character for OCR. We charge a flat rate per document parsed, and diagram extraction is always unlimited.
+            Stop paying per character for basic OCR. Get rich JSON extraction, math formulas, semantic chunks, and embeddings for a flat rate per page.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 items-center">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 items-center">
           {availablePlans.map((plan, i) => {
             const isPro = plan.id === "pro";
             const isActive = currentPlan === plan.id;

@@ -87,7 +87,7 @@ export default function ExtractNodePage() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("/api/baseparse/upload", {
+      const response = await fetch("/api/v1/parse", {
         method: "POST",
         body: formData,
       });
@@ -124,7 +124,7 @@ export default function ExtractNodePage() {
     setIsChatting(true);
     
     try {
-      const response = await fetch("/api/baseparse/chat", {
+      const response = await fetch("/api/v1/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

@@ -84,6 +84,24 @@ export default function UpgradePlansPage() {
                     <span className="font-mono text-[10px] sm:text-xs text-zinc-700 dark:text-zinc-300">Priority Processing</span>
                   </div>
                 )}
+                {plan.priceCents >= 2500 && (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                      <span className="font-mono text-[10px] sm:text-xs text-zinc-700 dark:text-zinc-300">Semantic Chunks API</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                      <span className="font-mono text-[10px] sm:text-xs text-zinc-700 dark:text-zinc-300">Embeddings API (Vector)</span>
+                    </div>
+                  </>
+                )}
+                {plan.priceCents >= 10000 && (
+                  <div className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
+                    <span className="font-mono text-[10px] sm:text-xs text-zinc-700 dark:text-zinc-300">Search API (RAG built-in)</span>
+                  </div>
+                )}
               </div>
 
               <button

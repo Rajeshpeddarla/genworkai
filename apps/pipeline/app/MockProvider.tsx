@@ -55,19 +55,25 @@ export function MockProvider({ children }: { children: ReactNode }) {
       id: "free",
       name: "Free Tier",
       price: 0,
-      features: ["50 PDF Pages / mo", "Standard Support"],
+      features: ["100 Pages / mo", "Parse API (JSON)", "Formulas, Images, Tables", "No Embeddings/Chunks"],
+    },
+    {
+      id: "starter",
+      name: "Starter",
+      price: 10,
+      features: ["5,000 Pages / mo", "Batch Uploads", "Parse API", "Standard Support"],
     },
     {
       id: "pro",
       name: "Pro Builder",
-      price: 49,
-      features: ["10,000 PDF Pages / mo", "Priority Support", "Unlimited Diagram Extraction"],
+      price: 25,
+      features: ["15,000 Pages / mo", "Embeddings API", "Semantic Chunks API", "Priority Support"],
     },
     {
       id: "enterprise",
       name: "Enterprise",
-      price: 299,
-      features: ["Custom Rate Limits", "Dedicated Account Manager", "SLA Guarantee"],
+      price: 100,
+      features: ["100,000 Pages / mo", "Search API (RAG)", "Unlimited Projects", "Dedicated Support"],
     },
   ];
 
