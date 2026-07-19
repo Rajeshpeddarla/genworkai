@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 export default function UpgradePlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
+  const [currentPlanId, setCurrentPlanId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -13,6 +14,7 @@ export default function UpgradePlansPage() {
       .then(res => res.json())
       .then(data => {
         if (data.plans) setPlans(data.plans);
+        if (data.currentPlanId) setCurrentPlanId(data.currentPlanId);
         setLoading(false);
       })
       .catch(err => {
@@ -107,13 +109,16 @@ export default function UpgradePlansPage() {
               <button
                 onClick={() => handleUpgrade(plan.id)}
                 className={`w-full py-3 font-bold flex items-center justify-center gap-2 transition-colors uppercase tracking-widest text-xs relative z-10 ${
-                  plan.priceCents > 0 && plan.priceCents < 5000
-                    ? "bg-[#014b5c] dark:bg-cyan-500 hover:bg-[#013b4c] dark:hover:bg-cyan-400 text-white dark:text-black"
-                    : "bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black"
+                  plan.id === currentPlanId
+                    ? "bg-black dark:bg-white text-white dark:text-black cursor-default"
+                    : plan.priceCents > 0 && plan.priceCents < 5000
+                      ? "bg-[#014b5c] dark:bg-cyan-500 hover:bg-[#013b4c] dark:hover:bg-cyan-400 text-white dark:text-black"
+                      : "bg-black dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-black"
                 }`}
+                disabled={plan.id === currentPlanId}
               >
-                {plan.priceCents === 0 ? "Current Node" : "Deploy Upgrade"} 
-                {plan.priceCents > 0 && <ArrowRight className="w-4 h-4" />}
+                {plan.id === currentPlanId ? "Current Node" : "Deploy Upgrade"} 
+                {plan.id !== currentPlanId && <ArrowRight className="w-4 h-4" />}
               </button>
             </motion.div>
           ))}

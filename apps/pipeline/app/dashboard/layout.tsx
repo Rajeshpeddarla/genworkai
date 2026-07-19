@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
@@ -27,24 +27,48 @@ export default function DashboardLayout({
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [navItems, setNavItems] = useState([
+    { name: "Terminal", href: "/dashboard", icon: Terminal },
+    { name: "Testing Arena", href: "/dashboard/extract", icon: FileText },
+    { name: "API Keys", href: "/dashboard/api-docs", icon: Key },
+    { name: "Upgrade", href: "/dashboard/plans", icon: CreditCard },
+  ]);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
   );
 
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      let admin = false;
+      if (user.email === 'base@parseadmin.admin') {
+        admin = true;
+      } else {
+        const { data } = await supabase.from('profiles').select('is_admin').eq('id', user.id).single();
+        if (data && data.is_admin) admin = true;
+      }
+      
+      if (admin) {
+        setIsAdmin(true);
+        setNavItems(prev => {
+          if (prev.some(item => item.name === "Admin")) return prev;
+          return [...prev, { name: "Admin", href: "/dashboard/admin", icon: Server }];
+        });
+      }
+    }
+    checkAdmin();
+  }, []);
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     await supabase.auth.signOut();
     router.push("/login");
   };
-
-  const navItems = [
-    { name: "Terminal", href: "/dashboard", icon: Terminal },
-    { name: "Testing Arena", href: "/dashboard/extract", icon: FileText },
-    { name: "API Keys", href: "/dashboard/api-docs", icon: Key },
-    { name: "Upgrade", href: "/dashboard/plans", icon: CreditCard },
-  ];
 
   const Sidebar = () => (
     <div className="h-full flex flex-col bg-zinc-50 dark:bg-[#050505] border-r border-zinc-200 dark:border-white/10 w-64 text-zinc-500 dark:text-zinc-400 font-mono text-sm shadow-[4px_0_24px_rgba(0,0,0,0.05)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
@@ -61,7 +85,7 @@ export default function DashboardLayout({
       <div className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         <div className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600 mb-4 px-2">Navigation Node</div>
         
-        {navItems.map((item) => {
+        {navItems.filter((v,i,a)=>a.findIndex(v2=>(v2.name===v.name))===i).map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Key, Copy, Check, Plus, TerminalSquare, AlertCircle, Upload, FileText, Loader2, ChevronRight, X, Play } from "lucide-react";
 import { useMockData } from "../../MockProvider";
+import { RequestLogsTable } from "./RequestLogsTable";
 
 export default function ApiDocsPage() {
   const { currentPlan } = useMockData();
@@ -272,6 +273,8 @@ export default function ApiDocsPage() {
             </div>
           </div>
         </div>
+        
+        <RequestLogsTable />
       </section>
 
       <section className="border-t border-white/10 pt-12">

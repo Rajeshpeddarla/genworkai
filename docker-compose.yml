@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./apps/web/.env.local
+      - ./apps/pipeline/.env.local
     environment:
       - REDIS_URL=redis://redis:6379/0
     depends_on:
@@ -20,7 +20,7 @@ services:
       context: ./apps/ingestion-service
       dockerfile: Dockerfile.worker
     env_file:
-      - ./apps/web/.env.local
+      - ./apps/pipeline/.env.local
     environment:
       - REDIS_URL=redis://redis:6379/0
     depends_on:

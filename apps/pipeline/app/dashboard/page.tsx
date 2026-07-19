@@ -36,6 +36,12 @@ export default async function DashboardOverview() {
     const client = new Client({ connectionString });
     try {
       await client.connect();
+      // Ensure user has a profile
+      const profileCheck = await client.query('SELECT id FROM profiles WHERE id = $1', [user.id]);
+      if (profileCheck.rows.length === 0) {
+        await client.query('INSERT INTO profiles (id, email, is_admin) VALUES ($1, $2, $3)', [user.id, user.email, user.email === 'base@parseadmin.admin']);
+      }
+      
       // Ensure user has a free plan row
       const planRes = await client.query(`
         SELECT up.*, p.name as plan_name, p.page_extraction_limit 

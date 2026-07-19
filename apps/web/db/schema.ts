@@ -1100,3 +1100,13 @@ export const pricingPlans = pgTable('pricing_plans', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+export const requestLogs = pgTable('request_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => profiles.id, { onDelete: 'cascade' }),
+  fileName: varchar('file_name', { length: 255 }),
+  status: varchar('status', { length: 50 }),
+  executionTimeMs: integer('execution_time_ms'),
+  requestMetadata: jsonb('request_metadata'),
+  createdAt: timestamp('created_at').defaultNow(),
+});

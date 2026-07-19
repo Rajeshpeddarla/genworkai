@@ -108,6 +108,10 @@ export async function POST(request: Request) {
       };
 
     } catch (e: any) {
+      await client.query(`
+        INSERT INTO request_logs (user_id, file_name, status, execution_time_ms, request_metadata)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [userId, file.name, 'error', Date.now() - startTime, JSON.stringify({ error: e.message })]);
       await client.end();
       return NextResponse.json({ error: "Failed to process via Document Intelligence: " + e.message }, { status: 400 });
     }
@@ -139,6 +143,12 @@ export async function POST(request: Request) {
       INSERT INTO baseparse_documents (user_id, file_name, status, page_count, extracted_data, checksum)
       VALUES ($1, $2, $3, $4, $5, $6)
     `, [userId, file.name, 'completed', realPageCount, JSON.stringify(extractedData), fileHash]);
+
+    // Step 5: Log Request
+    await client.query(`
+      INSERT INTO request_logs (user_id, file_name, status, execution_time_ms, request_metadata)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [userId, file.name, 'success', Date.now() - startTime, JSON.stringify(extractedData)]);
 
     await client.end();
 

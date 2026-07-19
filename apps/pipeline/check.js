@@ -3,8 +3,7 @@ const connectionString = 'postgresql://postgres.ctyzlvywuginxxrrgdsj:DTQfM%21Mp1
 const c = new Client({ connectionString });
 (async () => {
   await c.connect();
-  await c.query('ALTER TABLE baseparse_documents ADD COLUMN IF NOT EXISTS checksum VARCHAR(64)');
-  const res = await c.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'baseparse_documents'");
-  console.log(res.rows);
+  const res = await c.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+  console.log(res.rows.map(r => r.table_name));
   await c.end();
 })();

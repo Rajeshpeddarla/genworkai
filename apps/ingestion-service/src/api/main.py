@@ -17,6 +17,9 @@ class IngestRequest(BaseModel):
     mime_type: str
 
 from src.worker.tasks import process_document
+from src.api.extract import router as extract_router
+
+app.include_router(extract_router, prefix="/api/v1", tags=["extract"])
 
 @app.post("/api/v1/ingest")
 async def ingest_document(req: IngestRequest):
