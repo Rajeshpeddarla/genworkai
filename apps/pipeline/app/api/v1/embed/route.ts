@@ -61,14 +61,14 @@ export async function POST(request: Request) {
     const planName = planRes.rows[0]?.name?.toLowerCase() || 'free';
     if (planName !== 'pro' && planName !== 'enterprise') {
       await client.end();
-      return NextResponse.json({ error: "Embeddings are only available on Pro and Enterprise plans." }, { status: 403 });
+      return NextResponse.json({ error: "Please upgrade to the Pro or Enterprise plan to access the Vector Embeddings API." }, { status: 403 });
     }
 
     const { documentId, chunks } = await request.json();
 
-    if (!documentId || !chunks || !Array.isArray(chunks)) {
+    if (!chunks || !Array.isArray(chunks)) {
       await client.end();
-      return NextResponse.json({ error: "documentId and chunks array are required" }, { status: 400 });
+      return NextResponse.json({ error: "chunks array is required. documentId is optional." }, { status: 400 });
     }
 
     // Process embeddings in batches to avoid rate limits
@@ -87,31 +87,47 @@ export async function POST(request: Request) {
         const vector = response.embeddings?.[0]?.values;
         
         if (vector) {
-           embeddingsToInsert.push({
-             documentId,
-             userId,
+           // We always want to return the raw vector to the user
+           const returnedEmbedding = {
              content: chunk.content,
              metadata: chunk.metadata || {},
-             vector: `[${vector.join(',')}]` // Format for pgvector
-           });
+             vector
+           };
+           
+           // If they provided a documentId, they want to use our hosted search API
+           if (documentId) {
+             embeddingsToInsert.push({
+               documentId,
+               userId,
+               content: chunk.content,
+               metadata: chunk.metadata || {},
+               vector: `[${vector.join(',')}]`, // Format for pgvector
+               returnedEmbedding
+             });
+           } else {
+             embeddingsToInsert.push({ returnedEmbedding });
+           }
         }
       } catch (err) {
         console.warn(`Failed to embed chunk:`, err);
       }
     }
 
-    // Bulk insert into Postgres
+    // Bulk insert into Postgres (only for chunks with a documentId)
     let insertedCount = 0;
-    for (const item of embeddingsToInsert) {
-      try {
-         await client.query(`
-           INSERT INTO baseparse_embeddings (document_id, user_id, content, metadata, embedding)
-           VALUES ($1, $2, $3, $4, $5)
-         `, [item.documentId, item.userId, item.content, JSON.stringify(item.metadata), item.vector]);
-         insertedCount++;
-      } catch (insertErr: any) {
-         // If vector extension isn't enabled, we can't insert vector type.
-         console.error("Insert error (ensure pgvector is enabled):", insertErr.message);
+    if (documentId) {
+      for (const item of embeddingsToInsert) {
+        if (!item.documentId) continue;
+        try {
+           await client.query(`
+             INSERT INTO baseparse_embeddings (document_id, user_id, content, metadata, embedding)
+             VALUES ($1, $2, $3, $4, $5)
+           `, [item.documentId, item.userId, item.content, JSON.stringify(item.metadata), item.vector]);
+           insertedCount++;
+        } catch (insertErr: any) {
+           // If vector extension isn't enabled, we can't insert vector type.
+           console.error("Insert error (ensure pgvector is enabled):", insertErr.message);
+        }
       }
     }
 
@@ -119,8 +135,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      processedChunks: insertedCount,
-      totalRequested: chunks.length
+      processedChunks: embeddingsToInsert.length,
+      savedToDatabase: insertedCount,
+      totalRequested: chunks.length,
+      embeddings: embeddingsToInsert.map((item) => item.returnedEmbedding)
     });
 
   } catch (error: any) {

@@ -12,7 +12,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Server
+  Server,
+  BookOpen
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -32,6 +33,7 @@ export default function DashboardLayout({
     { name: "Terminal", href: "/dashboard", icon: Terminal },
     { name: "Testing Arena", href: "/dashboard/extract", icon: FileText },
     { name: "API Keys", href: "/dashboard/api-docs", icon: Key },
+    { name: "Dev Guide", href: "/dashboard/integration", icon: BookOpen },
     { name: "Upgrade", href: "/dashboard/plans", icon: CreditCard },
   ]);
 

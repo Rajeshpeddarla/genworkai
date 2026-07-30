@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     const planName = planRes.rows[0]?.name?.toLowerCase() || 'free';
     if (planName !== 'pro' && planName !== 'enterprise') {
       await client.end();
-      return NextResponse.json({ error: "Semantic Chunks API is only available on Pro and Enterprise plans." }, { status: 403 });
+      return NextResponse.json({ error: "Please upgrade to the Pro or Enterprise plan to access the Semantic Chunks API." }, { status: 403 });
     }
 
     const { text, strategy = "semantic" } = await request.json();
@@ -80,7 +80,7 @@ ${text.substring(0, 50000)}
 `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { responseMimeType: "application/json" }
     });

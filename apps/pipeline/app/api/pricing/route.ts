@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "DATABASE_URL not found" }, { status: 500 });
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,

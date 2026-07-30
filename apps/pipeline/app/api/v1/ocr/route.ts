@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     
     // Simple text extraction prompt
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite",
       contents: [
         {
           role: "user",
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
       await client.query(`
         UPDATE baseparse_user_plans 
         SET pages_extracted_this_month = pages_extracted_this_month + 1 
-        WHERE id = $2
+        WHERE id = $1
       `, [userPlan.id]);
     }
 

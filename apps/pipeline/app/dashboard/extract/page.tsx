@@ -98,7 +98,7 @@ export default function ExtractNodePage() {
         throw new Error(data.error || "Failed to extract document");
       }
       
-      setExtractedData(data.extractedData);
+      setExtractedData(data); // Next.js backend returns final JSON synchronously now
       setMessages([
         { role: "model", content: "Document successfully parsed! You can now ask me questions about it." }
       ]);
