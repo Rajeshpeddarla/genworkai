@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import extract, render, chunk, graph, embed
+from routers import extract, render, chunk, graph, embed, layout
 
 app = FastAPI(title="GenWorkAI Multimodal Worker", version="3.0")
 
@@ -8,6 +8,7 @@ app.include_router(render.router, prefix="/api/worker")
 app.include_router(chunk.router, prefix="/api/worker")
 app.include_router(embed.router, prefix="/api/worker")
 app.include_router(graph.router, prefix="/api/worker")
+app.include_router(layout.router, prefix="/api/worker")
 
 @app.get("/health")
 def health_check():

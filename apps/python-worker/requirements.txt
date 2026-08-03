@@ -11,3 +11,7 @@ marker-pdf
 torch
 torchvision
 pdf2image
+google-genai
+pillow
+pypdf
+
