@@ -13,6 +13,7 @@ export default function AdminPlans() {
   const [isEditing, setIsEditing] = useState<any>(null); // Plan object being edited/created
   const [saving, setSaving] = useState(false);
 
+  const [syncing, setSyncing] = useState(false);
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
@@ -62,6 +63,25 @@ export default function AdminPlans() {
     }
   };
 
+  const handleSyncPlans = async () => {
+    setSyncing(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/sync-plans", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${session?.access_token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      alert(data.message);
+      await fetchPlans();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /></div>;
   }
@@ -73,78 +93,109 @@ export default function AdminPlans() {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-pixel uppercase tracking-widest text-zinc-800 dark:text-zinc-200">Subscription Matrix</h2>
-        <button 
-          onClick={() => setIsEditing({ name: "", price_cents: 0, page_extraction_limit: 1000, paddle_product_id: "", paddle_price_id: "", is_active: true })}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#014b5c] dark:bg-cyan-500 text-white dark:text-black font-mono text-xs uppercase tracking-widest rounded transition-transform active:scale-95 hover:brightness-110"
-        >
-          <Plus className="w-4 h-4" /> Initialize Plan
-        </button>
+        <div className="flex gap-4">
+          <button 
+            disabled={syncing}
+            onClick={handleSyncPlans}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-[#014b5c] dark:border-cyan-500 text-[#014b5c] dark:text-cyan-500 font-mono text-xs uppercase tracking-widest rounded transition-all hover:bg-cyan-500/10 active:scale-95 disabled:opacity-50"
+          >
+            {syncing && <Loader2 className="w-4 h-4 animate-spin" />}
+            Sync Gateways
+          </button>
+          <button 
+            onClick={() => setIsEditing({ 
+              name: "", 
+              price_usd_cents: 0, 
+              price_inr_paise: 0, 
+              discount_usd_cents: 0, 
+              discount_inr_paise: 0,
+              page_extraction_limit: 1000, 
+              paddle_product_id: "", 
+              paddle_price_id: "", 
+              paypal_plan_id: "",
+              cashfree_plan_id: "",
+              display_order: 0,
+              is_active: true 
+            })}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#014b5c] dark:bg-cyan-500 text-white dark:text-black font-mono text-xs uppercase tracking-widest rounded transition-transform active:scale-95 hover:brightness-110"
+          >
+            <Plus className="w-4 h-4" /> Initialize Plan
+          </button>
+        </div>
       </div>
 
       {isEditing && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 border border-cyan-500/30 bg-cyan-500/5 rounded-lg mb-8">
-          <h3 className="font-mono uppercase tracking-widest text-sm text-[#014b5c] dark:text-cyan-400 mb-4">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 md:p-8 border border-cyan-500/30 bg-cyan-500/5 rounded-xl mb-8 shadow-[0_0_30px_rgba(34,211,238,0.1)]">
+          <h3 className="font-mono uppercase tracking-widest text-lg text-[#014b5c] dark:text-cyan-400 mb-6 border-b border-cyan-500/20 pb-4">
             {isEditing.id ? "Modify Node Plan" : "Create Node Plan"}
           </h3>
-          <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-sm">
-            <div>
-              <label className="block text-zinc-500 text-xs mb-1">Plan Name</label>
-              <input required type="text" value={isEditing.name} onChange={e => setIsEditing({...isEditing, name: e.target.value})} className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-zinc-500 text-xs mb-1">Price (Cents)</label>
-              <input required type="number" value={isEditing.price_cents} onChange={e => setIsEditing({...isEditing, price_cents: parseInt(e.target.value)})} className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-zinc-500 text-xs mb-1">Page Limit</label>
-              <input required type="number" value={isEditing.page_extraction_limit} onChange={e => setIsEditing({...isEditing, page_extraction_limit: parseInt(e.target.value)})} className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
-            </div>
-            <div>
-              <label className="block text-zinc-500 text-xs mb-1">Status</label>
-              <select value={isEditing.is_active ? 'true' : 'false'} onChange={e => setIsEditing({...isEditing, is_active: e.target.value === 'true'})} className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white">
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2 p-4 border border-zinc-200 dark:border-white/10 rounded mt-2 bg-zinc-50 dark:bg-[#0a0a0a]">
-              <h4 className="text-xs text-zinc-500 mb-4">Paddle Integration (Sync with GenWorkAI structure)</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSave} className="font-mono text-sm space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              <div className="space-y-4">
+                <h4 className="text-xs text-zinc-500 mb-4 uppercase tracking-widest">Base Attributes</h4>
                 <div>
-                  <label className="block text-zinc-500 text-xs mb-1">Paddle Product</label>
-                  <select 
-                    value={isEditing.paddle_product_id || ""} 
-                    onChange={e => setIsEditing({...isEditing, paddle_product_id: e.target.value, paddle_price_id: ""})} 
-                    className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white"
-                  >
-                    <option value="">Select Product...</option>
-                    {data.paddleProducts.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
-                    ))}
-                  </select>
+                  <label className="block text-zinc-500 text-xs mb-1">Plan Name</label>
+                  <input required type="text" value={isEditing.name || ""} onChange={e => setIsEditing({...isEditing, name: e.target.value})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
                 </div>
+                
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">Price (USD Cents)</label>
+                    <input required type="number" value={isEditing.price_usd_cents || 0} onChange={e => setIsEditing({...isEditing, price_usd_cents: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
+                  </div>
+
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">Price (INR Paise)</label>
+                    <input required type="number" value={isEditing.price_inr_paise || 0} onChange={e => setIsEditing({...isEditing, price_inr_paise: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
+                  </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">Page Limit</label>
+                    <input required type="number" value={isEditing.page_extraction_limit || 0} onChange={e => setIsEditing({...isEditing, page_extraction_limit: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
+                  </div>
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">Display Order</label>
+                    <input type="number" value={isEditing.display_order || 0} onChange={e => setIsEditing({...isEditing, display_order: parseInt(e.target.value) || 0})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-zinc-500 text-xs mb-1">Paddle Price</label>
-                  <select 
-                    value={isEditing.paddle_price_id || ""} 
-                    onChange={e => setIsEditing({...isEditing, paddle_price_id: e.target.value})} 
-                    className="w-full p-2 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white"
-                    disabled={!isEditing.paddle_product_id}
-                  >
-                    <option value="">Select Price...</option>
-                    {data.paddleProducts.find((p: any) => p.id === isEditing.paddle_product_id)?.prices.map((price: any) => (
-                      <option key={price.id} value={price.id}>{price.description} ({price.id})</option>
-                    ))}
+                  <label className="block text-zinc-500 text-xs mb-1">Status</label>
+                  <select value={isEditing.is_active ? 'true' : 'false'} onChange={e => setIsEditing({...isEditing, is_active: e.target.value === 'true'})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white">
+                    <option value="true">Active (Visible)</option>
+                    <option value="false">Inactive (Hidden)</option>
                   </select>
                 </div>
               </div>
+
+              <div className="space-y-4">
+                <h4 className="text-xs text-zinc-500 mb-4 uppercase tracking-widest">Gateway Integration Keys</h4>
+                
+                <div className="p-4 border border-zinc-200 dark:border-white/10 rounded-lg bg-zinc-50 dark:bg-[#0a0a0a] space-y-4">
+                  <h5 className="text-xs text-[#014b5c] dark:text-cyan-400 font-semibold uppercase">PayPal (Rest of World)</h5>
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">PayPal Plan ID</label>
+                    <input type="text" value={isEditing.paypal_plan_id || ""} onChange={e => setIsEditing({...isEditing, paypal_plan_id: e.target.value})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" placeholder="P-xxxxxxxxxxxxxxxxxx" />
+                  </div>
+                </div>
+
+                <div className="p-4 border border-zinc-200 dark:border-white/10 rounded-lg bg-zinc-50 dark:bg-[#0a0a0a] space-y-4">
+                  <h5 className="text-xs text-[#014b5c] dark:text-cyan-400 font-semibold uppercase">Cashfree (India)</h5>
+                  <div>
+                    <label className="block text-zinc-500 text-xs mb-1">Cashfree Plan ID</label>
+                    <input type="text" value={isEditing.cashfree_plan_id || ""} onChange={e => setIsEditing({...isEditing, cashfree_plan_id: e.target.value})} className="w-full p-2.5 rounded bg-white dark:bg-black border border-zinc-200 dark:border-white/10 outline-none focus:border-cyan-500 text-black dark:text-white" placeholder="plan_xxxxxxxx" />
+                  </div>
+                </div>
+
+              </div>
             </div>
 
-            <div className="md:col-span-2 flex justify-end gap-3 mt-4">
-              <button type="button" onClick={() => setIsEditing(null)} className="px-4 py-2 border border-zinc-200 dark:border-white/10 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5">Cancel</button>
-              <button disabled={saving} type="submit" className="px-4 py-2 bg-[#014b5c] dark:bg-cyan-500 text-white dark:text-black rounded hover:brightness-110 flex items-center gap-2">
+            <div className="flex justify-end gap-4 pt-6 border-t border-cyan-500/20">
+              <button type="button" onClick={() => setIsEditing(null)} className="px-6 py-2 border border-zinc-200 dark:border-white/10 rounded text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 uppercase tracking-widest text-xs font-bold transition-colors">Cancel</button>
+              <button disabled={saving} type="submit" className="px-6 py-2 bg-[#014b5c] dark:bg-cyan-500 text-white dark:text-black rounded hover:brightness-110 flex items-center gap-2 uppercase tracking-widest text-xs font-bold transition-all active:scale-95 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isEditing.id ? "Update Plan" : "Create Plan"}
+                {isEditing.id ? "Update Sequence" : "Deploy Sequence"}
               </button>
             </div>
           </form>
@@ -163,11 +214,28 @@ export default function AdminPlans() {
                   <span className="flex items-center gap-1 text-[10px] font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full"><XCircle className="w-3 h-3" /> Inactive</span>
                 )}
               </div>
-              <div className="flex flex-wrap gap-4 text-xs font-mono text-zinc-500 mt-2">
-                <div><span className="text-zinc-400 dark:text-zinc-600">Price:</span> ${(plan.price_cents / 100).toFixed(2)}</div>
-                <div><span className="text-zinc-400 dark:text-zinc-600">Limit:</span> {plan.page_extraction_limit} pages</div>
-                {plan.paddle_product_id && (
-                  <div><span className="text-zinc-400 dark:text-zinc-600">Product:</span> {plan.paddle_product_id}</div>
+              <div className="flex flex-wrap gap-4 text-xs font-mono text-zinc-500 mt-3 bg-zinc-50 dark:bg-white/5 p-3 rounded border border-zinc-200 dark:border-white/10">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Base Price</span>
+                  <span className="text-black dark:text-white">${((plan.price_usd_cents || 0) / 100).toFixed(2)} / ₹{((plan.price_inr_paise || 0) / 100).toFixed(2)}</span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Limit</span>
+                  <span className="text-black dark:text-white">{plan.page_extraction_limit} pages</span>
+                </div>
+
+                {plan.paypal_plan_id && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">PayPal</span>
+                    <span className="text-black dark:text-white">{plan.paypal_plan_id}</span>
+                  </div>
+                )}
+                {plan.cashfree_plan_id && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-widest text-zinc-400 dark:text-zinc-600">Cashfree</span>
+                    <span className="text-black dark:text-white">{plan.cashfree_plan_id}</span>
+                  </div>
                 )}
               </div>
             </div>

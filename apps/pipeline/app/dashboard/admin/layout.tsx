@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { LayoutDashboard, Users, CreditCard, Loader2 } from "lucide-react";
+import { LayoutDashboard, Users, CreditCard, Loader2, Tag } from "lucide-react";
 import TransitionWrapper from "../../TransitionWrapper";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Overview", href: "/dashboard/admin", icon: LayoutDashboard },
     { name: "Users", href: "/dashboard/admin/users", icon: Users },
     { name: "Plans", href: "/dashboard/admin/plans", icon: CreditCard },
+    { name: "Promotions", href: "/dashboard/admin/promotions", icon: Tag },
   ];
 
   return (

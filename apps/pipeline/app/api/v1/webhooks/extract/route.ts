@@ -8,12 +8,17 @@ export async function POST(request: Request) {
     const fileHash = searchParams.get('file_hash');
     const fileType = searchParams.get('file_type');
     const fileName = searchParams.get('file_name');
+    const userWebhookUrl = searchParams.get('user_webhook');
 
     if (!userId || !fileHash || !fileName) {
       return NextResponse.json({ error: "Missing query parameters" }, { status: 400 });
     }
 
-    const payload = await request.json();
+    const rawBody = await request.text();
+    // Strip literal \u00XX escape sequences for control characters (except tab, LF, CR) sent by Python/Docling 
+    // to prevent PostgreSQL jsonb "unsupported Unicode escape sequence" errors and invalid JSON in downstream apps.
+    const sanitizedBody = rawBody.replace(/\\u00(?:0[0-8b-cB-Ce-fE-F]|1[0-9a-fA-F])/g, '');
+    const payload = JSON.parse(sanitizedBody);
     const { job_id, extracted_data, processing_time_ms } = payload;
 
     if (!job_id) {
@@ -41,6 +46,17 @@ export async function POST(request: Request) {
       `, [userId, fileName, 'error', processing_time_ms, JSON.stringify(extracted_data)]);
       
       await client.end();
+      
+      if (userWebhookUrl) {
+         try {
+           await fetch(userWebhookUrl, {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ error: extracted_data })
+           });
+         } catch (e) { console.error("User webhook error", e); }
+      }
+      
       return NextResponse.json({ success: true, message: "Error logged" });
     }
 
@@ -106,6 +122,16 @@ export async function POST(request: Request) {
     `, [userId, fileName, 'success', processing_time_ms, JSON.stringify({ pages: realPageCount, tokens: finalExtractedData.usage })]);
 
     await client.end();
+
+    if (userWebhookUrl) {
+       try {
+         await fetch(userWebhookUrl, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify(finalExtractedData)
+         });
+       } catch (e) { console.error("User webhook error", e); }
+    }
 
     return NextResponse.json({ success: true });
 

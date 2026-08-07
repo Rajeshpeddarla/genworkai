@@ -73,7 +73,7 @@ export function MockProvider({ children }: { children: ReactNode }) {
       id: "enterprise",
       name: "Enterprise",
       price: 100,
-      features: ["100,000 Pages / mo", "Search API (RAG)", "Unlimited Projects", "Dedicated Support"],
+      features: ["100,000 Pages / mo", "Unlimited Projects", "Dedicated Support"],
     },
   ];
 

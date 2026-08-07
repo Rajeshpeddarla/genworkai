@@ -45,6 +45,7 @@ class PDFParser(BaseParser):
             "Output the results in the required JSON format. "
             "Ensure all math formulas are correctly formatted in LaTeX within `markdown_content`. "
             "If there are any diagrams or charts, add them to the `diagrams` array with a unique string `id`. "
+            "CRITICAL: Do NOT extract decorative images, watermarks, brand logos, QR codes, barcodes, or signatures as diagrams. Only extract actual charts, graphs, or scientific diagrams. "
             "For each diagram, output its bounding box with normalized coordinates (0 to 1000). "
             "In the `markdown_content`, exactly where the diagram appears, insert a placeholder: [DIAGRAM_{id}] "
             "Do not include any conversational filler."

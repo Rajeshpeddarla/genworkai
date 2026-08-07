@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const plansRes = await client.query('SELECT * FROM baseparse_pricing_plans ORDER BY display_order ASC');
     await client.end();
 
-    let paddleProducts = [];
+    let paddleProducts: any[] = [];
     if (process.env.PADDLE_API_KEY) {
       const paddle = new Paddle(process.env.PADDLE_API_KEY, {
         environment: process.env.PADDLE_API_KEY.startsWith("pdl_live") ? Environment.production : Environment.sandbox
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
       }
       
       paddleProducts = await Promise.all(products.map(async p => {
-        const pricesIter = paddle.prices.list({ productId: p.id, status: ['active'] });
+        const pricesIter = paddle.prices.list({ productId: [p.id], status: ['active'] });
         const prices = [];
         for await (const price of pricesIter) {
           prices.push({ id: price.id, description: price.description });
@@ -72,17 +72,30 @@ export async function POST(request: Request) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
-    const { name, price_cents, page_extraction_limit, paddle_product_id, paddle_price_id, is_active } = body;
+    const { 
+      name, 
+      price_usd_cents, 
+      price_inr_paise, 
+      discount_usd_cents, 
+      discount_inr_paise, 
+      page_extraction_limit, 
+      paddle_product_id, 
+      paddle_price_id, 
+      paypal_plan_id, 
+      cashfree_plan_id, 
+      is_active,
+      display_order
+    } = body;
 
     const connectionString = process.env.DATABASE_URL;
     const client = new Client({ connectionString });
     await client.connect();
 
     const res = await client.query(`
-      INSERT INTO baseparse_pricing_plans (name, price_cents, page_extraction_limit, paddle_product_id, paddle_price_id, is_active, display_order)
-      VALUES ($1, $2, $3, $4, $5, $6, (SELECT COALESCE(MAX(display_order), 0) + 1 FROM baseparse_pricing_plans))
+      INSERT INTO baseparse_pricing_plans (name, price_usd_cents, price_inr_paise, discount_usd_cents, discount_inr_paise, page_extraction_limit, paddle_product_id, paddle_price_id, paypal_plan_id, cashfree_plan_id, is_active, display_order)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, (SELECT COALESCE(MAX(display_order), 0) + 1 FROM baseparse_pricing_plans)))
       RETURNING *
-    `, [name, price_cents, page_extraction_limit, paddle_product_id, paddle_price_id, is_active]);
+    `, [name, price_usd_cents, price_inr_paise, discount_usd_cents || 0, discount_inr_paise || 0, page_extraction_limit, paddle_product_id, paddle_price_id, paypal_plan_id, cashfree_plan_id, is_active, display_order]);
 
     await client.end();
     return NextResponse.json({ plan: res.rows[0] });
@@ -98,7 +111,21 @@ export async function PATCH(request: Request) {
     if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
-    const { id, name, price_cents, page_extraction_limit, paddle_product_id, paddle_price_id, is_active } = body;
+    const { 
+      id, 
+      name, 
+      price_usd_cents, 
+      price_inr_paise, 
+      discount_usd_cents, 
+      discount_inr_paise, 
+      page_extraction_limit, 
+      paddle_product_id, 
+      paddle_price_id, 
+      paypal_plan_id, 
+      cashfree_plan_id, 
+      is_active,
+      display_order
+    } = body;
 
     const connectionString = process.env.DATABASE_URL;
     const client = new Client({ connectionString });
@@ -106,10 +133,10 @@ export async function PATCH(request: Request) {
 
     const res = await client.query(`
       UPDATE baseparse_pricing_plans 
-      SET name = $1, price_cents = $2, page_extraction_limit = $3, paddle_product_id = $4, paddle_price_id = $5, is_active = $6, updated_at = NOW()
-      WHERE id = $7
+      SET name = $1, price_usd_cents = $2, price_inr_paise = $3, discount_usd_cents = $4, discount_inr_paise = $5, page_extraction_limit = $6, paddle_product_id = $7, paddle_price_id = $8, paypal_plan_id = $9, cashfree_plan_id = $10, is_active = $11, display_order = $12, updated_at = NOW()
+      WHERE id = $13
       RETURNING *
-    `, [name, price_cents, page_extraction_limit, paddle_product_id, paddle_price_id, is_active, id]);
+    `, [name, price_usd_cents, price_inr_paise, discount_usd_cents || 0, discount_inr_paise || 0, page_extraction_limit, paddle_product_id, paddle_price_id, paypal_plan_id, cashfree_plan_id, is_active, display_order, id]);
 
     await client.end();
     return NextResponse.json({ plan: res.rows[0] });

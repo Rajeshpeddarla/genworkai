@@ -38,6 +38,45 @@ export async function GET() {
       },
     ],
     paths: {
+      '/layout': {
+        post: {
+          summary: 'Premium PDF Layout Extraction',
+          description: 'Extracts a document into a structured Document Object Model (DOM) returning high-fidelity layouts, tables, and images.',
+          requestBody: {
+            required: true,
+            content: {
+              'multipart/form-data': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    file: { type: 'string', format: 'binary', description: 'The PDF document to extract.' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': {
+              description: 'Successful job queued response',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      job_id: { type: 'string' },
+                      status: { type: 'string' },
+                      message: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            },
+            '401': { $ref: '#/components/schemas/ErrorResponse' },
+            '400': { $ref: '#/components/schemas/ErrorResponse' },
+            '402': { $ref: '#/components/schemas/ErrorResponse' }
+          }
+        }
+      },
       '/kb/{kbId}/search': {
         post: {
           summary: 'Semantic Search',

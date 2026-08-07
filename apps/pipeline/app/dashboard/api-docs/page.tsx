@@ -20,31 +20,39 @@ export default function ApiDocsPage() {
   const [copiedOcr, setCopiedOcr] = useState(false);
   const [copiedChunks, setCopiedChunks] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+  const [copiedLayout, setCopiedLayout] = useState(false);
 
   const copyDocResponse = () => {
     const text = error ? "[ERROR] " + error : extractedData ? JSON.stringify(extractedData, null, 2) : defaultJsonSchema;
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText("```json\n" + text + "\n```");
     setCopiedDoc(true);
     setTimeout(() => setCopiedDoc(false), 2000);
   };
 
   const copyOcrResponse = () => {
     const text = apiStates.ocr.error ? "[ERROR] " + apiStates.ocr.error : JSON.stringify(apiStates.ocr.data, null, 2);
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText("```json\n" + text + "\n```");
     setCopiedOcr(true);
     setTimeout(() => setCopiedOcr(false), 2000);
   };
 
+  const copyLayoutResponse = () => {
+    const text = apiStates.layout.error ? "[ERROR] " + apiStates.layout.error : JSON.stringify(apiStates.layout.data, null, 2);
+    navigator.clipboard.writeText("```json\n" + text + "\n```");
+    setCopiedLayout(true);
+    setTimeout(() => setCopiedLayout(false), 2000);
+  };
+
   const copyChunksResponse = () => {
     const text = apiStates.chunks.error ? "[ERROR] " + apiStates.chunks.error : JSON.stringify(apiStates.chunks.data, null, 2);
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText("```json\n" + text + "\n```");
     setCopiedChunks(true);
     setTimeout(() => setCopiedChunks(false), 2000);
   };
 
   const copyEmbedResponse = () => {
     const text = apiStates.embed.error ? "[ERROR] " + apiStates.embed.error : JSON.stringify(apiStates.embed.data, null, 2);
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText("```json\n" + text + "\n```");
     setCopiedEmbed(true);
     setTimeout(() => setCopiedEmbed(false), 2000);
   };
@@ -59,12 +67,10 @@ export default function ApiDocsPage() {
   // API Responses State
   const [apiStates, setApiStates] = useState<Record<string, any>>({
     ocr: { loading: false, data: null, error: null },
+    layout: { loading: false, data: null, error: null },
     chunks: { loading: false, data: null, error: null },
     embed: { loading: false, data: null, error: null },
-    search: { loading: false, data: null, error: null },
   });
-
-  const [searchQuery, setSearchQuery] = useState("Revenue Q3");
 
   useEffect(() => {
     fetchKeys();
@@ -136,9 +142,9 @@ export default function ApiDocsPage() {
       setError(null);
       setApiStates({
         ocr: { loading: false, data: null, error: null },
+        layout: { loading: false, data: null, error: null },
         chunks: { loading: false, data: null, error: null },
         embed: { loading: false, data: null, error: null },
-        search: { loading: false, data: null, error: null },
       });
     }
   };
@@ -165,8 +171,27 @@ export default function ApiDocsPage() {
         method: "POST",
         body: formData,
       });
-      const data = await response.json();
+      let data = await response.json();
       if (!response.ok) throw new Error(data.error || "Failed to extract document");
+      
+      // Poll if queued
+      if (data.status === 'queued' && data.job_id) {
+          let attempts = 0;
+          while (attempts < 60) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const pollRes = await fetch(`/api/v1/jobs/${data.job_id}`);
+              const pollData = await pollRes.json();
+              
+              if (pollData.status === 'completed' || pollData.status === 'completed_with_errors') {
+                  data = pollData;
+                  break;
+              } else if (pollData.status === 'error') {
+                  throw new Error(pollData.error || "Job processing failed");
+              }
+              attempts++;
+          }
+      }
+      
       setExtractedData(data.extractedData || data);
     } catch (err: any) {
       setError(err.message);
@@ -196,9 +221,27 @@ export default function ApiDocsPage() {
       }
 
       const res = await fetch(endpoint, options);
-      const data = await res.json();
+      let data = await res.json();
       
       if (!res.ok) throw new Error(data.error || "API Request Failed");
+      
+      // Poll if queued
+      if (data.status === 'queued' && data.job_id) {
+          let attempts = 0;
+          while (attempts < 60) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const pollRes = await fetch(`/api/v1/jobs/${data.job_id}`);
+              const pollData = await pollRes.json();
+              
+              if (pollData.status === 'completed' || pollData.status === 'completed_with_errors') {
+                  data = pollData.extractedData || pollData;
+                  break;
+              } else if (pollData.status === 'error') {
+                  throw new Error(pollData.error || "Job processing failed");
+              }
+              attempts++;
+          }
+      }
       
       setApiStates(prev => ({ ...prev, [stateKey]: { loading: false, data, error: null } }));
     } catch (err: any) {
@@ -207,63 +250,88 @@ export default function ApiDocsPage() {
   };
 
   const defaultJsonSchema = `{
-  "schema_version": "1.0",
-  "job": {
-    "id": "job_123",
-    "status": "completed",
-    "created_at": "2026-07-30T08:00:00Z",
-    "completed_at": "2026-07-30T08:02:15Z"
-  },
-  "document": {
-    "id": "doc_123",
-    "filename": "medical-report.pdf",
-    "page_count": 19,
-    "document_type": "medical_report",
-    "languages": ["en"],
-    "processing_time_ms": 135000
-  },
-  "pages": [
-    {
-      "page_number": 1,
+  "job_id": "job_123",
+  "status": "completed",
+  "progress": 100,
+  "stage": "Completed",
+  "extractedData": {
+    "job": {
+      "id": "job_123",
       "status": "completed",
-      "dimensions": {
-        "width": 1000,
-        "height": 1414
-      },
-      "blocks": [
-        {
-          "id": "page_001_table_001",
-          "type": "table",
-          "bbox": {
-            "x1": 152,
-            "y1": 70,
-            "x2": 977,
-            "y2": 263
+      "created_at": "2026-08-03T18:14:54.581Z",
+      "completed_at": "2026-08-03T18:16:36.635Z"
+    },
+    "pages": [
+      {
+        "dpi": 300,
+        "width": 2480,
+        "height": 3509,
+        "elements": [
+          {
+            "id": "heading_p1_001",
+            "type": "heading",
+            "bbox": [145, 245, 855, 285],
+            "bbox_normalized": {
+              "x": 0.0585,
+              "y": 0.0698,
+              "width": 0.2863,
+              "height": 0.0114
+            },
+            "text": "ENGLISH GRAMMAR FOR IBPS PO",
+            "style": {
+              "alignment": "left",
+              "font_size": 24,
+              "font_weight": "bold"
+            },
+            "confidence": 0.99,
+            "reading_order": 1,
+            "parent_id": null
           },
-          "text": "Patient Information...",
-          "confidence": 0.96,
-          "reading_order": 1,
-          "asset": {
-            "status": "available",
-            "url": "signed-url",
-            "mime_type": "image/png"
+          {
+            "id": "table_p1_002",
+            "type": "table",
+            "bbox": [200, 300, 800, 500],
+            "bbox_normalized": {
+              "x": 0.0806,
+              "y": 0.0855,
+              "width": 0.2419,
+              "height": 0.0570
+            },
+            "rows": 3,
+            "columns": 4,
+            "text": "Table content extracted here...",
+            "confidence": 0.96,
+            "reading_order": 2,
+            "parent_id": null
           }
-        }
-      ]
-    }
-  ],
-  "warnings": [
-    {
-      "page": 5,
-      "code": "PAGE_RETRIED"
-    }
-  ],
+        ],
+        "assets": [
+          {
+            "id": "image_p1_001",
+            "bbox": [400, 600, 800, 900],
+            "bbox_normalized": {
+              "x": 0.1612,
+              "y": 0.1710,
+              "width": 0.1612,
+              "height": 0.0855
+            },
+            "url": "https://signed-s3-url.com/asset_123.png"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "title": "ENGLISH GRAMMAR FOR IBPS PO",
+        "elements": ["heading_p1_001", "table_p1_002"]
+      }
+    ],
+    "warnings": []
+  },
   "usage": {
-    "pages_processed": 19,
-    "pages_retried": 1,
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "processing_seconds": 135
+    "pages_processed": 1,
+    "input_tokens": 1500,
+    "output_tokens": 500
   }
 }`;
 
@@ -347,7 +415,7 @@ export default function ApiDocsPage() {
           </div>
         </div>
         
-        <RequestLogsTable />
+        <RequestLogsTable limit={2} />
       </section>
 
 
@@ -407,7 +475,10 @@ export default function ApiDocsPage() {
             <div className="p-4 border-b border-zinc-200 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="px-2 py-1 bg-green-500/20 text-green-400 font-mono text-[10px] uppercase border border-green-500/50">POST</span>
-                <h3 className="font-mono text-sm font-bold text-black dark:text-white">/v1/parse (Doc Intelligence)</h3>
+                <h3 className="font-mono text-sm font-bold text-black dark:text-white flex items-center gap-2">
+                  /v1/parse (Doc Intelligence)
+                  <span className="text-[10px] text-zinc-500 font-normal ml-2 hidden sm:inline-block border border-zinc-200 dark:border-white/10 px-1.5 py-0.5 bg-black/5 dark:bg-white/5 rounded">Async / Webhooks Recommended</span>
+                </h3>
               </div>
               <button 
                 onClick={handleUpload}
@@ -434,6 +505,47 @@ export default function ApiDocsPage() {
                   </button>
                   <pre className="font-mono text-[10px] sm:text-xs text-[#014b5c] dark:text-cyan-400 overflow-x-auto max-h-[300px] custom-scrollbar pr-8">
                     {error ? "[ERROR] " + error : extractedData ? JSON.stringify(extractedData, null, 2) : defaultJsonSchema}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Layout API */}
+          <div className="border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-[#050505] overflow-hidden">
+            <div className="p-4 border-b border-zinc-200 dark:border-white/10 bg-black/5 dark:bg-white/5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-1 bg-green-500/20 text-green-400 font-mono text-[10px] uppercase border border-green-500/50">POST</span>
+                <h3 className="font-mono text-sm font-bold text-black dark:text-white flex items-center gap-2">
+                  /v1/layout (Premium Layout Extraction)
+                  <span className="text-[10px] text-zinc-500 font-normal ml-2 hidden sm:inline-block border border-zinc-200 dark:border-white/10 px-1.5 py-0.5 bg-black/5 dark:bg-white/5 rounded">Async / Webhooks Recommended</span>
+                </h3>
+              </div>
+              <button 
+                onClick={() => runApi('/api/v1/layout', 'layout', null, true)}
+                disabled={!file || apiStates.layout.loading}
+                className="bg-[#014b5c] dark:bg-cyan-500 hover:bg-[#013b4c] dark:hover:bg-cyan-400 text-white dark:text-black px-4 py-2 rounded-md font-bold flex items-center gap-2 transition-colors disabled:opacity-50 uppercase tracking-widest text-xs"
+              >
+                {apiStates.layout.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
+                Run
+              </button>
+            </div>
+            <div className="p-4 bg-zinc-100 dark:bg-[#020202]">
+              <p className="font-mono text-xs text-zinc-500 mb-2">Request Body (multipart/form-data):</p>
+              <pre className="font-mono text-[10px] text-zinc-400">file: {file ? file.name : "<No file selected>"}</pre>
+            </div>
+            {(apiStates.layout.data || apiStates.layout.error) && (
+              <div className="p-4 border-t border-zinc-200 dark:border-white/10">
+                <p className="font-mono text-xs text-zinc-500 mb-2">JSON Response:</p>
+                <div className="bg-white dark:bg-black border border-zinc-200 dark:border-white/10 p-4 rounded-lg mb-4 relative">
+                  <button 
+                    onClick={copyLayoutResponse}
+                    className="absolute top-2 right-2 p-1.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#0a0a0a] dark:hover:bg-[#111111] border border-zinc-200 dark:border-white/10 rounded-md transition-colors"
+                  >
+                    {copiedLayout ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5 text-zinc-400" />}
+                  </button>
+                  <pre className="font-mono text-[10px] sm:text-xs text-[#014b5c] dark:text-cyan-400 overflow-x-auto max-h-[300px] custom-scrollbar whitespace-pre-wrap pr-8">
+                    {apiStates.layout.error ? "[ERROR] " + apiStates.layout.error : JSON.stringify(apiStates.layout.data, null, 2)}
                   </pre>
                 </div>
               </div>
@@ -617,58 +729,7 @@ export default function ApiDocsPage() {
               )}
             </div>
 
-          {/* SEARCH API (Enterprise) */}
-          <div className="border border-zinc-200 dark:border-violet-500/30 bg-zinc-50 dark:bg-[#050505] overflow-hidden shadow-[0_0_15px_rgba(139,92,246,0.05)] relative">
-            {!isEnterprise && (
-              <div className="absolute inset-0 bg-zinc-50/50 dark:bg-black/50 backdrop-blur-[1px] z-20 flex flex-col items-center justify-center border border-zinc-200 dark:border-white/10 rounded-lg">
-                <Lock className="w-8 h-8 text-violet-500 mb-2" />
-                <p className="font-mono text-sm text-black dark:text-white uppercase tracking-widest font-bold">Enterprise Plan Required</p>
-                <p className="font-mono text-xs text-zinc-500 mt-1 max-w-[250px] text-center">Upgrade to Enterprise to unlock the RAG Search API.</p>
-              </div>
-            )}
-            <div className={`p-4 border-b border-zinc-200 dark:border-violet-500/20 bg-violet-50 dark:bg-violet-950/10 flex items-center justify-between ${!isEnterprise ? 'opacity-50' : ''}`}>
-                <div className="flex items-center gap-3">
-                  <span className="px-2 py-1 bg-violet-500/20 text-violet-400 font-mono text-[10px] uppercase border border-violet-500/50">POST</span>
-                  <h3 className="font-mono text-sm font-bold text-black dark:text-violet-400">/v1/search (RAG Built-in)</h3>
-                  <span className="px-2 py-0.5 bg-violet-500/20 text-violet-400 font-mono text-[8px] uppercase border border-violet-500/30 rounded-full">Enterprise</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="text" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="bg-black/20 border border-violet-500/30 text-xs px-2 py-1 text-violet-100 placeholder:text-violet-700 outline-none w-32"
-                  />
-                  <button 
-                    onClick={() => runApi('/api/v1/search', 'search', { query: searchQuery, documentId: "test_doc_123" })}
-                    disabled={!file || apiStates.search.loading}
-                    className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-md font-bold flex items-center gap-2 transition-colors disabled:opacity-50 uppercase tracking-widest text-xs"
-                  >
-                    {apiStates.search.loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
-                    Search
-                  </button>
-                </div>
-              </div>
-              <div className="p-4 bg-zinc-100 dark:bg-[#020202]">
-                <p className="font-mono text-xs text-zinc-500 mb-2">Request Body (application/json):</p>
-                <pre className="font-mono text-[10px] text-zinc-400">
-{`{
-  "query": "${searchQuery}",
-  "documentId": "test_doc_123"
-}`}
-                </pre>
-              </div>
-              {(apiStates.search.data || apiStates.search.error) && (
-                <div className="p-4 border-t border-zinc-200 dark:border-white/10">
-                  <p className="font-mono text-xs text-zinc-500 mb-2">Response:</p>
-                  <div className="bg-white dark:bg-black border border-zinc-200 dark:border-white/10 p-4 rounded-lg">
-                    <pre className="font-mono text-[10px] sm:text-xs text-violet-400 overflow-x-auto max-h-[300px] custom-scrollbar">
-                      {apiStates.search.error ? "[ERROR] " + apiStates.search.error : JSON.stringify(apiStates.search.data, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
+
 
         </div>
       </section>

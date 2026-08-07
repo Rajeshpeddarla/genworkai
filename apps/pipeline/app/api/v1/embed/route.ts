@@ -94,7 +94,7 @@ export async function POST(request: Request) {
              vector
            };
            
-           // If they provided a documentId, they want to use our hosted search API
+           // If they provided a documentId, they want to save vectors into our hosted database
            if (documentId) {
              embeddingsToInsert.push({
                documentId,

@@ -293,11 +293,6 @@ export default function LandingPage() {
                   <div className="text-white mb-2 uppercase tracking-widest font-bold">Embed</div>
                   <div className="text-zinc-500">Generates precise vector embeddings via Gemini.</div>
                 </div>
-                <div className="p-8 border border-white/10 bg-black/50 backdrop-blur-sm group hover:border-amber-500/50 transition-all cursor-crosshair">
-                  <div className="text-amber-500 font-bold mb-4 text-2xl group-hover:scale-110 transition-transform origin-left">04.</div>
-                  <div className="text-white mb-2 uppercase tracking-widest font-bold">Search (RAG)</div>
-                  <div className="text-zinc-500">Query your documents instantly with our built-in Search API.</div>
-                </div>
               </div>
             </div>
 

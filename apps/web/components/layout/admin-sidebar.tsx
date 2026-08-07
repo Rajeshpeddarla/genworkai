@@ -42,14 +42,14 @@ export function AdminSidebar() {
   return (
     <div className={cn(
       "flex shrink-0 flex-col gap-y-5 overflow-y-auto bg-zinc-950 px-4 pb-4 border-r border-white/10 transition-all duration-300",
-      isCollapsed ? "w-[80px] items-center" : "w-[260px]"
+      isCollapsed ? "w-[80px] items-center" : "w-[320px]"
     )}>
       <div className={cn("flex h-16 shrink-0 items-center mt-2", isCollapsed ? "justify-center" : "justify-between w-full px-2")}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-rose-500 to-orange-500 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-5 h-5 text-white" />
           </div>
-          {!isCollapsed && <span className="text-lg font-bold tracking-tight text-white">Admin Control</span>}
+          {!isCollapsed && <span className="text-xl font-bold tracking-tight text-white">Admin Control</span>}
         </div>
         {!isCollapsed && (
           <button onClick={() => setIsCollapsed(true)} className="text-zinc-500 hover:text-white">

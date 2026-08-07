@@ -119,10 +119,15 @@ export default function BillingClient({
     const formData = new FormData(e.target as HTMLFormElement);
     const data = {
       name: formData.get("name") as string,
-      priceCents: parseInt(formData.get("priceCents") as string),
+      priceUsdCents: parseInt(formData.get("priceUsdCents") as string) || 0,
+      priceInrPaise: parseInt(formData.get("priceInrPaise") as string) || 0,
+      discountUsdCents: parseInt(formData.get("discountUsdCents") as string) || 0,
+      discountInrPaise: parseInt(formData.get("discountInrPaise") as string) || 0,
       pageExtractionLimit: parseInt(formData.get("pageExtractionLimit") as string) || 0,
       paddleProductId: (formData.get("paddleProductId") as string)?.trim() || null,
       paddlePriceId: (formData.get("paddlePriceId") as string)?.trim() || null,
+      paypalPlanId: (formData.get("paypalPlanId") as string)?.trim() || null,
+      cashfreePlanId: (formData.get("cashfreePlanId") as string)?.trim() || null,
       isActive: formData.get("isActive") === "on",
       displayOrder: parseInt(formData.get("displayOrder") as string) || 0,
     };
@@ -521,7 +526,8 @@ export default function BillingClient({
             <thead className="bg-zinc-50 dark:bg-zinc-800/50 text-zinc-500 dark:text-zinc-400">
               <tr>
                 <th className="px-6 py-4 font-medium">Plan Name</th>
-                <th className="px-6 py-4 font-medium">Price</th>
+                <th className="px-6 py-4 font-medium">USD (Price/Discount)</th>
+                <th className="px-6 py-4 font-medium">INR (Price/Discount)</th>
                 <th className="px-6 py-4 font-medium">Page Limit</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -531,7 +537,14 @@ export default function BillingClient({
               {(initialBaseparsePlans || []).map((plan) => (
                 <tr key={plan.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 font-medium">{plan.name}</td>
-                  <td className="px-6 py-4">${(plan.priceCents / 100).toFixed(2)}</td>
+                  <td className="px-6 py-4">
+                    ${((plan.priceUsdCents || 0) / 100).toFixed(2)}
+                    {plan.discountUsdCents > 0 && <span className="text-rose-500 block text-xs">-${(plan.discountUsdCents / 100).toFixed(2)} OFF</span>}
+                  </td>
+                  <td className="px-6 py-4">
+                    ₹{((plan.priceInrPaise || 0) / 100).toFixed(2)}
+                    {plan.discountInrPaise > 0 && <span className="text-rose-500 block text-xs">-₹{(plan.discountInrPaise / 100).toFixed(2)} OFF</span>}
+                  </td>
                   <td className="px-6 py-4 font-medium text-emerald-600">{plan.pageExtractionLimit.toLocaleString()}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
@@ -549,7 +562,7 @@ export default function BillingClient({
               ))}
               {(!initialBaseparsePlans || initialBaseparsePlans.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                  <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
                     No BaseParse plans configured.
                   </td>
                 </tr>
@@ -1026,8 +1039,8 @@ export default function BillingClient({
 
     {/* BaseParse Plan Editor Modal */}
       {editingBaseparsePlan && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-card rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
               <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
                 {editingBaseparsePlan.id ? `Edit Plan: ${editingBaseparsePlan.name}` : 'Create BaseParse Plan'}
@@ -1041,49 +1054,76 @@ export default function BillingClient({
             </div>
             
             <div className="p-6 overflow-y-auto">
-              <form id="baseparseForm" onSubmit={handleSaveBaseparsePlan} className="space-y-8">
-                <div>
-                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Basic Info</h3>
-                  <div className="grid grid-cols-2 gap-4">
+              <form id="baseparseForm" onSubmit={handleSaveBaseparsePlan} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800 pb-2">Plan Details</h3>
                     <div>
-                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Name</label>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Plan Name</label>
                       <input name="name" defaultValue={editingBaseparsePlan.name} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
                     </div>
-                    <div>
-                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price (Cents)</label>
-                      <input name="priceCents" type="number" defaultValue={editingBaseparsePlan.priceCents || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Price (USD Cents)</label>
+                        <input name="priceUsdCents" type="number" defaultValue={editingBaseparsePlan.priceUsdCents || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Discount (USD Cents)</label>
+                        <input name="discountUsdCents" type="number" defaultValue={editingBaseparsePlan.discountUsdCents || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold mb-2">Page Extraction Limit</label>
-                      <input name="pageExtractionLimit" type="number" defaultValue={editingBaseparsePlan.pageExtractionLimit || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Price (INR Paise)</label>
+                        <input name="priceInrPaise" type="number" defaultValue={editingBaseparsePlan.priceInrPaise || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Discount (INR Paise)</label>
+                        <input name="discountInrPaise" type="number" defaultValue={editingBaseparsePlan.discountInrPaise || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Display Order</label>
-                      <input name="displayOrder" type="number" defaultValue={editingBaseparsePlan.displayOrder || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Page Extraction Limit</label>
+                        <input name="pageExtractionLimit" type="number" defaultValue={editingBaseparsePlan.pageExtractionLimit || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Display Order</label>
+                        <input name="displayOrder" type="number" defaultValue={editingBaseparsePlan.displayOrder || 0} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-4 bg-zinc-50 dark:bg-zinc-800/50 p-3 rounded-lg">
+                      <input type="checkbox" name="isActive" defaultChecked={editingBaseparsePlan.isActive !== false} className="w-4 h-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-600" />
+                      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Active Plan (Visible to users)</label>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Paddle Configuration</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-6">
+                    <h3 className="text-sm font-semibold text-zinc-900 dark:text-white uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800 pb-2">Payment Integration</h3>
                     <div>
-                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Product ID</label>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Paddle Product ID</label>
                       <input name="paddleProductId" defaultValue={editingBaseparsePlan.paddleProductId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
                     </div>
+                    
                     <div>
-                      <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Price ID</label>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Paddle Price ID</label>
                       <input name="paddlePriceId" defaultValue={editingBaseparsePlan.paddlePriceId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
                     </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h3 className="text-zinc-900 dark:text-white font-medium mb-3 border-b border-zinc-200 dark:border-white/10 pb-2">Status</h3>
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" name="isActive" defaultChecked={editingBaseparsePlan.isActive !== false} className="w-4 h-4 rounded border-zinc-300 text-rose-600 focus:ring-rose-600" />
-                    <span className="text-sm text-zinc-700 dark:text-zinc-300">Is Active</span>
-                  </label>
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">PayPal Plan ID (Global)</label>
+                      <input name="paypalPlanId" defaultValue={editingBaseparsePlan.paypalPlanId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Cashfree Plan ID (India)</label>
+                      <input name="cashfreePlanId" defaultValue={editingBaseparsePlan.cashfreePlanId} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg px-4 py-2 text-zinc-900 dark:text-white font-mono text-sm" />
+                    </div>
+                  </div>
                 </div>
               </form>
             </div>

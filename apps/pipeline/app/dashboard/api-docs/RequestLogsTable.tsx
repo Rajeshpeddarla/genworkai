@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TerminalSquare, ChevronDown, ChevronUp, Loader2, Clock, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
 
 interface RequestLog {
   id: string;
@@ -13,14 +14,10 @@ interface RequestLog {
   created_at: string;
 }
 
-export function RequestLogsTable() {
+export function RequestLogsTable({ limit }: { limit?: number }) {
   const [logs, setLogs] = useState<RequestLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchLogs();
-  }, []);
 
   const fetchLogs = async () => {
     try {
@@ -36,6 +33,12 @@ export function RequestLogsTable() {
     }
   };
 
+  useEffect(() => {
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const toggleExpand = (id: string) => {
     setExpandedLogId(expandedLogId === id ? null : id);
   };
@@ -47,18 +50,27 @@ export function RequestLogsTable() {
     }).format(date);
   };
 
+  const displayedLogs = limit ? logs.slice(0, limit) : logs;
+
   return (
     <div className="mt-12 bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm">
-      <div className="border-b border-zinc-200 bg-zinc-50/50 p-6">
-        <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
-          <TerminalSquare className="w-5 h-5 text-zinc-500" />
-          Request Logs
-        </h2>
-        <p className="text-zinc-500 text-sm mt-1">Monitor your Document Intelligence API executions in real-time.</p>
+      <div className="border-b border-zinc-200 bg-zinc-50/50 p-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900 flex items-center gap-2">
+            <TerminalSquare className="w-5 h-5 text-zinc-500" />
+            Request Logs
+          </h2>
+          <p className="text-zinc-500 text-sm mt-1">Monitor your Document Intelligence API executions in real-time.</p>
+        </div>
+        {limit && logs.length > limit && (
+          <Link href="/dashboard/logs" className="text-sm text-[#014b5c] hover:text-[#013b4c] font-medium px-4 py-2 bg-[#014b5c]/10 hover:bg-[#014b5c]/20 rounded-md transition-colors">
+            See all
+          </Link>
+        )}
       </div>
       
       <div className="p-0">
-        {loading ? (
+        {loading && logs.length === 0 ? (
           <div className="flex items-center justify-center p-12 text-zinc-500">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
             Loading logs...
@@ -69,7 +81,7 @@ export function RequestLogsTable() {
           </div>
         ) : (
           <div className="divide-y divide-zinc-200">
-            {logs.map((log) => (
+            {displayedLogs.map((log) => (
               <div key={log.id} className="flex flex-col">
                 <div 
                   className="flex items-center justify-between p-4 hover:bg-zinc-50 cursor-pointer transition-colors"

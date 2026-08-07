@@ -4,9 +4,10 @@ import { cookies } from "next/headers";
 import { Client } from "pg";
 import crypto from "crypto";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const jobId = params.id;
+    const resolvedParams = await params;
+    const jobId = resolvedParams.id;
     if (!jobId) {
       return NextResponse.json({ error: "Job ID required" }, { status: 400 });
     }
@@ -73,12 +74,30 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ 
         job_id: jobId, 
         status: jobRow.status,
+        progress: 100,
+        stage: "Completed",
         extractedData: jobRow.extracted_data 
       });
-    } else {
+    } else if (jobRow.status === 'processing') {
       return NextResponse.json({ 
         job_id: jobId, 
-        status: jobRow.status 
+        status: jobRow.status,
+        progress: 45,
+        stage: "Extracting layout structure (Model inference running...)"
+      });
+    } else {
+      let errorMsg = "Job processing failed";
+      try {
+        if (jobRow.extracted_data) {
+          const parsed = typeof jobRow.extracted_data === 'string' ? JSON.parse(jobRow.extracted_data) : jobRow.extracted_data;
+          if (parsed.error) errorMsg = parsed.error;
+        }
+      } catch (e) {}
+      
+      return NextResponse.json({ 
+        job_id: jobId, 
+        status: jobRow.status,
+        error: errorMsg
       });
     }
 

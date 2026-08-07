@@ -64,19 +64,24 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    // Step 1: SHA256 Caching
+    // Step 1: SHA256 Caching (Idempotency)
     const fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
     
-    // TEMPORARILY DISABLED FOR TESTING
-    // const existingDocRes = await client.query(
-    //   'SELECT extracted_data FROM baseparse_documents WHERE user_id = $1 AND checksum = $2 LIMIT 1', 
-    //   [userId, fileHash]
-    // );
+    const existingDocRes = await client.query(
+      "SELECT id, status, extracted_data FROM baseparse_documents WHERE user_id = $1 AND checksum = $2 AND status = 'completed' LIMIT 1", 
+      [userId, fileHash]
+    );
 
-    // if (existingDocRes.rows.length > 0) {
-    //   await client.end();
-    //   return NextResponse.json({ extractedData: existingDocRes.rows[0].extracted_data, cached: true });
-    // }
+    if (existingDocRes.rows.length > 0) {
+      await client.end();
+      // If a completed extraction already exists, return the cached result
+      const parsedData = typeof existingDocRes.rows[0].extracted_data === 'string' 
+                         ? JSON.parse(existingDocRes.rows[0].extracted_data) 
+                         : existingDocRes.rows[0].extracted_data;
+      return NextResponse.json(parsedData);
+    }
+
+    const userWebhookUrl = formData.get("webhook_url") as string | null;
 
     // Step 2: Preliminary Billing Check (ensure user is not already over quota)
     const planRes = await client.query(`
@@ -108,24 +113,39 @@ export async function POST(request: Request) {
       
       const reqUrl = new URL(request.url);
       let webhookHost = reqUrl.host;
-      // If running locally, docker container needs host.docker.internal to reach Next.js on the host
+      let protocol = reqUrl.protocol;
+      
+      // If running locally, the cloud Modal worker needs a public URL to reach the webhook
       if (webhookHost.includes('localhost')) {
-        webhookHost = webhookHost.replace('localhost', 'host.docker.internal');
+        if (process.env.PUBLIC_DEV_URL) {
+           const devUrl = new URL(process.env.PUBLIC_DEV_URL);
+           webhookHost = devUrl.host;
+           protocol = devUrl.protocol;
+        } else {
+           // Fallback to docker internal if they are still using local docker-compose python worker
+           webhookHost = webhookHost.replace('localhost', 'host.docker.internal');
+        }
       }
-      const webhookUrl = `${reqUrl.protocol}//${webhookHost}/api/v1/webhooks/extract?user_id=${userId}&file_hash=${fileHash}&file_type=${file.type || 'application/pdf'}&file_name=${encodeURIComponent(file.name)}`;
+      
+      let internalWebhookUrl = `${protocol}//${webhookHost}/api/v1/webhooks/extract?user_id=${userId}&file_hash=${fileHash}&file_type=${file.type || 'application/pdf'}&file_name=${encodeURIComponent(file.name)}`;
+      
+      if (userWebhookUrl) {
+         internalWebhookUrl += `&user_webhook=${encodeURIComponent(userWebhookUrl)}`;
+      }
       
       // Create new FormData to send to Python, injecting job_id, webhook_url, and priority
       const pyFormData = new FormData();
       pyFormData.append("file", file);
       pyFormData.append("job_id", dbJobId.toString());
-      pyFormData.append("webhook_url", webhookUrl);
+      pyFormData.append("webhook_url", internalWebhookUrl);
       
       // Determine priority: Pro/Enterprise get high priority, everyone else gets default
       const priority = (planName === 'pro' || planName === 'enterprise') ? "high" : "default";
       pyFormData.append("priority", priority);
 
       // Step 3: Dispatch Asynchronous Job to Python
-      const pythonResponse = await fetch("http://localhost:8000/api/v1/extract", {
+      const workerUrl = process.env.MODAL_WORKER_URL || "http://localhost:8000/api/worker/extract";
+      const pythonResponse = await fetch(workerUrl, {
         method: "POST",
         body: pyFormData,
       });
@@ -134,36 +154,10 @@ export async function POST(request: Request) {
         throw new Error(`Python API error: ${await pythonResponse.text()}`);
       }
 
-      // Step 4: Wait for the webhook to finish processing by polling the database internally
-      let isCompleted = false;
-      let finalData = null;
-      let attempts = 0;
-      
-      while (!isCompleted && attempts < 100) { // 5 minute timeout (100 * 3s)
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        attempts++;
-        
-        const checkRes = await client.query('SELECT status, extracted_data FROM baseparse_documents WHERE id = $1', [dbJobId]);
-        if (checkRes.rows.length > 0) {
-          const row = checkRes.rows[0];
-          if (row.status === 'completed') {
-            isCompleted = true;
-            finalData = row.extracted_data;
-          } else if (row.status === 'error') {
-            await client.end();
-            return NextResponse.json({ error: "Processing failed: " + JSON.stringify(row.extracted_data) }, { status: 500 });
-          }
-        }
-      }
-
       await client.end();
 
-      if (!isCompleted) {
-         return NextResponse.json({ error: "Processing timed out" }, { status: 504 });
-      }
-
-      // Return the final data synchronously to the user
-      return NextResponse.json(finalData);
+      // Step 4: Return immediately. The client must poll or wait for their webhook.
+      return NextResponse.json({ status: "queued", job_id: dbJobId }, { status: 202 });
 
     } catch (e: any) {
       await client.query(`
