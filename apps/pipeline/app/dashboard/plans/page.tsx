@@ -92,11 +92,11 @@ function UpgradePlansContent() {
       if (!res.ok) throw new Error(data.error || "Checkout session failed");
       
       if (data.cashfreeSessionId) {
-        if (!window.Cashfree) {
+        if (!(window as any).Cashfree) {
           throw new Error("Payment SDK is still loading, please try again in a few seconds.");
         }
-        // @ts-ignore - Cashfree is loaded globally via script
-        const cashfree = window.Cashfree({
+        
+        const cashfree = (window as any).Cashfree({
           mode: process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' ? "production" : "sandbox",
         });
         cashfree.checkout({
