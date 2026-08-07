@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { PremiumUpgradeDialog } from "@/components/billing/PremiumUpgradeDialog";
 import { MessageSquare, Download, FileText, File, Send, Database, LayoutDashboard, BrainCircuit, Mail, Presentation, Type, GripVertical, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { PdfViewer } from "../../../components/knowledge/PdfViewer";
+import dynamic from 'next/dynamic';
+const PdfViewer = dynamic(() => import('../../../components/knowledge/PdfViewer').then(mod => mod.PdfViewer), { ssr: false });
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from "react-resizable-panels";
 
 export default function WorkspacePage() {

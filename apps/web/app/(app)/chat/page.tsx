@@ -5,7 +5,8 @@ import { Send, User, Sparkles, Link as LinkIcon, Paperclip, Plus, MessageSquare,
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from 'react-markdown';
-import { PdfViewer } from "@/components/knowledge/PdfViewer";
+import dynamic from 'next/dynamic';
+const PdfViewer = dynamic(() => import('@/components/knowledge/PdfViewer').then(mod => mod.PdfViewer), { ssr: false });
 import { PanelLeftClose } from "lucide-react";
 
 type Message = {
